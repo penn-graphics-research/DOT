@@ -79,6 +79,13 @@ namespace FracCuts {
         E_scaffold = E;
         bnd_scaffold = bnd;
         w_scaf = energyParams[0] * 0.01;
+        
+#ifndef STATIC_SOLVE
+        dt = 0.04;
+        dtSq = dt * dt;
+#else
+        dt = dtSq = 1.0;
+#endif
     }
     
     Optimizer::~Optimizer(void)
@@ -136,6 +143,11 @@ namespace FracCuts {
         allowEDecRelTol = p_allowEDecRelTol;
     }
     
+    double Optimizer::getDt(void) const
+    {
+        return dt;
+    }
+    
     void Optimizer::precompute(void)
     {
         result = data0;
@@ -180,6 +192,7 @@ namespace FracCuts {
         lastEDec = 0.0;
         data_findExtrema = data0;
         updateTargetGRes();
+        velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
         computeEnergyVal(result, scaffold, lastEnergyVal);
         if(!mute) {
             writeEnergyValToFile(true);
@@ -208,9 +221,14 @@ namespace FracCuts {
             }
             else {
                 if(solve_oneStep()) {
+#ifdef STATIC_SOLVE
                     globalIterNum++;
                     if(!mute) { timer.stop(); }
                     return 1;
+#else
+                    std::cout << "line search with Armijo's rule failed!!!" << std::endl;
+                    logFile << "line search with Armijo's rule failed!!!" << std::endl;
+#endif
                 }
             }
             globalIterNum++;
@@ -703,6 +721,11 @@ namespace FracCuts {
                 writeEnergyValToFile(false);
             }
         }
+       
+#ifndef STATIC_SOLVE
+        velocity = Eigen::Map<Eigen::MatrixXd>(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>((result.V - resultV0).array() / dt).data(),
+                                               velocity.rows(), 1);
+#endif
         
         return stopped;
     }
@@ -732,6 +755,7 @@ namespace FracCuts {
     {
 //        targetGRes = energyParamSum * (data0.V_rest.rows() - data0.fixedVert.size()) * relGL2Tol * data0.avgEdgeLen * data0.avgEdgeLen;
         targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
+        targetGRes *= data0.surfaceArea * data0.surfaceArea;
     }
     
     void Optimizer::getGradientVisual(Eigen::MatrixXd& arrowVec) const
@@ -821,10 +845,10 @@ namespace FracCuts {
     void Optimizer::computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold)
     {
         energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
-        energyVal = energyParams[0] * energyVal_ET[0];
+        energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
             energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
-            energyVal += energyParams[eI] * energyVal_ET[eI];
+            energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         
         if(scaffolding && (!excludeScaffold)) {
@@ -836,14 +860,21 @@ namespace FracCuts {
         else {
             energyVal_scaffold = 0.0;
         }
+        
+#ifndef STATIC_SOLVE
+        for(int vI = 0; vI < result.V.rows(); vI++) {
+            double massI = result.massMatrix.coeffRef(vI, vI);
+            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
+        }
+#endif
     }
     void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
         energyTerms[0]->computeGradient(data, gradient_ET[0]);
-        gradient = energyParams[0] * gradient_ET[0];
+        gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
             energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
-            gradient += energyParams[eI] * gradient_ET[eI];
+            gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
         if(scaffolding) {
@@ -851,6 +882,13 @@ namespace FracCuts {
             SD.computeGradient(scaffoldData.airMesh, gradient_scaffold, true);
             scaffoldData.augmentGradient(gradient, gradient_scaffold, (excludeScaffold ? 0.0 : (w_scaf / scaffold.airMesh.F.rows())));
         }
+        
+#ifndef STATIC_SOLVE
+        for(int vI = 0; vI < result.V.rows(); vI++) {
+            double massI = result.massMatrix.coeffRef(vI, vI);
+            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
+        }
+#endif
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr)
     {
@@ -864,7 +902,7 @@ namespace FracCuts {
                 Eigen::VectorXi I, J;
                 Eigen::VectorXd V;
                 energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-                V *= energyParams[eI];
+                V *= energyParams[eI] * dtSq;
                 I_mtr.conservativeResize(I_mtr.size() + I.size());
                 I_mtr.bottomRows(I.size()) = I;
                 J_mtr.conservativeResize(J_mtr.size() + J.size());
@@ -878,9 +916,26 @@ namespace FracCuts {
                 Eigen::VectorXi I, J;
                 Eigen::VectorXd V;
                 SD.computePrecondMtr(scaffoldData.airMesh, &V, &I, &J, true);
-                scaffoldData.augmentProxyMatrix(I_mtr, J_mtr, V_mtr, I, J, V, w_scaf / scaffold.airMesh.F.rows());
+                scaffoldData.augmentProxyMatrix(I_mtr, J_mtr, V_mtr, I, J, V, w_scaf / scaffold.airMesh.F.rows() * dtSq);
             }
 //            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/FracCuts/mtr", I_mtr, J_mtr, V_mtr, true);
+            
+#ifndef STATIC_SOLVE
+            int curTripletSize = static_cast<int>(I_mtr.size());
+            I_mtr.conservativeResize(I_mtr.size() + result.V.rows() * 2);
+            J_mtr.conservativeResize(J_mtr.size() + result.V.rows() * 2);
+            V_mtr.conservativeResize(V_mtr.size() + result.V.rows() * 2);
+            for(int vI = 0; vI < result.V.rows(); vI++) {
+                double massI = result.massMatrix.coeffRef(vI, vI);
+                I_mtr[curTripletSize + vI * 2] = vI * 2;
+                J_mtr[curTripletSize + vI * 2] = vI * 2;
+                V_mtr[curTripletSize + vI * 2] = massI;
+                I_mtr[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+                J_mtr[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+                V_mtr[curTripletSize + vI * 2 + 1] = massI;
+            }
+            //TODO: mass of negative space vertices
+#endif
         }
         else {
             //TODO: triplet representation for eigen matrices

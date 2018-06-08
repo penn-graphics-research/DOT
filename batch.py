@@ -14,7 +14,7 @@ meshFolderPath = '/Users/mincli/Downloads/meshes/test_/'
 onlyfiles = [f for f in listdir(meshFolderPath) if isfile(join(meshFolderPath, f))]
 
 priority = 'nice -n -10 '
-FracCutsPath = '/Users/mincli/Library/Developer/Xcode/DerivedData/FracCuts-agmhaiwbuwzkmvfhishexuvkyjdo/Build/Products/Release/FracCuts'
+FracCutsPath = '/Users/mincli/Library/Developer/Xcode/DerivedData/FracCuts-cegibpdumtrmuqbjruacrqwltitb/Build/Products/Release/FracCuts'
 
 # for inputModelNameI in onlyfiles:
 # 	# current best
@@ -32,7 +32,7 @@ FracCutsPath = '/Users/mincli/Library/Developer/Xcode/DerivedData/FracCuts-agmha
 
 for inputModelNameI in onlyfiles:
 	# no prop, no filter
-	runCommand = priority + FracCutsPath + ' 100 ' + meshFolderPath + inputModelNameI + ' 0.999 502 0'
+	runCommand = priority + FracCutsPath + ' 0 ' + meshFolderPath + inputModelNameI + ' 0.999 666 4'
 	if subprocess.call([runCommand], shell=True):
 		continue
 

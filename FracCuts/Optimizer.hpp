@@ -72,6 +72,10 @@ namespace FracCuts {
         std::ofstream file_energyValPerIter;
         std::ofstream file_gradientPerIter;
         
+    protected: // dynamic information
+        Eigen::VectorXd velocity;
+        double dt, dtSq;
+        
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
                   int p_propagateFracture = 1, bool p_mute = false, bool p_scaffolding = false,
@@ -110,6 +114,7 @@ namespace FracCuts {
         int getTopoIter(void) const;
         void setRelGL2Tol(double p_relTol);
         void setAllowEDecRelTol(bool p_allowEDecRelTol);
+        double getDt(void) const;
         
         void flushEnergyFileOutput(void);
         void flushGradFileOutput(void);

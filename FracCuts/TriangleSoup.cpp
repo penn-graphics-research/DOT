@@ -435,6 +435,9 @@ namespace FracCuts {
         }
         
         computeLaplacianMtr();
+#ifndef STATIC_SOLVE
+        igl::massmatrix(V_rest, F, igl::MASSMATRIX_TYPE_VORONOI, massMatrix);
+#endif STATIC_SOLVE
         
 //        //!! for edge count minimization of separation energy
 //        for(int cohI = 0; cohI < cohE.rows(); cohI++)
@@ -538,6 +541,9 @@ namespace FracCuts {
         }
         
         computeLaplacianMtr();
+#ifndef STATIC_SOLVE
+        igl::massmatrix(V_rest, F, igl::MASSMATRIX_TYPE_VORONOI, massMatrix);
+#endif
     }
     
     void TriangleSoup::resetFixedVert(const std::set<int>& p_fixedVert)

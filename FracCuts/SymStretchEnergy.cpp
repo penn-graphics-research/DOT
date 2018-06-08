@@ -24,7 +24,8 @@ namespace FracCuts {
     
     void SymStretchEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         energyValPerElem.resize(data.F.rows());
         for(int triI = 0; triI < data.F.rows(); triI++) {
@@ -48,7 +49,8 @@ namespace FracCuts {
     
     void SymStretchEnergy::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         int triI = elemI;
         const Eigen::Vector3i& triVInd = data.F.row(triI);
@@ -216,7 +218,8 @@ namespace FracCuts {
     // doesn't work well for topology filtering
     void SymStretchEnergy::computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         localSearchDir.resize(data.F.rows() * 3, 2);
         for(int triI = 0; triI < data.F.rows(); triI++) {
@@ -330,7 +333,8 @@ namespace FracCuts {
     
     void SymStretchEnergy::computeLocalGradient(const TriangleSoup& data, Eigen::MatrixXd& localGradients) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         localGradients.resize(data.F.rows() * 3, 2);
         for(int triI = 0; triI < data.F.rows(); triI++) {
@@ -373,7 +377,8 @@ namespace FracCuts {
     
     void SymStretchEnergy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
@@ -437,7 +442,8 @@ namespace FracCuts {
     void SymStretchEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
                                    Eigen::VectorXi* I, Eigen::VectorXi* J, bool uniformWeight) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
 //        std::cout << "computing entry value..." << std::endl;
 //        clock_t start = clock();
@@ -558,7 +564,8 @@ namespace FracCuts {
     
     void SymStretchEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         hessian.conservativeResize(data.V.rows() * 2, data.V.rows() * 2);
         hessian.reserve(data.V.rows() * 7 * 4);
@@ -789,7 +796,8 @@ namespace FracCuts {
     {
         logFile << "check energyVal computation..." << std::endl;
         
-        const double normalizer_div = data.surfaceArea;
+//        const double normalizer_div = data.surfaceArea;
+        const double normalizer_div = 1.0;
         
         Eigen::VectorXd energyValPerTri;
         energyValPerTri.resize(data.F.rows());

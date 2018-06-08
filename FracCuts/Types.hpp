@@ -11,6 +11,8 @@
 
 #include <cstdio>
 
+//#define STATIC_SOLVE
+
 namespace FracCuts {
     enum MethodType {
         MT_OURS,

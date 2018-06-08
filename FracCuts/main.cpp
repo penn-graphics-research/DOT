@@ -37,8 +37,8 @@ FracCuts::TriangleSoup triSoup_backup;
 FracCuts::Optimizer* optimizer;
 std::vector<FracCuts::Energy*> energyTerms;
 std::vector<double> energyParams;
-//bool bijectiveParam = false;
-bool bijectiveParam = true; //TODO: set as arguments!
+bool bijectiveParam = false;
+//bool bijectiveParam = true; //TODO: set as arguments!
 bool rand1PInitCut = false;
 //bool rand1PInitCut = true; //!!! for fast prototyping
 double lambda_init;
@@ -91,7 +91,7 @@ std::string infoName = "";
 bool isCapture3D = false;
 int capture3DI = 0;
 GifWriter GIFWriter;
-const uint32_t GIFDelay = 10; //*10ms
+uint32_t GIFDelay = 10; //*10ms
 double GIFScale = 0.25;
 
 
@@ -101,7 +101,9 @@ void proceedOptimization(int proceedNum = 1)
 {
     for(int proceedI = 0; (proceedI < proceedNum) && (!converged); proceedI++) {
 //        infoName = std::to_string(iterNum);
-//        saveInfo(true, false, true); //!!! output mesh for making video, PNG output only works under online rendering mode
+        if((!offlineMode) && (methodType == FracCuts::MT_NOCUT)) {
+            saveInfo(false, true, false); //!!! output mesh for making video, PNG output only works under online rendering mode
+        }
         std::cout << "Iteration" << iterNum << ":" << std::endl;
         converged = optimizer->solve(1);
         iterNum = optimizer->getIterNum();
@@ -939,18 +941,6 @@ void converge_preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 {
     infoName = "finalResult";
     
-    if(!bijectiveParam) {
-        // perform exact solve
-//                            optimizer->setRelGL2Tol(1.0e-10);
-        optimizer->setAllowEDecRelTol(false);
-        //!! can recompute precondmtr if needed
-        converged = false;
-        optimizer->setPropagateFracture(false);
-        while(!converged) {
-            proceedOptimization(1000);
-        }
-    }
-    
     secPast += difftime(time(NULL), lastStart_world);
     updateViewerData();
     
@@ -1334,17 +1324,17 @@ int main(int argc, char *argv[])
     switch (methodType) {
         case FracCuts::MT_OURS_FIXED:
             assert(lambda < 1.0);
-            startDS = "OursFixed";
+            startDS = "OptCutsFixed";
             break;
             
         case FracCuts::MT_OURS:
             assert(lambda < 1.0);
-            startDS = "OursBounded";
+            startDS = "OptCuts";
             break;
             
         case FracCuts::MT_GEOMIMG:
             assert(lambda < 1.0);
-            startDS = "GeomImg";
+            startDS = "EBCuts";
             bijectiveParam = false;
             break;
             
@@ -1357,7 +1347,7 @@ int main(int argc, char *argv[])
             
         case FracCuts::MT_NOCUT:
             lambda = 0.0;
-            startDS = "NoCut";
+            startDS = "minEd";
             break;
             
         default:
@@ -1367,26 +1357,32 @@ int main(int argc, char *argv[])
     
     std::string folderTail = "";
     if(argc > 6) {
-        if(argv[6][0] != '_') {
-            folderTail += '_';
-        }
+        //TODO: remove all '_'
         folderTail += argv[6];
     }
-    
+#ifndef STATIC_SOLVE
+    folderTail += "Dynamic";
+#endif
+
+#define USE_INPUT_UV
+#ifdef USE_INPUT_UV
     if(UV.rows() != 0) {
-//        //DEBUG
-//        // generate Tutte embedding using input seams
-//        Eigen::VectorXi bnd;
-//        igl::boundary_loop(FUV, bnd);
-//        Eigen::MatrixXd bnd_uv;
-//        FracCuts::IglUtils::map_vertices_to_circle(UV, bnd, bnd_uv);
-//        Eigen::SparseMatrix<double> A, M;
-//        FracCuts::IglUtils::computeUniformLaplacian(FUV, A);
-//        igl::harmonic(A, M, bnd, bnd_uv, 1, UV);
+        bool onlyUseInputSeam = true;
+        if(onlyUseInputSeam) {
+            // generate Tutte embedding using input seams
+            Eigen::VectorXi bnd;
+            igl::boundary_loop(FUV, bnd);
+            Eigen::MatrixXd bnd_uv;
+            FracCuts::IglUtils::map_vertices_to_circle(UV, bnd, bnd_uv);
+            Eigen::SparseMatrix<double> A, M;
+            FracCuts::IglUtils::computeUniformLaplacian(FUV, A);
+            igl::harmonic(A, M, bnd, bnd_uv, 1, UV);
+        }
         
         // with input UV
         FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, UV, FUV, startWithTriSoup);
-        outputFolderPath += meshName + "_input_" + FracCuts::IglUtils::rtos(lambda) + "_" +
+        const std::string inputTypeStr = (onlyUseInputSeam ? "_inputSeam_" : "_inputUV_");
+        outputFolderPath += meshName + inputTypeStr + FracCuts::IglUtils::rtos(lambda) + "_" +
             FracCuts::IglUtils::rtos(delta) + "_" +startDS + folderTail;
         
 //        //TEST: for commercial software output
@@ -1451,6 +1447,7 @@ int main(int argc, char *argv[])
 //        temp->saveAsMesh("/Users/mincli/Desktop/output_FracCuts/test.obj");//DEBUG
     }
     else {
+#endif
         // no input UV
         // * Harmonic map for initialization
         Eigen::VectorXi bnd;
@@ -1516,7 +1513,9 @@ int main(int argc, char *argv[])
                                 "_" + startDS + folderTail;
             }
         }
+#ifdef USE_INPUT_UV
     }
+#endif
     
     mkdir(outputFolderPath.c_str(), 0777);
     outputFolderPath += '/';
@@ -1579,6 +1578,10 @@ int main(int argc, char *argv[])
     optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     optimizer->precompute();
+    optimizer->setAllowEDecRelTol(false);
+#ifndef STATIC_SOLVE
+    GIFDelay = optimizer->getDt() * 100;
+#endif
     triSoup.emplace_back(&optimizer->getResult());
     triSoup_backup = optimizer->getResult();
     triSoup.emplace_back(&optimizer->getData_findExtrema()); // for visualizing UV map for finding extrema

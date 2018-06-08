@@ -14,6 +14,8 @@
 #include <set>
 #include <array>
 
+#include "Types.hpp"
+
 namespace FracCuts{
     
     enum Primitive
@@ -42,6 +44,7 @@ namespace FracCuts{
         Eigen::VectorXi boundaryEdge; // 1: boundary edge, 0: interior edge
         Eigen::VectorXd edgeLen; // cohesive edge rest length, used as weights
         Eigen::SparseMatrix<double> LaplacianMtr; // 2 * V.rows() wide
+        Eigen::SparseMatrix<double> massMatrix; // V.rows() wide
         Eigen::VectorXd triArea; // triangle rest area
         Eigen::MatrixXd triNormal;
         double surfaceArea;
