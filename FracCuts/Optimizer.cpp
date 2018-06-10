@@ -148,9 +148,35 @@ namespace FracCuts {
         return dt;
     }
     
+//    void Optimizer::fixDirection(void)
+//    {
+//        assert(result.V.rows() == result.V_rest.rows());
+//        
+//        directionFix.clear();
+//        const Eigen::RowVector2d& v0 = result.V.row(0);
+//        int nbVI = *result.vNeighbor[0].begin();
+//        const Eigen::RowVector2d& vi = result.V.row(nbVI);
+//        Eigen::RowVector2d dif = vi - v0;
+//        if(std::abs(dif[0]) > std::abs(dif[1])) {
+//            double coef = dif[1] / dif[0];
+//            directionFix[0] = coef;
+//            directionFix[1] = -1.0;
+//            directionFix[nbVI * 2] = -coef;
+//            directionFix[nbVI * 2 + 1] = 1.0;
+//        }
+//        else {
+//            double coef = dif[0] / dif[1];
+//            directionFix[0] = -1.0;
+//            directionFix[1] = coef;
+//            directionFix[nbVI * 2] = 1.0;
+//            directionFix[nbVI * 2 + 1] = -coef;
+//        }
+//    }
+    
     void Optimizer::precompute(void)
     {
         result = data0;
+        resultV_n = result.V;
         if(scaffolding) {
             scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
             result.scaffold = &scaffold;
@@ -220,16 +246,22 @@ namespace FracCuts {
                 return 1;
             }
             else {
-                if(solve_oneStep()) {
 #ifdef STATIC_SOLVE
+                if(solve_oneStep()) {
                     globalIterNum++;
                     if(!mute) { timer.stop(); }
                     return 1;
 #else
+                if(fullyImplicit()) {
                     std::cout << "line search with Armijo's rule failed!!!" << std::endl;
                     logFile << "line search with Armijo's rule failed!!!" << std::endl;
 #endif
                 }
+#ifndef STATIC_SOLVE
+                velocity = Eigen::Map<Eigen::MatrixXd>(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>((result.V - resultV_n).array() / dt).data(),
+                                                       velocity.rows(), 1);
+                resultV_n = result.V;
+#endif
             }
             globalIterNum++;
             if(!mute) { timer.stop(); }
@@ -558,6 +590,25 @@ namespace FracCuts {
         return changed;
     }
     
+    bool Optimizer::fullyImplicit(void)
+    {
+        double sqn_g = __DBL_MAX__;
+        do {
+            if(solve_oneStep()) {
+                std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
+                logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
+                return true;
+            }
+            computeGradient(result, scaffold, gradient);
+            sqn_g = gradient.squaredNorm();
+            if(!mute) {
+                std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
+            }
+        } while(sqn_g > targetGRes);
+        
+        return false;
+    }
+    
     bool Optimizer::solve_oneStep(void)
     {
         if(needRefactorize) {
@@ -660,7 +711,8 @@ namespace FracCuts {
 //        Eigen::VectorXd testingG;
         computeEnergyVal(result, scaffold, testingE);
 //        computeGradient(testingData, testingG);
-        
+//#define ARMIJO_RULE
+#ifdef ARMIJO_RULE
 //        while((testingE > lastEnergyVal + stepSize * c1m) ||
 //              (searchDir.dot(testingG) < c2m)) // Wolfe condition
         while(testingE > lastEnergyVal + stepSize * c1m) // Armijo condition
@@ -680,6 +732,7 @@ namespace FracCuts {
             computeEnergyVal(result, scaffold, testingE);
 //            computeGradient(testingData, testingG);
         }
+#endif
         if(!mute) {
             std::cout << stepSize << "(armijo) ";
         }
@@ -721,11 +774,6 @@ namespace FracCuts {
                 writeEnergyValToFile(false);
             }
         }
-       
-#ifndef STATIC_SOLVE
-        velocity = Eigen::Map<Eigen::MatrixXd>(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>((result.V - resultV0).array() / dt).data(),
-                                               velocity.rows(), 1);
-#endif
         
         return stopped;
     }
@@ -862,10 +910,12 @@ namespace FracCuts {
         }
         
 #ifndef STATIC_SOLVE
-        for(int vI = 0; vI < result.V.rows(); vI++) {
+        for(int vI = 0; vI < data.V.rows(); vI++) {
             double massI = result.massMatrix.coeffRef(vI, vI);
-            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
+//            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
+            energyVal += (data.V.row(vI) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()).squaredNorm() * massI / 2.0;
         }
+        //TODO: mass of negative space vertices
 #endif
     }
     void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold)
@@ -884,11 +934,23 @@ namespace FracCuts {
         }
         
 #ifndef STATIC_SOLVE
-        for(int vI = 0; vI < result.V.rows(); vI++) {
+        for(int vI = 0; vI < data.V.rows(); vI++) {
             double massI = result.massMatrix.coeffRef(vI, vI);
-            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
+//            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
+            gradient.segment(vI * 2, 2) += massI * (data.V.row(vI).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2));
         }
+        //TODO: mass of negative space vertices
 #endif
+        
+//        if(!directionFix.empty()) {
+//            double cx = 0.0;
+//            for(const auto termI : directionFix) {
+//                gradient(termI.first) -= lambda_df * termI.second;
+//                cx += result.V(termI.first / 2, termI.first % 2) * termI.second;
+//            }
+//            gradient.conservativeResize(gradient.size() + 1);
+//            gradient.tail(1) << cx;
+//        }
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr)
     {

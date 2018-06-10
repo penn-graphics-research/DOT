@@ -326,9 +326,9 @@ void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const vectorTypeI &II_,
     
     numRows = static_cast<int>(vNeighbor.size()) * 2;
     ia.resize(vNeighbor.size() * 2 + 1);
-    ia[0] = 1;
-    ja.resize(0);
-    IJ2aI.resize(0);
+    ia[0] = 1; // 1 + nnz above row i
+    ja.resize(0); // colI of each element
+    IJ2aI.resize(0); // map from matrix index to ja index
     IJ2aI.resize(vNeighbor.size() * 2);
     for(int rowI = 0; rowI < vNeighbor.size(); rowI++) {
         if(fixedVert.find(rowI) == fixedVert.end()) {
@@ -351,6 +351,8 @@ void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const vectorTypeI &II_,
                 }
             }
 
+            // another row for y,
+            // excluding the left-bottom entry on the diagonal band
             IJ2aI[rowI * 2 + 1] = IJ2aI[rowI * 2];
             for(auto& IJ2aI_newRow : IJ2aI[rowI * 2 + 1]) {
                 IJ2aI_newRow.second += nnz_rowI * 2 - 1;

@@ -72,8 +72,12 @@ namespace FracCuts {
         std::ofstream file_energyValPerIter;
         std::ofstream file_gradientPerIter;
         
+//        std::map<int, double> directionFix;
+//        double lambda_df;
+        
     protected: // dynamic information
         Eigen::VectorXd velocity;
+        Eigen::MatrixXd resultV_n;
         double dt, dtSq;
         
     public: // constructor and destructor
@@ -87,6 +91,8 @@ namespace FracCuts {
     public: // API
         // precompute preconditioning matrix and factorize for fast solve, prepare initial guess
         void precompute(void);
+        
+//        void fixDirection(void);
         
         // solve the optimization problem that minimizes E using a hill-climbing method,
         // the final result will be in result
@@ -122,6 +128,8 @@ namespace FracCuts {
         void clearGradFileOutputBuffer(void);
         
     protected: // helper functions
+        bool fullyImplicit(void);
+        
         // solve for new configuration in the next iteration
         //NOTE: must compute current gradient first
         bool solve_oneStep(void);
