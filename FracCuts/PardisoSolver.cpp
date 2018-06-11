@@ -408,12 +408,14 @@ void PardisoSolver<vectorTypeI,vectorTypeS>::update_a(const vectorTypeI &II_,
     for(int tripletI = 0; tripletI < II_.size(); tripletI++) {
         int i = II_[tripletI], j = JJ_[tripletI];
         if(i <= j) {
+//        if((i <= j) && (i != 2) && (j != 2)) {
             assert(i < IJ2aI.size());
             const auto finder = IJ2aI[i].find(j);
             assert(finder != IJ2aI[i].end());
             a[finder->second] += SS_[tripletI];
         }
     }
+//    a[IJ2aI[2].find(2)->second] = 1.0;
 }
 
 template <typename vectorTypeI, typename vectorTypeS>

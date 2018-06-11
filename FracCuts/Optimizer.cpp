@@ -593,6 +593,7 @@ namespace FracCuts {
     bool Optimizer::fullyImplicit(void)
     {
         double sqn_g = __DBL_MAX__;
+        computeEnergyVal(result, scaffold, lastEnergyVal);
         do {
             if(solve_oneStep()) {
                 std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
@@ -613,17 +614,17 @@ namespace FracCuts {
     {
         if(needRefactorize) {
             // for the changing hessian
-            if(!mute) {
-                std::cout << "recompute proxy/Hessian matrix..." << std::endl;
-            }
             if(!fractureInitiated) {
+                if(!mute) {
+                    std::cout << "recompute proxy/Hessian matrix..." << std::endl;
+                }
                 computePrecondMtr(result, scaffold, precondMtr);
             }
             
-            if(!mute) {
-                std::cout << "factorizing proxy/Hessian matrix..." << std::endl;
-            }
             if(!pardisoThreadAmt) {
+                if(!mute) {
+                    std::cout << "factorizing proxy/Hessian matrix..." << std::endl;
+                }
                 cholSolver.factorize(precondMtr);
                 if(cholSolver.info() != Eigen::Success) {
                     IglUtils::writeSparseMatrixToFile(outputFolderPath + "precondMtr_decomposeFailed", precondMtr);
@@ -635,13 +636,21 @@ namespace FracCuts {
                     if(scaffolding) {
                         if(!mute) { timer_step.start(1); }
 //                        pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-                        pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+                        pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr,
+                                                  scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                                   scaffolding ? fixedV_withScaf : result.fixedVert);
+                        
+                        if(!mute) {
+                            std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
+                        }
                         if(!mute) { timer_step.stop(); timer_step.start(2); }
                         pardisoSolver.analyze_pattern();
                         if(!mute) { timer_step.stop(); }
                     }
                     else {
+                        if(!mute) {
+                            std::cout << "updating matrix entries..." << std::endl;
+                        }
                         if(!mute) { timer_step.start(1); }
 //                        pardisoSolver.update_a(V_mtr);
                         pardisoSolver.update_a(I_mtr, J_mtr, V_mtr);
@@ -649,6 +658,9 @@ namespace FracCuts {
                     }
                 }
                 try {
+                    if(!mute) {
+                        std::cout << "numerically factorizing Hessian/Proxy matrix..." << std::endl;
+                    }
                     if(!mute) { timer_step.start(3); }
                     pardisoSolver.factorize();
                     if(!mute) { timer_step.stop(); }
@@ -661,6 +673,9 @@ namespace FracCuts {
         }
         
         if(!pardisoThreadAmt) {
+            if(!mute) {
+                std::cout << "back solve..." << std::endl;
+            }
             searchDir = cholSolver.solve(-gradient);
             if(cholSolver.info() != Eigen::Success) {
                 assert(0 && "Cholesky solve failed!");
@@ -668,6 +683,9 @@ namespace FracCuts {
         }
         else {
             Eigen::VectorXd minusG = -gradient;
+            if(!mute) {
+                std::cout << "back solve..." << std::endl;
+            }
             if(!mute) { timer_step.start(4); }
             pardisoSolver.solve(minusG, searchDir);
             if(!mute) { timer_step.stop(); }
@@ -711,7 +729,7 @@ namespace FracCuts {
 //        Eigen::VectorXd testingG;
         computeEnergyVal(result, scaffold, testingE);
 //        computeGradient(testingData, testingG);
-//#define ARMIJO_RULE
+#define ARMIJO_RULE
 #ifdef ARMIJO_RULE
 //        while((testingE > lastEnergyVal + stepSize * c1m) ||
 //              (searchDir.dot(testingG) < c2m)) // Wolfe condition
@@ -951,6 +969,7 @@ namespace FracCuts {
 //            gradient.conservativeResize(gradient.size() + 1);
 //            gradient.tail(1) << cx;
 //        }
+//        gradient[2] = 0.0;
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr)
     {
