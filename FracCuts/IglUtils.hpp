@@ -113,6 +113,10 @@ namespace FracCuts {
                                       const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
         
         static void smoothVertField(const TriangleSoup& mesh, Eigen::VectorXd& field);
+        
+        static void compute_dsigma_div_dx(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                          const Eigen::MatrixXd& A,
+                                          Eigen::MatrixXd& dsigma_div_dx);
     };
     
 }

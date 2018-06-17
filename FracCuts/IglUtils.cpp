@@ -735,4 +735,23 @@ namespace FracCuts {
             field[vI] /= mesh.vNeighbor[vI].size() + 1;
         }
     }
+    
+    void IglUtils::compute_dsigma_div_dx(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                         const Eigen::MatrixXd& A,
+                                         Eigen::MatrixXd& dsigma_div_dx)
+    {
+        dsigma_div_dx.resize(6, 2);
+        
+        const double mA11mA21 = -A(0, 0) - A(1, 0);
+        const double mA12mA22 = -A(0, 1) - A(1, 1);
+        for(int dimI = 0; dimI < 2; dimI++) {
+            Eigen::Matrix2d dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            dsigma_div_dx(0, dimI) = dsigma_div_dF(0, 0) * mA11mA21 + dsigma_div_dF(0, 1) * mA12mA22;
+            dsigma_div_dx(1, dimI) = dsigma_div_dF(1, 0) * mA11mA21 + dsigma_div_dF(1, 1) * mA12mA22;
+            dsigma_div_dx(2, dimI) = dsigma_div_dF(0, 0) * A(0, 0) + dsigma_div_dF(0, 1) * A(0, 1);
+            dsigma_div_dx(3, dimI) = dsigma_div_dF(1, 0) * A(0, 0) + dsigma_div_dF(1, 1) * A(0, 1);
+            dsigma_div_dx(4, dimI) = dsigma_div_dF(0, 0) * A(1, 0) + dsigma_div_dF(0, 1) * A(1, 1);
+            dsigma_div_dx(5, dimI) = dsigma_div_dF(1, 0) * A(1, 0) + dsigma_div_dF(1, 1) * A(1, 1);
+        }
+    }
 }

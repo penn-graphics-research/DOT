@@ -938,10 +938,12 @@ namespace FracCuts {
     }
     void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
-        energyTerms[0]->computeGradient(data, gradient_ET[0]);
+//        energyTerms[0]->computeGradient(data, gradient_ET[0]);
+        energyTerms[0]->computeGradientBySVD(data, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
+//            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
+            energyTerms[eI]->computeGradientBySVD(data, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         

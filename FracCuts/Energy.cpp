@@ -81,7 +81,8 @@ namespace FracCuts {
         }
         
         Eigen::VectorXd gradient_symbolic;
-        computeGradient(data, gradient_symbolic);
+//        computeGradient(data, gradient_symbolic);
+        computeGradientBySVD(data, gradient_symbolic);
         
         Eigen::VectorXd difVec = gradient_symbolic - gradient_finiteDiff;
         const double dif_L2 = difVec.norm();
@@ -160,6 +161,10 @@ namespace FracCuts {
         logFile << "h_finiteDiff = \n" << hessian_finiteDiff << std::endl;
     }
     
+    void Energy::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
+    {
+        assert(0 && "please implement!");
+    }
     
     void Energy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {

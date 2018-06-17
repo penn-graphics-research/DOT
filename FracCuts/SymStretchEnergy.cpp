@@ -828,6 +828,48 @@ namespace FracCuts {
         logFile << "energyVal computation error = " << err << std::endl;
     }
     
+    void SymStretchEnergy::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
+    {
+        gradient.resize(data.V.rows() * 2);
+        gradient.setZero();
+        for(int triI = 0; triI < data.F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = data.F.row(triI);
+            
+            Eigen::Vector3d x0_3D[3] = {
+                data.V_rest.row(triVInd[0]),
+                data.V_rest.row(triVInd[1]),
+                data.V_rest.row(triVInd[2])
+            };
+            Eigen::Vector2d x0[3];
+            IglUtils::mapTriangleTo2D(x0_3D, x0);
+            
+            Eigen::Matrix2d X0, Xt, A;
+            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
+                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            A = X0.inverse(); //TODO: this only need to be computed once
+            
+            Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            
+            Eigen::MatrixXd dsigma_div_dx;
+            IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
+            
+            Eigen::Vector2d dE_div_dsigma;
+            dE_div_dsigma[0] = 2.0 * svd.singularValues()[0] - 2.0 * std::pow(svd.singularValues()[0], -3);
+            dE_div_dsigma[1] = 2.0 * svd.singularValues()[1] - 2.0 * std::pow(svd.singularValues()[1], -3);
+            
+            const double w = data.triArea[triI];
+            for(int triVI = 0; triVI < 3; triVI++) {
+                gradient.segment(triVInd[triVI] * 2, 2) += w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
+            }
+        }
+        
+        for(const auto fixedVI : data.fixedVert) {
+            gradient[2 * fixedVI] = 0.0;
+            gradient[2 * fixedVI + 1] = 0.0;
+        }
+    }
+    
     SymStretchEnergy::SymStretchEnergy(void) :
         Energy(true)
     {
