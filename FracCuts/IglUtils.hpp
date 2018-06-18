@@ -117,6 +117,15 @@ namespace FracCuts {
         static void compute_dsigma_div_dx(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
                                           const Eigen::MatrixXd& A,
                                           Eigen::MatrixXd& dsigma_div_dx);
+        
+        static void compute_d2sigma_div_dx2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                            const Eigen::MatrixXd& A,
+                                            Eigen::MatrixXd& d2sigma_div_dx2);
+        static void compute_d2sigma_div_dF2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                            Eigen::MatrixXd& d2sigma_div_dF2);
+        static void compute_dU_and_dV_div_dF(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                             Eigen::MatrixXd& dU_div_dF,
+                                             Eigen::MatrixXd& dV_div_dF);
     };
     
 }

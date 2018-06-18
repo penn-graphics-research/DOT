@@ -754,4 +754,81 @@ namespace FracCuts {
             dsigma_div_dx(5, dimI) = dsigma_div_dF(1, 0) * A(1, 0) + dsigma_div_dF(1, 1) * A(1, 1);
         }
     }
+    
+    void IglUtils::compute_dU_and_dV_div_dF(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                            Eigen::MatrixXd& dU_div_dF,
+                                            Eigen::MatrixXd& dV_div_dF)
+    {
+        Eigen::Matrix2d coefMtr;
+        coefMtr << svd.singularValues()[0], svd.singularValues()[1],
+            svd.singularValues()[1], svd.singularValues()[0];
+        const Eigen::LDLT<Eigen::Matrix2d>& solver = coefMtr.ldlt();
+        if(solver.info() != Eigen::Success) {
+            assert(0 && "isometric degeneracy in Hessian computation");
+        }
+        
+        dU_div_dF.resize(4, 4);
+        dV_div_dF.resize(4, 4);
+        
+        Eigen::Vector2d b;
+        for(int rowI = 0; rowI < 2; rowI++) {
+            for(int colI = 0; colI < 2; colI++) {
+                b << svd.matrixU()(rowI, 1) * svd.matrixV()(colI, 0),
+                    -svd.matrixU()(rowI, 0) * svd.matrixV()(colI, 1);
+                const Eigen::Vector2d wij21 = solver.solve(b);
+                
+                dU_div_dF.block(rowI * 2 + colI, 0, 1, 2) = wij21[0] * svd.matrixU().col(1).transpose();
+                dU_div_dF.block(rowI * 2 + colI, 2, 1, 2) = -wij21[0] * svd.matrixU().col(0).transpose();
+                
+                dV_div_dF.block(rowI * 2 + colI, 0, 1, 2) = -wij21[1] * svd.matrixV().col(1).transpose();
+                dV_div_dF.block(rowI * 2 + colI, 2, 1, 2) = wij21[1] * svd.matrixV().col(0).transpose();
+            }
+        }
+    }
+    
+    void IglUtils::compute_d2sigma_div_dF2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                           Eigen::MatrixXd& d2sigma_div_dF2)
+    {
+        Eigen::MatrixXd dU_div_dF, dV_div_dF;
+        compute_dU_and_dV_div_dF(svd, dU_div_dF, dV_div_dF);
+        
+        d2sigma_div_dF2.resize(4, 8);
+        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
+            for(int Fij = 0; Fij < 4; Fij++) {
+                const Eigen::Matrix2d& d2sigma_div_dF2ij = dU_div_dF.block(Fij, sigmaI * 2, 1, 2).transpose() * svd.matrixV().col(sigmaI).transpose() +
+                    svd.matrixU().col(sigmaI) * dV_div_dF.block(Fij, sigmaI * 2, 1, 2);
+                d2sigma_div_dF2.block(Fij, sigmaI * 4, 1, 4) << d2sigma_div_dF2ij.row(0), d2sigma_div_dF2ij.row(1);
+            }
+        }
+    }
+    
+    void IglUtils::compute_d2sigma_div_dx2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+                                           const Eigen::MatrixXd& A,
+                                           Eigen::MatrixXd& d2sigma_div_dx2)
+    {
+        Eigen::MatrixXd d2sigma_div_dF2;
+        compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
+        
+        //TODO: write into function, also replace gradient computation, PRECOMPUTE!
+        Eigen::MatrixXd dF_div_dx;
+        dF_div_dx.resize(6, 4);
+        const double mA11mA21 = -A(0, 0) - A(1, 0);
+        const double mA12mA22 = -A(0, 1) - A(1, 1);
+        dF_div_dx <<
+            mA11mA21, mA12mA22, 0.0, 0.0,
+            0.0, 0.0, mA11mA21, mA12mA22,
+            A(0, 0), A(0, 1), 0.0, 0.0,
+            0.0, 0.0, A(0, 0), A(0, 1),
+            A(1, 0), A(1, 1), 0.0, 0.0,
+            0.0, 0.0, A(1, 0), A(1, 1);
+        
+        d2sigma_div_dx2.resize(6, 12);
+        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
+            for(int xI = 0; xI < 3; xI++) {
+                for(int xJ = 0; xJ < 3; xJ++) {
+                    d2sigma_div_dx2.block(xJ * 2, sigmaI * 6 + xI * 2, 2, 2) = dF_div_dx.block(xJ * 2, 0, 2, 4) * d2sigma_div_dF2.block(0, 4 * sigmaI, 4, 4) * dF_div_dx.block(xI * 2, 0, 2, 4).transpose();
+                }
+            }
+        }
+    }
 }

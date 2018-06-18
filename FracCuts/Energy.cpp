@@ -138,7 +138,8 @@ namespace FracCuts {
         if(triplet) {
             Eigen::VectorXi I, J;
             Eigen::VectorXd V;
-            computePrecondMtr(data, &V, &I, &J); //TODO: change name to Hessian!
+//            computePrecondMtr(data, &V, &I, &J); //TODO: change name to Hessian!
+            computeHessianBySVD(data, &V, &I, &J);
             std::vector<Eigen::Triplet<double>> triplet(V.size());
             for(int entryI = 0; entryI < V.size(); entryI++) {
                 triplet[entryI] = Eigen::Triplet<double>(I[entryI], J[entryI], V[entryI]);
@@ -162,6 +163,12 @@ namespace FracCuts {
     }
     
     void Energy::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
+    {
+        assert(0 && "please implement!");
+    }
+    
+    void Energy::computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
+                                     Eigen::VectorXi* I, Eigen::VectorXi* J) const
     {
         assert(0 && "please implement!");
     }

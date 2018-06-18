@@ -41,6 +41,8 @@ namespace FracCuts {
         virtual void checkHessian(const TriangleSoup& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
+        virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
+                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL) const;
         
         virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
     };

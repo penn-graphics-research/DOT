@@ -984,7 +984,8 @@ namespace FracCuts {
             for(int eI = 0; eI < energyTerms.size(); eI++) {
                 Eigen::VectorXi I, J;
                 Eigen::VectorXd V;
-                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
+//                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
+                energyTerms[eI]->computeHessianBySVD(data, &V, &I, &J);
                 V *= energyParams[eI] * dtSq;
                 I_mtr.conservativeResize(I_mtr.size() + I.size());
                 I_mtr.bottomRows(I.size()) = I;
