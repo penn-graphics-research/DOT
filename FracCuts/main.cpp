@@ -3,6 +3,7 @@
 #include "Optimizer.hpp"
 #include "SymStretchEnergy.hpp"
 #include "ARAPEnergy.hpp"
+#include "NeoHookeanEnergy.hpp"
 #include "SeparationEnergy.hpp"
 #include "CohesiveEnergy.hpp"
 #include "GIF.hpp"
@@ -177,7 +178,9 @@ void updateViewerData_distortion(void)
         case 1: { // show SD energy value
             Eigen::VectorXd distortionPerElem;
             energyTerms[0]->getEnergyValPerElem(*triSoup[viewChannel], distortionPerElem, true);
-            FracCuts::IglUtils::mapScalarToColor(distortionPerElem, color_distortionVis, 4.0, 8.5);
+            const Eigen::VectorXd& visRange = energyTerms[0]->getVisRange_energyVal();
+            FracCuts::IglUtils::mapScalarToColor(distortionPerElem, color_distortionVis,
+                                                 visRange[0], visRange[1]);
             break;
         }
             
@@ -1561,7 +1564,8 @@ int main(int argc, char *argv[])
     if(lambda != 1.0) {
         energyParams.emplace_back(1.0 - lambda);
 //        energyTerms.emplace_back(new FracCuts::ARAPEnergy());
-        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+//        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+        energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy());
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0], true);

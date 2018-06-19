@@ -17,13 +17,18 @@ namespace FracCuts {
     class Energy {
     protected:
         const bool needRefactorize;
+        const bool crossSigmaDervative;
+        Eigen::Vector2d visRange_energyVal;
         
     public:
-        Energy(bool p_needRefactorize);
+        Energy(bool p_needRefactorize, bool p_crossSigmaDervative = false,
+               double visRange_min = 0.0, double visRange_max = 1.0);
         virtual ~Energy(void);
         
     public:
         bool getNeedRefactorize(void) const;
+        const Eigen::Vector2d& getVisRange_energyVal(void) const;
+        void setVisRange_energyVal(double visRange_min, double visRange_max);
         
     public:
         virtual void computeEnergyVal(const TriangleSoup& data, double& energyVal, bool uniformWeight = false) const;
@@ -47,9 +52,10 @@ namespace FracCuts {
         virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                             Eigen::VectorXd& d2E_div_dsigma2) const;
+                                             Eigen::MatrixXd& d2E_div_dsigma2) const;
         
         virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
+        virtual void initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
     };
     
 }

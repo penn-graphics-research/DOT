@@ -735,61 +735,7 @@ namespace FracCuts {
     
     void SymStretchEnergy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
-        double left = 1.0, right = 0.0;
-        for(int triI = 0; triI < data.F.rows(); triI++)
-        {
-            const Eigen::Vector3i& triVInd = data.F.row(triI);
-            
-            const Eigen::Vector2d& U1 = data.V.row(triVInd[0]);
-            const Eigen::Vector2d& U2 = data.V.row(triVInd[1]);
-            const Eigen::Vector2d& U3 = data.V.row(triVInd[2]);
-            
-            const Eigen::Vector2d V1(searchDir[triVInd[0] * 2], searchDir[triVInd[0] * 2 + 1]);
-            const Eigen::Vector2d V2(searchDir[triVInd[1] * 2], searchDir[triVInd[1] * 2 + 1]);
-            const Eigen::Vector2d V3(searchDir[triVInd[2] * 2], searchDir[triVInd[2] * 2 + 1]);
-            
-            const Eigen::Vector2d U2m1 = U2 - U1;
-            const Eigen::Vector2d U3m1 = U3 - U1;
-            const Eigen::Vector2d V2m1 = V2 - V1;
-            const Eigen::Vector2d V3m1 = V3 - V1;
-            
-            const double a = V2m1[0] * V3m1[1] - V2m1[1] * V3m1[0];
-            const double b = U2m1[0] * V3m1[1] - U2m1[1] * V3m1[0] + V2m1[0] * U3m1[1] - V2m1[1] * U3m1[0];
-            const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
-            assert(c > 0.0);
-            const double delta = b * b - 4.0 * a * c;
-            double bound = stepSize;
-            if(a > 0.0) {
-                if((b < 0.0) && (delta > 0.0)) {
-                    const double r_left = (-b - sqrt(delta)) / 2.0 / a;
-                    assert(r_left > 0.0);
-                    const double r_right = (-b + sqrt(delta)) / 2.0 / a;
-                    if(r_left < left) {
-                        left = r_left;
-                    }
-                    if(r_right > right) {
-                        right = r_right;
-                    }
-                }
-            }
-            else if(a < 0.0) {
-                assert(delta > 0.0);
-                bound = (-b - sqrt(delta)) / 2.0 / a;
-            }
-            else {
-                if(b < 0.0) {
-                    bound = -c / b;
-                }
-            }
-            if(bound < stepSize) {
-                stepSize = bound;
-            }
-        }
-        
-        if((stepSize < right) && (stepSize > left)) {
-            stepSize = left;
-        }
-        assert(stepSize > 0.0);
+        Energy::initStepSize_preventElemInv(data, searchDir, stepSize);
     }
     
     void SymStretchEnergy::checkEnergyVal(const TriangleSoup& data) const
@@ -838,19 +784,18 @@ namespace FracCuts {
         }
     }
     void SymStretchEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                                   Eigen::VectorXd& d2E_div_dsigma2) const
+                                                   Eigen::MatrixXd& d2E_div_dsigma2) const
     {
-        d2E_div_dsigma2.resize(singularValues.size());
+        d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
+        d2E_div_dsigma2.setZero();
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            d2E_div_dsigma2[sigmaI] = 2.0 + 6.0 * std::pow(singularValues[sigmaI], -4);
+            d2E_div_dsigma2(sigmaI, sigmaI) = 2.0 + 6.0 * std::pow(singularValues[sigmaI], -4);
         }
     }
     
     SymStretchEnergy::SymStretchEnergy(void) :
-        Energy(true)
-    {
-        
-    }
+        Energy(true, false, 4.0, 8.5)
+    {}
     
     void SymStretchEnergy::computeStressTensor(const Eigen::Vector3d v[3], const Eigen::Vector2d u[3], Eigen::Matrix2d& stressTensor)
     {

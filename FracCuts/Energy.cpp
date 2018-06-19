@@ -20,20 +20,30 @@ extern std::ofstream logFile;
 
 namespace FracCuts {
     
-    Energy::Energy(bool p_needRefactorize) :
-        needRefactorize(p_needRefactorize)
-    {
-        
-    }
+    Energy::Energy(bool p_needRefactorize,
+                   bool p_crossSigmaDervative,
+                   double visRange_min,
+                   double visRange_max) :
+        needRefactorize(p_needRefactorize),
+        crossSigmaDervative(p_crossSigmaDervative),
+        visRange_energyVal(visRange_min, visRange_max)
+    {}
     
     Energy::~Energy(void)
-    {
-        
-    }
+    {}
     
     bool Energy::getNeedRefactorize(void) const
     {
         return needRefactorize;
+    }
+    
+    const Eigen::Vector2d& Energy::getVisRange_energyVal(void) const
+    {
+        return visRange_energyVal;
+    }
+    void Energy::setVisRange_energyVal(double visRange_min, double visRange_max)
+    {
+        visRange_energyVal << visRange_min, visRange_max;
     }
     
     void Energy::computeEnergyVal(const TriangleSoup& data, double& energyVal, bool uniformWeight) const
@@ -118,7 +128,8 @@ namespace FracCuts {
         std::cout << "checking energy hessian computation..." << std::endl;
         
         Eigen::VectorXd gradient0;
-        computeGradient(data, gradient0);
+//        computeGradient(data, gradient0);
+        computeGradientBySVD(data, gradient0);
         const double h = 1.0e-8 * igl::avg_edge_length(data.V, data.F);
         TriangleSoup perturbed = data;
         Eigen::SparseMatrix<double> hessian_finiteDiff;
@@ -135,7 +146,8 @@ namespace FracCuts {
                 perturbed.V = data.V;
                 perturbed.V(vI, dimI) += h;
                 Eigen::VectorXd gradient_perturbed;
-                computeGradient(perturbed, gradient_perturbed);
+//                computeGradient(perturbed, gradient_perturbed);
+                computeGradientBySVD(perturbed, gradient_perturbed);
                 Eigen::VectorXd hessian_colI = (gradient_perturbed - gradient0) / h;
                 int colI = vI * 2 + dimI;
                 for(int rowI = 0; rowI < data.V.rows() * 2; rowI++) {
@@ -257,14 +269,25 @@ namespace FracCuts {
             d2sigma_div_dx2.block(0, 6, 6, 6) * dE_div_dsigma[1];
             
             // left term:
-            Eigen::VectorXd d2E_div_dsigma2;
+            Eigen::MatrixXd d2E_div_dsigma2;
             compute_d2E_div_dsigma2(svd.singularValues(), d2E_div_dsigma2);
             
             Eigen::MatrixXd dsigma_div_dx;
             IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
             
-            Eigen::MatrixXd d2E_div_dx2_left = d2E_div_dsigma2[0] * dsigma_div_dx.col(0) * dsigma_div_dx.col(0).transpose() +
-            d2E_div_dsigma2[1] * dsigma_div_dx.col(1) * dsigma_div_dx.col(1).transpose();
+            Eigen::MatrixXd d2E_div_dx2_left = d2E_div_dsigma2(0, 0) * dsigma_div_dx.col(0) * dsigma_div_dx.col(0).transpose() +
+            d2E_div_dsigma2(1, 1) * dsigma_div_dx.col(1) * dsigma_div_dx.col(1).transpose();
+            
+            // cross sigma derivative
+            if(crossSigmaDervative) {
+                for(int sigmaI = 0; sigmaI < svd.singularValues().size(); sigmaI++) {
+                    for(int sigmaJ = sigmaI + 1; sigmaJ < svd.singularValues().size(); sigmaJ++) {
+                        const Eigen::MatrixXd m = dsigma_div_dx.col(sigmaJ) * dsigma_div_dx.col(sigmaI).transpose();
+                        d2E_div_dx2_left += d2E_div_dsigma2(sigmaI, sigmaJ) * m +
+                            d2E_div_dsigma2(sigmaJ, sigmaI) * m.transpose();
+                    }
+                }
+            }
             
             // add up left term and right term
             const double w = data.triArea[triI];
@@ -301,14 +324,71 @@ namespace FracCuts {
         assert(0 && "please implement this method in the subclass!");
     }
     void Energy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                         Eigen::VectorXd& d2E_div_dsigma2) const
+                                         Eigen::MatrixXd& d2E_div_dsigma2) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
     void Energy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
+    {}
+    
+    void Energy::initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
+        double left = 1.0, right = 0.0;
+        for(int triI = 0; triI < data.F.rows(); triI++)
+        {
+            const Eigen::Vector3i& triVInd = data.F.row(triI);
+            
+            const Eigen::Vector2d& U1 = data.V.row(triVInd[0]);
+            const Eigen::Vector2d& U2 = data.V.row(triVInd[1]);
+            const Eigen::Vector2d& U3 = data.V.row(triVInd[2]);
+            
+            const Eigen::Vector2d V1(searchDir[triVInd[0] * 2], searchDir[triVInd[0] * 2 + 1]);
+            const Eigen::Vector2d V2(searchDir[triVInd[1] * 2], searchDir[triVInd[1] * 2 + 1]);
+            const Eigen::Vector2d V3(searchDir[triVInd[2] * 2], searchDir[triVInd[2] * 2 + 1]);
+            
+            const Eigen::Vector2d U2m1 = U2 - U1;
+            const Eigen::Vector2d U3m1 = U3 - U1;
+            const Eigen::Vector2d V2m1 = V2 - V1;
+            const Eigen::Vector2d V3m1 = V3 - V1;
+            
+            const double a = V2m1[0] * V3m1[1] - V2m1[1] * V3m1[0];
+            const double b = U2m1[0] * V3m1[1] - U2m1[1] * V3m1[0] + V2m1[0] * U3m1[1] - V2m1[1] * U3m1[0];
+            const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
+            assert(c > 0.0);
+            const double delta = b * b - 4.0 * a * c;
+            double bound = stepSize;
+            if(a > 0.0) {
+                if((b < 0.0) && (delta > 0.0)) {
+                    const double r_left = (-b - sqrt(delta)) / 2.0 / a;
+                    assert(r_left > 0.0);
+                    const double r_right = (-b + sqrt(delta)) / 2.0 / a;
+                    if(r_left < left) {
+                        left = r_left;
+                    }
+                    if(r_right > right) {
+                        right = r_right;
+                    }
+                }
+            }
+            else if(a < 0.0) {
+                assert(delta > 0.0);
+                bound = (-b - sqrt(delta)) / 2.0 / a;
+            }
+            else {
+                if(b < 0.0) {
+                    bound = -c / b;
+                }
+            }
+            if(bound < stepSize) {
+                stepSize = bound;
+            }
+        }
         
+        if((stepSize < right) && (stepSize > left)) {
+            stepSize = left;
+        }
+        assert(stepSize > 0.0);
     }
     
 }

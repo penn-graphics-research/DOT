@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-        980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
+		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 987382CF2076F49A0040BBCE /* Scaffold.cpp */; };
 		988D81A720AA7FFE0037737D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988ED1271F57211500B21181 /* OpenGL.framework */; };
@@ -28,6 +28,7 @@
 		98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98CE476D1F71E66300627725 /* PardisoSolver.cpp */; };
 		98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98D10F2B1F5CA12C0010E1A6 /* SymStretchEnergy.cpp */; };
 		98D3E7D51F75AEC6000DA61D /* CohesiveEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */; };
+		98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -80,6 +81,8 @@
 		98D10F2C1F5CA12C0010E1A6 /* SymStretchEnergy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = SymStretchEnergy.hpp; sourceTree = "<group>"; };
 		98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CohesiveEnergy.cpp; sourceTree = "<group>"; };
 		98D3E7D41F75AEC6000DA61D /* CohesiveEnergy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = CohesiveEnergy.hpp; sourceTree = "<group>"; };
+		98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NeoHookeanEnergy.cpp; sourceTree = "<group>"; };
+		98E6E68120D976D500130500 /* NeoHookeanEnergy.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NeoHookeanEnergy.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -126,6 +129,8 @@
 			children = (
 				987382CF2076F49A0040BBCE /* Scaffold.cpp */,
 				98B57EA0207C748600F238C0 /* Timer.hpp */,
+				98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */,
+				98E6E68120D976D500130500 /* NeoHookeanEnergy.hpp */,
 				987382D02076F49A0040BBCE /* Scaffold.hpp */,
 				98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */,
 				98D3E7D41F75AEC6000DA61D /* CohesiveEnergy.hpp */,
@@ -235,9 +240,10 @@
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */,
 				98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */,
+				98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */,
 				98C2D8F41F6348820048B18A /* SeparationEnergy.cpp in Sources */,
 				988ED12F1F5727F400B21181 /* TriangleSoup.cpp in Sources */,
-                980180BC1F552CDA00C64B43 /* main.cpp in Sources */,
+				980180BC1F552CDA00C64B43 /* main.cpp in Sources */,
 				987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */,
 				98D3E7D51F75AEC6000DA61D /* CohesiveEnergy.cpp in Sources */,
 			);
