@@ -31,9 +31,10 @@ namespace FracCuts {
         virtual void computeDivGradPerVert(const TriangleSoup& data, Eigen::VectorXd& divGradPerVert) const;
         virtual void computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const;
         
-        virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
-        virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
-                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL) const;
+        virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
+                                           Eigen::VectorXd& dE_div_dsigma) const;
+        virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
+                                             Eigen::VectorXd& d2E_div_dsigma2) const;
         
         // to prevent element inversion
         virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
