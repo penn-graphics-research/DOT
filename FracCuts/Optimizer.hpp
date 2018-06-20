@@ -39,6 +39,7 @@ namespace FracCuts {
         int globalIterNum;
         int topoIter;
         double relGL2Tol, energyParamSum;
+        double sqnorm_H_rest, sqnorm_l;
         TriangleSoup result; // intermediate results of each iteration
         TriangleSoup data_findExtrema; // intermediate results for deciding the cuts in each topology step
         bool scaffolding; // whether to enable bijectivity parameterization
@@ -79,6 +80,7 @@ namespace FracCuts {
         Eigen::VectorXd velocity;
         Eigen::MatrixXd resultV_n;
         double dt, dtSq;
+        int frameAmt;
         
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,

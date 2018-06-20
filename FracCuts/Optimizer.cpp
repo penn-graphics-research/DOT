@@ -13,6 +13,7 @@
 #include "Timer.hpp"
 
 #include <igl/avg_edge_length.h>
+#include <igl/edge_lengths.h>
 
 //#include <omp.h>
 
@@ -60,8 +61,23 @@ namespace FracCuts {
         }
         
         globalIterNum = 0;
-        relGL2Tol = 1.0e-12;
+        relGL2Tol = 1.0e-10;
         topoIter = 0;
+        
+        Eigen::MatrixXd d2E_div_dF2_rest;
+        energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
+        sqnorm_H_rest = d2E_div_dF2_rest.squaredNorm();
+        Eigen::MatrixXd edgeLens;
+        igl::edge_lengths(data0.V_rest, data0.F, edgeLens);
+        Eigen::VectorXd ls;
+        ls.resize(data0.V_rest.rows());
+        ls.setZero();
+        for(int triI = 0; triI < data0.F.rows(); triI++) {
+            for(int i = 0; i < 3; i++) {
+                ls[data0.F(triI, i)] += edgeLens(triI, i);
+            }
+        }
+        sqnorm_l = ls.squaredNorm();
         
         needRefactorize = false;
         for(const auto& energyTermI : energyTerms) {
@@ -83,6 +99,7 @@ namespace FracCuts {
 #ifndef STATIC_SOLVE
         dt = 0.04;
         dtSq = dt * dt;
+        frameAmt = 10.0 / dt;
 #else
         dt = dtSq = 1.0;
 #endif
@@ -238,7 +255,11 @@ namespace FracCuts {
                 std::cout << "||gradient||^2 = " << sqn_g << ", targetGRes = " << targetGRes << std::endl;
                 writeGradL2NormToFile(false);
             }
+#ifdef STATIC_SOLVE
             if(sqn_g < targetGRes) {
+#else
+            if(globalIterNum >= frameAmt) {
+#endif
                 // converged
                 lastEDec = 0.0;
                 globalIterNum++;
@@ -820,8 +841,12 @@ namespace FracCuts {
     void Optimizer::updateTargetGRes(void)
     {
 //        targetGRes = energyParamSum * (data0.V_rest.rows() - data0.fixedVert.size()) * relGL2Tol * data0.avgEdgeLen * data0.avgEdgeLen;
-        targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
-        targetGRes *= data0.surfaceArea * data0.surfaceArea;
+//        targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
+//        targetGRes *= data0.surfaceArea * data0.surfaceArea;
+        targetGRes = relGL2Tol * sqnorm_H_rest * sqnorm_l * (data0.V_rest.rows() - data0.fixedVert.size()) / data0.V_rest.rows() * energyParamSum * energyParamSum;
+#ifndef STATIC_SOLVE
+        targetGRes *= dtSq * dtSq;
+#endif
     }
     
     void Optimizer::getGradientVisual(Eigen::MatrixXd& arrowVec) const

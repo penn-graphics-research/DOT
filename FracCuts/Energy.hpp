@@ -54,6 +54,8 @@ namespace FracCuts {
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
                                              Eigen::MatrixXd& d2E_div_dsigma2) const;
         
+        virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
+        
         virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
         virtual void initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
     };

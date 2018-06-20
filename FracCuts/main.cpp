@@ -75,14 +75,15 @@ const int channel_findExtrema = 2;
 int viewChannel = channel_result;
 bool viewUV = true; // view UV or 3D model
 double texScale = 1.0;
-bool showSeam = true;
+bool showSeam = false;
 Eigen::MatrixXd seamColor;
 bool showBoundary = false;
 int showDistortion = 1; // 0: don't show; 1: SD energy value; 2: L2 stretch value;
 bool showTexture = true; // show checkerboard
 bool isLighting = false;
-bool showFracTail = true;
-float fracTailSize = 15.0f;
+bool showFracTail = true; //!!! frac tail info not initialized correctly
+bool showFixedVerts = true; //TODO: add key control
+float fracTailSize = 20.0f;
 double secPast = 0.0;
 time_t lastStart_world;
 Timer timer, timer_step;
@@ -93,7 +94,7 @@ bool isCapture3D = false;
 int capture3DI = 0;
 GifWriter GIFWriter;
 uint32_t GIFDelay = 10; //*10ms
-double GIFScale = 0.25;
+double GIFScale = 0.4;
 
 
 void saveInfo(bool writePNG = true, bool writeGIF = true, bool writeMesh = true);
@@ -240,7 +241,7 @@ void updateViewerData(void)
         }
         UV_vis.conservativeResize(UV_vis.rows(), 3);
         UV_vis.rightCols(1) = Eigen::VectorXd::Zero(UV_vis.rows());
-        viewer.core.align_camera_center(UV_vis, F_vis);
+        viewer.core.align_camera_center(triSoup[0]->V * texScale, triSoup[0]->F);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
         
         if((UV_vis.rows() != viewer.data().V.rows()) ||
@@ -259,6 +260,11 @@ void updateViewerData(void)
         if(showFracTail) {
             for(const auto& tailVI : triSoup[viewChannel]->fracTail) {
                 viewer.data().add_points(UV_vis.row(tailVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
+            }
+        }
+        if(showFixedVerts) {
+            for(const auto& fixedVI : triSoup[viewChannel]->fixedVert) {
+                viewer.data().add_points(UV_vis.row(fixedVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
             }
         }
     }
@@ -296,6 +302,11 @@ void updateViewerData(void)
         if(showFracTail) {
             for(const auto& tailVI : triSoup[viewChannel]->fracTail) {
                 viewer.data().add_points(V_vis.row(tailVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
+            }
+        }
+        if(showFixedVerts) {
+            for(const auto& fixedVI : triSoup[viewChannel]->fixedVert) {
+                viewer.data().add_points(V_vis.row(fixedVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
             }
         }
     }
@@ -1248,11 +1259,20 @@ int main(int argc, char *argv[])
     Eigen::MatrixXi F, FUV, FN;
     const std::string suffix = meshFilePath.substr(meshFilePath.find_last_of('.'));
     bool loadSucceed = false;
+    std::vector<std::vector<int>> borderVerts_primitive;
     if(suffix == ".off") {
         loadSucceed = igl::readOFF(meshFilePath, V, F);
     }
     else if(suffix == ".obj") {
         loadSucceed = igl::readOBJ(meshFilePath, V, UV, N, F, FUV, FN);
+    }
+    else if(suffix == ".primitive") {
+        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, 1.0, 0.1, false);
+        V = primitive.V_rest;
+        UV = primitive.V;
+        F = primitive.F;
+        borderVerts_primitive = primitive.borderVerts_primitive;
+        loadSucceed = true;
     }
     else {
         std::cout << "unkown mesh file format!" << std::endl;
@@ -1370,7 +1390,7 @@ int main(int argc, char *argv[])
 #define USE_INPUT_UV
 #ifdef USE_INPUT_UV
     if(UV.rows() != 0) {
-        bool onlyUseInputSeam = true;
+        bool onlyUseInputSeam = false;
         if(onlyUseInputSeam) {
             // generate Tutte embedding using input seams
             Eigen::VectorXi bnd;
@@ -1444,6 +1464,16 @@ int main(int argc, char *argv[])
                     "Exit program..." << std::endl;
                 exit(-1);
             }
+        }
+        
+        // primitive test cases
+        if(suffix == ".primitive") {
+            temp->V *= 1.5;
+            temp->fixedVert.clear();
+            for(const auto borderI : borderVerts_primitive) {
+                temp->fixedVert.insert(borderI.begin(), borderI.end());
+            }
+            temp->borderVerts_primitive = borderVerts_primitive;
         }
         
         triSoup.emplace_back(temp);

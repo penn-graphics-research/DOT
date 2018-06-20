@@ -284,12 +284,21 @@ namespace FracCuts {
                 spacing = size / (gridSize - 1);
                 V_rest.resize(gridSize * gridSize, 3);
                 V.resize(gridSize * gridSize, 2);
+                borderVerts_primitive.resize(2);
                 for(int rowI = 0; rowI < gridSize; rowI++)
                 {
                     for(int colI = 0; colI < gridSize; colI++)
                     {
-                        V_rest.row(rowI * gridSize + colI) = Eigen::Vector3d(spacing * colI, spacing * rowI, 0.0);
-                        V.row(rowI * gridSize + colI) = spacing * Eigen::Vector2d(colI, rowI);
+                        int vI = rowI * gridSize + colI;
+                        V_rest.row(vI) = Eigen::Vector3d(spacing * colI, spacing * rowI, 0.0);
+                        V.row(vI) = spacing * Eigen::Vector2d(colI, rowI);
+                        
+                        if(colI == 0) {
+                            borderVerts_primitive[0].emplace_back(vI);
+                        }
+                        else if(colI == gridSize - 1) {
+                            borderVerts_primitive[1].emplace_back(vI);
+                        }
                     }
                 }
                 
