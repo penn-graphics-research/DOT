@@ -80,6 +80,7 @@ namespace FracCuts {
         Eigen::VectorXd velocity;
         Eigen::MatrixXd resultV_n;
         double dt, dtSq;
+        const Eigen::Vector2d gravity;
         int frameAmt;
         
     public: // constructor and destructor

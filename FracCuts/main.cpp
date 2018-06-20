@@ -1468,10 +1468,19 @@ int main(int argc, char *argv[])
         
         // primitive test cases
         if(suffix == ".primitive") {
-            temp->V *= 1.5;
+//            // fixed stretch
+//            temp->V.col(0) *= 2.0;
+//
+//            temp->fixedVert.clear();
+//            for(const auto borderI : borderVerts_primitive) {
+//                temp->fixedVert.insert(borderI.begin(), borderI.end());
+//            }
+//            temp->borderVerts_primitive = borderVerts_primitive;
+            
+            // hang
             temp->fixedVert.clear();
             for(const auto borderI : borderVerts_primitive) {
-                temp->fixedVert.insert(borderI.begin(), borderI.end());
+                temp->fixedVert.insert(borderI.back());
             }
             temp->borderVerts_primitive = borderVerts_primitive;
         }
@@ -1676,7 +1685,7 @@ int main(int argc, char *argv[])
     viewer.callback_post_draw = &postDrawFunc;
     viewer.data().show_lines = true;
     viewer.core.orthographic = true;
-    viewer.core.camera_zoom *= 1.9;
+//    viewer.core.camera_zoom *= 1.9;
     viewer.core.animation_max_fps = 60.0;
     viewer.data().point_size = fracTailSize;
     viewer.data().show_overlay = true;

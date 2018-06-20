@@ -446,6 +446,7 @@ namespace FracCuts {
         computeLaplacianMtr();
 #ifndef STATIC_SOLVE
         igl::massmatrix(V_rest, F, igl::MASSMATRIX_TYPE_VORONOI, massMatrix);
+        massMatrix *= density;
 #endif STATIC_SOLVE
         
 //        //!! for edge count minimization of separation energy
@@ -552,6 +553,7 @@ namespace FracCuts {
         computeLaplacianMtr();
 #ifndef STATIC_SOLVE
         igl::massmatrix(V_rest, F, igl::MASSMATRIX_TYPE_VORONOI, massMatrix);
+        massMatrix *= density;
 #endif
     }
     

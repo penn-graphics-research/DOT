@@ -35,7 +35,8 @@ namespace FracCuts {
                          const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd) :
-        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams)
+        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams),
+        gravity(0.0, -9.80665)
     {
         assert(energyTerms.size() == energyParams.size());
         
@@ -956,7 +957,7 @@ namespace FracCuts {
         for(int vI = 0; vI < data.V.rows(); vI++) {
             double massI = result.massMatrix.coeffRef(vI, vI);
 //            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
-            energyVal += (data.V.row(vI) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()).squaredNorm() * massI / 2.0;
+            energyVal += (data.V.row(vI) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()  - dtSq * gravity.transpose()).squaredNorm() * massI / 2.0;
         }
         //TODO: mass of negative space vertices
 #endif
@@ -982,7 +983,10 @@ namespace FracCuts {
         for(int vI = 0; vI < data.V.rows(); vI++) {
             double massI = result.massMatrix.coeffRef(vI, vI);
 //            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
-            gradient.segment(vI * 2, 2) += massI * (data.V.row(vI).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2));
+            gradient.segment(vI * 2, 2) += massI * (data.V.row(vI).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2) - dtSq * gravity);
+        }
+        for(const auto& fixedVI : data.fixedVert) {
+            gradient.segment(fixedVI * 2, 2).setZero();
         }
         //TODO: mass of negative space vertices
 #endif

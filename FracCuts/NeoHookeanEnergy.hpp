@@ -29,7 +29,7 @@ namespace FracCuts {
         virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
         
     public:
-        NeoHookeanEnergy(double YM = 1.0, double PR = 0.4); //TODO: organize material parameters
+        NeoHookeanEnergy(double YM = 100.0, double PR = 0.4); //TODO: organize material parameters
 
     protected:
         const double u, lambda;
