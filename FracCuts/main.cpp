@@ -1468,20 +1468,6 @@ int main(int argc, char *argv[])
         
         // primitive test cases
         if(suffix == ".primitive") {
-//            // fixed stretch
-//            temp->V.col(0) *= 2.0;
-//
-//            temp->fixedVert.clear();
-//            for(const auto borderI : borderVerts_primitive) {
-//                temp->fixedVert.insert(borderI.begin(), borderI.end());
-//            }
-//            temp->borderVerts_primitive = borderVerts_primitive;
-            
-            // hang
-            temp->fixedVert.clear();
-            for(const auto borderI : borderVerts_primitive) {
-                temp->fixedVert.insert(borderI.back());
-            }
             temp->borderVerts_primitive = borderVerts_primitive;
         }
         
@@ -1620,6 +1606,10 @@ int main(int argc, char *argv[])
     }
     optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
+    if(suffix == ".primitive") {
+        optimizer->setAnimScriptType(FracCuts::AST_BEND);
+        //TODO: set type using input strings
+    }
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
 #ifndef STATIC_SOLVE

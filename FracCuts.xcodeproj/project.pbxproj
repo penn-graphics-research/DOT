@@ -29,6 +29,7 @@
 		98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98D10F2B1F5CA12C0010E1A6 /* SymStretchEnergy.cpp */; };
 		98D3E7D51F75AEC6000DA61D /* CohesiveEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */; };
 		98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */; };
+		98E6E68520DB110000130500 /* AnimScripter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68320DB110000130500 /* AnimScripter.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -83,6 +84,8 @@
 		98D3E7D41F75AEC6000DA61D /* CohesiveEnergy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = CohesiveEnergy.hpp; sourceTree = "<group>"; };
 		98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = NeoHookeanEnergy.cpp; sourceTree = "<group>"; };
 		98E6E68120D976D500130500 /* NeoHookeanEnergy.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = NeoHookeanEnergy.hpp; sourceTree = "<group>"; };
+		98E6E68320DB110000130500 /* AnimScripter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AnimScripter.cpp; sourceTree = "<group>"; };
+		98E6E68420DB110000130500 /* AnimScripter.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AnimScripter.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -127,34 +130,17 @@
 		980180BA1F552CDA00C64B43 /* FracCuts */ = {
 			isa = PBXGroup;
 			children = (
-				987382CF2076F49A0040BBCE /* Scaffold.cpp */,
-				98B57EA0207C748600F238C0 /* Timer.hpp */,
-				98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */,
-				98E6E68120D976D500130500 /* NeoHookeanEnergy.hpp */,
-				987382D02076F49A0040BBCE /* Scaffold.hpp */,
-				98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */,
-				98D3E7D41F75AEC6000DA61D /* CohesiveEnergy.hpp */,
-				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
-				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
-				98D10F2B1F5CA12C0010E1A6 /* SymStretchEnergy.cpp */,
-				98D10F2C1F5CA12C0010E1A6 /* SymStretchEnergy.hpp */,
-				980180BB1F552CDA00C64B43 /* main.cpp */,
-				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
-				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
+				98E6E68620DB15CC00130500 /* Energy */,
 				988ED12D1F5727F400B21181 /* TriangleSoup.cpp */,
 				988ED12E1F5727F400B21181 /* TriangleSoup.hpp */,
+				987382CF2076F49A0040BBCE /* Scaffold.cpp */,
+				987382D02076F49A0040BBCE /* Scaffold.hpp */,
+				980180BB1F552CDA00C64B43 /* main.cpp */,
 				988ED1331F5871F200B21181 /* Optimizer.cpp */,
 				988ED1341F5871F200B21181 /* Optimizer.hpp */,
-				988ED1371F58721B00B21181 /* Energy.hpp */,
-				982CE6121F5DB358004176A8 /* Energy.cpp */,
-				98A5A3291F5F5BB900584EFD /* ARAPEnergy.cpp */,
-				98A5A32A1F5F5BB900584EFD /* ARAPEnergy.hpp */,
-				98C2D8F21F6348820048B18A /* SeparationEnergy.cpp */,
-				98C2D8F31F6348820048B18A /* SeparationEnergy.hpp */,
-				98FD37F51F98806B00C83AAC /* GIF.hpp */,
-				983E7DB3202240D900412128 /* Diagnostic.hpp */,
-				983E7DB62022421400412128 /* MeshProcessing.hpp */,
-				987382CB202902590040BBCE /* Types.hpp */,
+				98E6E68320DB110000130500 /* AnimScripter.cpp */,
+				98E6E68420DB110000130500 /* AnimScripter.hpp */,
+				98E6E68A20DB18B800130500 /* Utils */,
 			);
 			path = FracCuts;
 			sourceTree = "<group>";
@@ -175,6 +161,65 @@
 				988ED1271F57211500B21181 /* OpenGL.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		98E6E68620DB15CC00130500 /* Energy */ = {
+			isa = PBXGroup;
+			children = (
+				982CE6121F5DB358004176A8 /* Energy.cpp */,
+				988ED1371F58721B00B21181 /* Energy.hpp */,
+				98E6E68820DB163000130500 /* Physics_Elasticity */,
+				98E6E68720DB161E00130500 /* Geometry_Isometry */,
+				98E6E68920DB187000130500 /* Connectivity */,
+			);
+			path = Energy;
+			sourceTree = "<group>";
+		};
+		98E6E68720DB161E00130500 /* Geometry_Isometry */ = {
+			isa = PBXGroup;
+			children = (
+				98D10F2B1F5CA12C0010E1A6 /* SymStretchEnergy.cpp */,
+				98D10F2C1F5CA12C0010E1A6 /* SymStretchEnergy.hpp */,
+				98A5A3291F5F5BB900584EFD /* ARAPEnergy.cpp */,
+				98A5A32A1F5F5BB900584EFD /* ARAPEnergy.hpp */,
+			);
+			path = Geometry_Isometry;
+			sourceTree = "<group>";
+		};
+		98E6E68820DB163000130500 /* Physics_Elasticity */ = {
+			isa = PBXGroup;
+			children = (
+				98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */,
+				98E6E68120D976D500130500 /* NeoHookeanEnergy.hpp */,
+			);
+			path = Physics_Elasticity;
+			sourceTree = "<group>";
+		};
+		98E6E68920DB187000130500 /* Connectivity */ = {
+			isa = PBXGroup;
+			children = (
+				98D3E7D31F75AEC6000DA61D /* CohesiveEnergy.cpp */,
+				98D3E7D41F75AEC6000DA61D /* CohesiveEnergy.hpp */,
+				98C2D8F21F6348820048B18A /* SeparationEnergy.cpp */,
+				98C2D8F31F6348820048B18A /* SeparationEnergy.hpp */,
+			);
+			path = Connectivity;
+			sourceTree = "<group>";
+		};
+		98E6E68A20DB18B800130500 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				987382CB202902590040BBCE /* Types.hpp */,
+				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
+				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
+				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
+				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
+				98B57EA0207C748600F238C0 /* Timer.hpp */,
+				98FD37F51F98806B00C83AAC /* GIF.hpp */,
+				983E7DB3202240D900412128 /* Diagnostic.hpp */,
+				983E7DB62022421400412128 /* MeshProcessing.hpp */,
+			);
+			path = Utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -244,6 +289,7 @@
 				98C2D8F41F6348820048B18A /* SeparationEnergy.cpp in Sources */,
 				988ED12F1F5727F400B21181 /* TriangleSoup.cpp in Sources */,
 				980180BC1F552CDA00C64B43 /* main.cpp in Sources */,
+				98E6E68520DB110000130500 /* AnimScripter.cpp in Sources */,
 				987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */,
 				98D3E7D51F75AEC6000DA61D /* CohesiveEnergy.cpp in Sources */,
 			);

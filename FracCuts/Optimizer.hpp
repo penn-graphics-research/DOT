@@ -12,6 +12,7 @@
 #include "Types.hpp"
 #include "Energy.hpp"
 #include "Scaffold.hpp"
+#include "AnimScripter.hpp"
 
 #include "PardisoSolver.hpp"
 
@@ -82,6 +83,7 @@ namespace FracCuts {
         double dt, dtSq;
         const Eigen::Vector2d gravity;
         int frameAmt;
+        AnimScripter animScripter;
         
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
@@ -124,6 +126,7 @@ namespace FracCuts {
         void setRelGL2Tol(double p_relTol);
         void setAllowEDecRelTol(bool p_allowEDecRelTol);
         double getDt(void) const;
+        void setAnimScriptType(AnimScriptType animScriptType);
         
         void flushEnergyFileOutput(void);
         void flushGradFileOutput(void);

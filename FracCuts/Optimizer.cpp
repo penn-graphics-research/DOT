@@ -166,6 +166,11 @@ namespace FracCuts {
         return dt;
     }
     
+    void Optimizer::setAnimScriptType(AnimScriptType animScriptType)
+    {
+        animScripter.setAnimScriptType(animScriptType);
+    }
+    
 //    void Optimizer::fixDirection(void)
 //    {
 //        assert(result.V.rows() == result.V_rest.rows());
@@ -194,6 +199,7 @@ namespace FracCuts {
     void Optimizer::precompute(void)
     {
         result = data0;
+        animScripter.initAnimScript(result);
         resultV_n = result.V;
         if(scaffolding) {
             scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
@@ -274,6 +280,7 @@ namespace FracCuts {
                     if(!mute) { timer.stop(); }
                     return 1;
 #else
+                animScripter.stepAnimScript(result, dt);
                 if(fullyImplicit()) {
                     std::cout << "line search with Armijo's rule failed!!!" << std::endl;
                     logFile << "line search with Armijo's rule failed!!!" << std::endl;
