@@ -32,7 +32,7 @@ FracCutsPath = '/Users/mincli/Library/Developer/Xcode/DerivedData/FracCuts-cegib
 
 for inputModelNameI in onlyfiles:
 	# no prop, no filter
-	runCommand = priority + FracCutsPath + ' 0 ' + meshFolderPath + inputModelNameI + ' 0.999 666 4'
+	runCommand = priority + FracCutsPath + ' 0 ' + meshFolderPath + inputModelNameI + ' 0.999 666 4 test'
 	if subprocess.call([runCommand], shell=True):
 		continue
 

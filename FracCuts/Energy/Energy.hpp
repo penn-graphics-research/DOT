@@ -47,7 +47,8 @@ namespace FracCuts {
         
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
-                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL) const;
+                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
+                                         bool projectSPD = true) const;
         
         virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                            Eigen::VectorXd& dE_div_dsigma) const;

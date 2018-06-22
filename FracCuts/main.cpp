@@ -4,6 +4,7 @@
 #include "SymStretchEnergy.hpp"
 #include "ARAPEnergy.hpp"
 #include "NeoHookeanEnergy.hpp"
+#include "FixedCoRotEnergy.hpp"
 #include "SeparationEnergy.hpp"
 #include "CohesiveEnergy.hpp"
 #include "GIF.hpp"
@@ -88,6 +89,7 @@ double secPast = 0.0;
 time_t lastStart_world;
 Timer timer, timer_step;
 bool offlineMode = false;
+bool autoSwitch = false;
 bool saveInfo_postDraw = false;
 std::string infoName = "";
 bool isCapture3D = false;
@@ -241,7 +243,7 @@ void updateViewerData(void)
         }
         UV_vis.conservativeResize(UV_vis.rows(), 3);
         UV_vis.rightCols(1) = Eigen::VectorXd::Zero(UV_vis.rows());
-        viewer.core.align_camera_center(triSoup[0]->V * texScale, triSoup[0]->F);
+        viewer.core.align_camera_center(triSoup[2]->V * texScale, triSoup[2]->F);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
         
         if((UV_vis.rows() != viewer.data().V.rows()) ||
@@ -568,7 +570,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 
 bool postDrawFunc(igl::opengl::glfw::Viewer& viewer)
 {
-    if(offlineMode && (iterNum == 0)) {
+    if((offlineMode || autoSwitch) && (iterNum == 0)) {
         toggleOptimization();
     }
     
@@ -598,7 +600,7 @@ bool postDrawFunc(igl::opengl::glfw::Viewer& viewer)
             else {
                 GifEnd(&GIFWriter);
                 saveInfoForPresent();
-                if(offlineMode) {
+                if(offlineMode || autoSwitch) {
                     exit(0);
                 }
                 else {
@@ -1213,6 +1215,12 @@ int main(int argc, char *argv[])
             std::cout << "Optimization mode" << std::endl;
             break;
             
+        case 10:
+            // autoswitch optimization mode
+            autoSwitch = true;
+            std::cout << "Auto-switch optimization mode" << std::endl;
+            break;
+            
         case 100: {
             // offline optimization mode
             offlineMode = true;
@@ -1267,7 +1275,7 @@ int main(int argc, char *argv[])
         loadSucceed = igl::readOBJ(meshFilePath, V, UV, N, F, FUV, FN);
     }
     else if(suffix == ".primitive") {
-        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, 1.0, 0.1, false);
+        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, 1.0, 0.05, false);
         V = primitive.V_rest;
         UV = primitive.V;
         F = primitive.F;
@@ -1370,7 +1378,7 @@ int main(int argc, char *argv[])
             
         case FracCuts::MT_NOCUT:
             lambda = 0.0;
-            startDS = "minEd";
+            startDS = "Sim";
             break;
             
         default:
@@ -1383,8 +1391,8 @@ int main(int argc, char *argv[])
         //TODO: remove all '_'
         folderTail += argv[6];
     }
-#ifndef STATIC_SOLVE
-    folderTail += "Dynamic";
+#ifdef STATIC_SOLVE
+    folderTail += "QuasiStatic";
 #endif
 
 #define USE_INPUT_UV
@@ -1590,7 +1598,8 @@ int main(int argc, char *argv[])
         energyParams.emplace_back(1.0 - lambda);
 //        energyTerms.emplace_back(new FracCuts::ARAPEnergy());
 //        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
-        energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy());
+//        energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy());
+        energyTerms.emplace_back(new FracCuts::FixedCoRotEnergy());
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
@@ -1607,8 +1616,14 @@ int main(int argc, char *argv[])
     optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     if(suffix == ".primitive") {
-        optimizer->setAnimScriptType(FracCuts::AST_BEND);
-        //TODO: set type using input strings
+        std::map<std::string, FracCuts::AnimScriptType> str2AST;
+        str2AST["hang"] = FracCuts::AST_HANG;
+        str2AST["stretch"] = FracCuts::AST_STRETCH;
+        str2AST["squash"] = FracCuts::AST_SQUASH;
+        str2AST["bend"] = FracCuts::AST_BEND;
+        str2AST["onepoint"] = FracCuts::AST_ONEPOINT;
+        str2AST["random"] = FracCuts::AST_RANDOM;
+        optimizer->setAnimScriptType(str2AST[meshName]);
     }
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
@@ -1616,6 +1631,7 @@ int main(int argc, char *argv[])
     GIFDelay = optimizer->getDt() * 100;
 #endif
     triSoup.emplace_back(&optimizer->getResult());
+    triSoup.emplace_back(new FracCuts::TriangleSoup(optimizer->getResult())); // for align camera center
     triSoup_backup = optimizer->getResult();
     triSoup.emplace_back(&optimizer->getData_findExtrema()); // for visualizing UV map for finding extrema
     if((lambda > 0.0) && (!startWithTriSoup)) {

@@ -21,7 +21,9 @@ namespace FracCuts {
         AST_HANG,
         AST_STRETCH,
         AST_SQUASH,
-        AST_BEND
+        AST_BEND,
+        AST_ONEPOINT,
+        AST_RANDOM
     };
     
     class AnimScripter

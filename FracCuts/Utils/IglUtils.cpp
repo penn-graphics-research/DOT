@@ -736,7 +736,7 @@ namespace FracCuts {
         }
     }
     
-    void IglUtils::compute_dsigma_div_dx(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+    void IglUtils::compute_dsigma_div_dx(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                          const Eigen::MatrixXd& A,
                                          Eigen::MatrixXd& dsigma_div_dx)
     {
@@ -755,7 +755,7 @@ namespace FracCuts {
         }
     }
     
-    void IglUtils::compute_dU_and_dV_div_dF(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+    void IglUtils::compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                             Eigen::MatrixXd& dU_div_dF,
                                             Eigen::MatrixXd& dV_div_dF)
     {
@@ -786,7 +786,7 @@ namespace FracCuts {
         }
     }
     
-    void IglUtils::compute_d2sigma_div_dF2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+    void IglUtils::compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                            Eigen::MatrixXd& d2sigma_div_dF2)
     {
         Eigen::MatrixXd dU_div_dF, dV_div_dF;
@@ -802,7 +802,7 @@ namespace FracCuts {
         }
     }
     
-    void IglUtils::compute_d2sigma_div_dx2(const Eigen::JacobiSVD<Eigen::MatrixXd>& svd,
+    void IglUtils::compute_d2sigma_div_dx2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                            const Eigen::MatrixXd& A,
                                            Eigen::MatrixXd& d2sigma_div_dx2)
     {

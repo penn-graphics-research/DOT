@@ -41,6 +41,7 @@ namespace FracCuts {
             Eigen::Matrix2d triMtrX, triMtrU;
             triMtrX << x[1], x[2];
             triMtrU << u[1] - u[0], u[2] - u[0];
+            //TODO: change to AutoFlipSVD
             Eigen::JacobiSVD<Eigen::Matrix2d> svd(triMtrU * triMtrX.inverse(), Eigen::ComputeFullU | Eigen::ComputeFullV);
             const double w = x[1][0] * x[2][1] / 2.0;
             if(triMtrU.determinant() < 0.0) {
@@ -86,9 +87,10 @@ namespace FracCuts {
                 int vI_pre = (vI + 2) % 3;
                 crossCov += cotVals(triI, vI_pre) * (u[vI] - u[vI_post]) * ((x[vI] - x[vI_post]).transpose());
             }
+            //TODO: change to AutoFlipSVD
             Eigen::JacobiSVD<Eigen::Matrix2d> svd(crossCov, Eigen::ComputeFullU | Eigen::ComputeFullV);
             Eigen::Matrix2d targetRotMtr = svd.matrixU() * svd.matrixV().transpose();
-            if(targetRotMtr.determinant() < 0.0) {
+            if(targetRotMtr.determinant() < 0.0) { //!!! deciding by determinant is only valid in 2D, change to use eigen value decomposition!
                 Eigen::Matrix2d V = svd.matrixV();
                 V.col(1) *= -1.0;
                 targetRotMtr = svd.matrixU() * V.transpose();

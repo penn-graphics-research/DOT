@@ -168,8 +168,8 @@ namespace FracCuts {
         if(triplet) {
             Eigen::VectorXi I, J;
             Eigen::VectorXd V;
-//            computePrecondMtr(data, &V, &I, &J); //TODO: change name to Hessian!
-            computeHessianBySVD(data, &V, &I, &J);
+//            computePrecondMtr(data, &V, &I, &J); //TODO: change name to Hessian! don't project!
+            computeHessianBySVD(data, &V, &I, &J, false);
             std::vector<Eigen::Triplet<double>> triplet(V.size());
             for(int entryI = 0; entryI < V.size(); entryI++) {
                 triplet[entryI] = Eigen::Triplet<double>(I[entryI], J[entryI], V[entryI]);
@@ -178,7 +178,7 @@ namespace FracCuts {
             hessian_symbolic.setFromTriplets(triplet.begin(), triplet.end());
         }
         else {
-            computeHessian(data, hessian_symbolic);
+            computeHessian(data, hessian_symbolic); //TODO: don't project
         }
         
         Eigen::SparseMatrix<double> difMtr = hessian_symbolic - hessian_finiteDiff;
@@ -213,7 +213,7 @@ namespace FracCuts {
             (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = X0.inverse(); //TODO: this only need to be computed once
             
-            Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+            AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
             
             Eigen::MatrixXd dsigma_div_dx;
             IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
@@ -234,7 +234,8 @@ namespace FracCuts {
     }
     
     void Energy::computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
-                                     Eigen::VectorXi* I, Eigen::VectorXi* J) const
+                                     Eigen::VectorXi* I, Eigen::VectorXi* J,
+                                     bool projectSPD) const
     {
         std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
         std::vector<Eigen::VectorXi> vInds(data.F.rows());
@@ -256,7 +257,7 @@ namespace FracCuts {
             (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = X0.inverse(); //TODO: this only need to be computed once
             
-            Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+            AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
             
             // right term:
             Eigen::VectorXd dE_div_dsigma;
@@ -293,7 +294,9 @@ namespace FracCuts {
             const double w = data.triArea[triI];
             triHessians[triI] = w * (d2E_div_dx2_left + d2E_div_dx2_right);
             
-            IglUtils::makePD(triHessians[triI]);
+            if(projectSPD) {
+                IglUtils::makePD(triHessians[triI]);
+            }
             
             Eigen::VectorXi& vInd = vInds[triI];
             vInd = triVInd;
@@ -333,7 +336,7 @@ namespace FracCuts {
     {
         Eigen::Matrix2d A = Eigen::Matrix2d::Identity();
         
-        Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        AutoFlipSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
         
         // right term:
         Eigen::VectorXd dE_div_dsigma;

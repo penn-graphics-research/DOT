@@ -1,22 +1,22 @@
 //
-//  NeoHookeanEnergy.cpp
+//  FixedCoRotEnergy.cpp
 //  FracCuts
 //
-//  Created by Minchen Li on 6/19/18.
+//  Created by Minchen Li on 6/20/18.
 //  Copyright © 2018 Minchen Li. All rights reserved.
 //
 
-#include "NeoHookeanEnergy.hpp"
+#include "FixedCoRotEnergy.hpp"
 #include "IglUtils.hpp"
 
 #include <tbb/tbb.h>
 
 namespace FracCuts {
     
-    void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    void FixedCoRotEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         energyValPerElem.resize(data.F.rows());
-        //        for(int triI = 0; triI < data.F.rows(); triI++) {
+//        for(int triI = 0; triI < data.F.rows(); triI++) {
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
@@ -36,48 +36,47 @@ namespace FracCuts {
             
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
             
-            const double sigma2Sum = svd.singularValues().squaredNorm();
-            const double sigmaProd = svd.singularValues().prod();
-            const double log_sigmaProd = std::log(sigmaProd);
+            const double sigmam12Sum = (svd.singularValues() - Eigen::Vector2d::Ones()).squaredNorm();
+            const double sigmaProdm1 = svd.singularValues().prod() - 1.0;
             
             const double w = (uniformWeight ? 1.0 : data.triArea[triI]);
-            energyValPerElem[triI] = w * (u / 2.0 * (sigma2Sum - svd.singularValues().size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd);
+            energyValPerElem[triI] = w * (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
         });
+//        }
     }
     
-    void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                       Eigen::VectorXd& dE_div_dsigma) const
+    void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
+                                                 Eigen::VectorXd& dE_div_dsigma) const
     {
-        const double log_sigmaProd = std::log(singularValues.prod());
+        const double sigmaProdm1 = singularValues.prod() - 1.0;
+        Eigen::Vector2d sigmaProd_noI(singularValues.cwiseInverse());
+        sigmaProd_noI *= singularValues.prod();
         
         dE_div_dsigma.resize(singularValues.size());
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            const double inv = 1.0 / singularValues[sigmaI];
-            dE_div_dsigma[sigmaI] = u * (singularValues[sigmaI] - inv) + lambda * inv * log_sigmaProd;
+            dE_div_dsigma[sigmaI] = 2.0 * u * (singularValues[sigmaI] - 1.0) +
+                lambda * sigmaProd_noI[sigmaI] * sigmaProdm1;
         }
     }
-    void NeoHookeanEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
+    void FixedCoRotEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
                                                    Eigen::MatrixXd& d2E_div_dsigma2) const
     {
-        const double log_sigmaProd = std::log(singularValues.prod());
+        const double sigmaProd = singularValues.prod();
+        Eigen::Vector2d sigmaProd_noI(singularValues.cwiseInverse());
+        sigmaProd_noI *= sigmaProd;
         
         d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            const double inv2 = 1.0 / singularValues[sigmaI] / singularValues[sigmaI];
-            d2E_div_dsigma2(sigmaI, sigmaI) = u * (1.0 + inv2) - lambda * inv2 * (log_sigmaProd - 1.0);
+            d2E_div_dsigma2(sigmaI, sigmaI) = 2.0 * u +
+                lambda * sigmaProd_noI[sigmaI] * sigmaProd_noI[sigmaI];
             for(int sigmaJ = sigmaI + 1; sigmaJ < singularValues.size(); sigmaJ++) {
-                d2E_div_dsigma2(sigmaI, sigmaJ) = d2E_div_dsigma2(sigmaJ, sigmaI) = lambda / singularValues[sigmaI] / singularValues[sigmaJ];
+                d2E_div_dsigma2(sigmaI, sigmaJ) = d2E_div_dsigma2(sigmaJ, sigmaI) =
+                    lambda * ((sigmaProd - 1.0) + sigmaProd_noI[sigmaI] * sigmaProd_noI[sigmaJ]);
             }
         }
     }
     
-    // to prevent element inversion
-    void NeoHookeanEnergy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
-    {
-        initStepSize_preventElemInv(data, searchDir, stepSize);
-    }
-    
-    void NeoHookeanEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
+    void FixedCoRotEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
     {
         //TODO: move to super class, only provide a value
         
@@ -101,26 +100,24 @@ namespace FracCuts {
             
             AutoFlipSVD<Eigen::MatrixXd> svd(X0 * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
             
-            const double sigma2Sum = svd.singularValues().squaredNorm();
-            const double sigmaProd = svd.singularValues().prod();
-            const double log_sigmaProd = std::log(sigmaProd);
+            const double sigmam12Sum = (svd.singularValues() - Eigen::Vector2d::Ones()).squaredNorm();
+            const double sigmaProdm1 = svd.singularValues().prod() - 1.0;
             
             const double w = data.triArea[triI];
-            const double energyVal = w * (u / 2.0 * (sigma2Sum - svd.singularValues().size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd);
+            const double energyVal = w * (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
             err += energyVal;
         }
         
         std::cout << "energyVal computation error = " << err << std::endl;
     }
     
-    NeoHookeanEnergy::NeoHookeanEnergy(double YM, double PR) :
+    FixedCoRotEnergy::FixedCoRotEnergy(double YM, double PR) :
         Energy(true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
     {
-        const double sigma2Sum = 8;
-        const double sigmaProd = 4;
-        const double log_sigmaProd = std::log(sigmaProd);
+        const double sigmam12Sum = 2;
+        const double sigmaProdm1 = 3;
         
-        const double visRange_max = u / 2.0 * (sigma2Sum - 2) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd;
+        const double visRange_max = (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
         Energy::setVisRange_energyVal(0.0, visRange_max);
     }
     

@@ -58,7 +58,8 @@ namespace FracCuts {
         }
         
         if(!data0.checkInversion()) {
-            exit(-1);
+            std::cout << "element inverted in the initial mesh!" << std::endl;
+//            exit(-1);
         }
         
         globalIterNum = 0;
@@ -98,7 +99,7 @@ namespace FracCuts {
         w_scaf = energyParams[0] * 0.01;
         
 #ifndef STATIC_SOLVE
-        dt = 0.04;
+        dt = 0.025;
         dtSq = dt * dt;
         frameAmt = 10.0 / dt;
 #else
@@ -784,21 +785,21 @@ namespace FracCuts {
             std::cout << stepSize << "(armijo) ";
         }
 
-        while((!result.checkInversion()) ||
-              ((scaffolding) && (!scaffold.airMesh.checkInversion())))
-        {
-            assert(0 && "element inversion after armijo shouldn't happen!");
-            
-            stepSize /= 2.0;
-            if(stepSize == 0.0) {
-                assert(0 && "line search failed!");
-                stopped = true;
-                break;
-            }
-            
-            stepForward(resultV0, scaffoldV0, result, scaffold, stepSize);
-            computeEnergyVal(result, scaffold, testingE);
-        }
+//        while((!result.checkInversion()) ||
+//              ((scaffolding) && (!scaffold.airMesh.checkInversion())))
+//        {
+//            assert(0 && "element inversion after armijo shouldn't happen!");
+//
+//            stepSize /= 2.0;
+//            if(stepSize == 0.0) {
+//                assert(0 && "line search failed!");
+//                stopped = true;
+//                break;
+//            }
+//
+//            stepForward(resultV0, scaffoldV0, result, scaffold, stepSize);
+//            computeEnergyVal(result, scaffold, testingE);
+//        }
         
         lastEDec = lastEnergyVal - testingE;
         if(scaffolding) {

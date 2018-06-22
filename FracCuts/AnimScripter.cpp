@@ -73,6 +73,15 @@ namespace FracCuts {
                 break;
             }
                 
+            case AST_ONEPOINT:
+                mesh.V.setZero();
+                break;
+                
+            case AST_RANDOM: {
+                mesh.V.setRandom();
+                break;
+            }
+                
             default:
                 assert(0 && "invalid animScriptType");
                 break;
@@ -103,6 +112,12 @@ namespace FracCuts {
                     assert(rotCenter != rotCenter_handleVerts.end());
                     mesh.V.row(movingVerts.first) = rotMtr * (mesh.V.row(movingVerts.first).transpose() - rotCenter->second) + rotCenter->second;
                 }
+                break;
+                
+            case AST_ONEPOINT:
+                break;
+                
+            case AST_RANDOM:
                 break;
                 
             default:
