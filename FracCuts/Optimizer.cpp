@@ -220,17 +220,17 @@ namespace FracCuts {
         }
         else {
             if(!mute) { timer_step.start(1); }
-            pardisoSolver.set_type(pardisoThreadAmt, -2);
-//            pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-            pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+            linSysSolver.set_type(pardisoThreadAmt, -2);
+//            linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
+            linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                       scaffolding ? fixedV_withScaf : result.fixedVert);
             if(!mute) { timer_step.stop(); timer_step.start(2); }
-            pardisoSolver.analyze_pattern();
+            linSysSolver.analyze_pattern();
             if(!mute) { timer_step.stop(); }
             if(!needRefactorize) {
                 try {
                     if(!mute) { timer_step.start(3); }
-                    pardisoSolver.factorize();
+                    linSysSolver.factorize();
                     if(!mute) { timer_step.stop(); }
                 }
                 catch(std::exception e) {
@@ -357,10 +357,10 @@ namespace FracCuts {
         }
         else {
             if(!mute) { timer_step.start(1); }
-//            pardisoSolver.update_a(V_mtr);
-            pardisoSolver.update_a(I_mtr, J_mtr, V_mtr);
+//            linSysSolver.update_a(V_mtr);
+            linSysSolver.update_a(I_mtr, J_mtr, V_mtr);
             if(!mute) { timer_step.stop(); timer_step.start(3); }
-            pardisoSolver.factorize();
+            linSysSolver.factorize();
             if(!mute) { timer_step.stop(); }
         }
     }
@@ -435,15 +435,15 @@ namespace FracCuts {
             }
             else {
                 if(!mute) { timer_step.start(1); }
-//                pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-                pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+//                linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
+                linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                           scaffolding ? fixedV_withScaf : result.fixedVert);
                 if(!mute) { timer_step.stop(); timer_step.start(2); }
-                pardisoSolver.analyze_pattern();
+                linSysSolver.analyze_pattern();
                 if(!mute) { timer_step.stop(); }
                 if(!needRefactorize) {
                     if(!mute) { timer_step.start(3); }
-                    pardisoSolver.factorize();
+                    linSysSolver.factorize();
                     if(!mute) { timer_step.stop(); }
                 }
             }
@@ -624,18 +624,22 @@ namespace FracCuts {
     {
         double sqn_g = __DBL_MAX__;
         computeEnergyVal(result, scaffold, lastEnergyVal);
+        int innerIterAmt = 0;
         do {
             if(solve_oneStep()) {
                 std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
                 logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
                 return true;
             }
+            innerIterAmt++;
             computeGradient(result, scaffold, gradient);
             sqn_g = gradient.squaredNorm();
             if(!mute) {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
             }
         } while(sqn_g > targetGRes);
+        
+        logFile << "Timestep" << globalIterNum << " innerIterAmt = " << innerIterAmt << std::endl;
         
         return false;
     }
@@ -665,8 +669,8 @@ namespace FracCuts {
                 if(!fractureInitiated) {
                     if(scaffolding) {
                         if(!mute) { timer_step.start(1); }
-//                        pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-                        pardisoSolver.set_pattern(I_mtr, J_mtr, V_mtr,
+//                        linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
+                        linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr,
                                                   scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                                   scaffolding ? fixedV_withScaf : result.fixedVert);
                         
@@ -674,7 +678,7 @@ namespace FracCuts {
                             std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
                         }
                         if(!mute) { timer_step.stop(); timer_step.start(2); }
-                        pardisoSolver.analyze_pattern();
+                        linSysSolver.analyze_pattern();
                         if(!mute) { timer_step.stop(); }
                     }
                     else {
@@ -682,8 +686,8 @@ namespace FracCuts {
                             std::cout << "updating matrix entries..." << std::endl;
                         }
                         if(!mute) { timer_step.start(1); }
-//                        pardisoSolver.update_a(V_mtr);
-                        pardisoSolver.update_a(I_mtr, J_mtr, V_mtr);
+//                        linSysSolver.update_a(V_mtr);
+                        linSysSolver.update_a(I_mtr, J_mtr, V_mtr);
                         if(!mute) { timer_step.stop(); }
                     }
                 }
@@ -692,7 +696,7 @@ namespace FracCuts {
                         std::cout << "numerically factorizing Hessian/Proxy matrix..." << std::endl;
                     }
                     if(!mute) { timer_step.start(3); }
-                    pardisoSolver.factorize();
+                    linSysSolver.factorize();
                     if(!mute) { timer_step.stop(); }
                 }
                 catch(std::exception e) {
@@ -717,7 +721,7 @@ namespace FracCuts {
                 std::cout << "back solve..." << std::endl;
             }
             if(!mute) { timer_step.start(4); }
-            pardisoSolver.solve(minusG, searchDir);
+            linSysSolver.solve(minusG, searchDir);
             if(!mute) { timer_step.stop(); }
         }
         fractureInitiated = false;

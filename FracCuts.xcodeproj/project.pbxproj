@@ -31,6 +31,8 @@
 		98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68020D976D500130500 /* NeoHookeanEnergy.cpp */; };
 		98E6E68520DB110000130500 /* AnimScripter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68320DB110000130500 /* AnimScripter.cpp */; };
 		98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E68B20DB4F2C00130500 /* FixedCoRotEnergy.cpp */; };
+		98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */; };
+		98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -90,6 +92,9 @@
 		98E6E68B20DB4F2C00130500 /* FixedCoRotEnergy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FixedCoRotEnergy.cpp; sourceTree = "<group>"; };
 		98E6E68C20DB4F2C00130500 /* FixedCoRotEnergy.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = FixedCoRotEnergy.hpp; sourceTree = "<group>"; };
 		98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AutoFlipSVD.hpp; sourceTree = "<group>"; };
+		98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CHOLMODSolver.cpp; sourceTree = "<group>"; };
+		98E6E69220DDA03300130500 /* CHOLMODSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CHOLMODSolver.hpp; sourceTree = "<group>"; };
+		98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcholmod.3.0.12.dylib; path = ../../../../usr/local/lib/libcholmod.3.0.12.dylib; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -98,6 +103,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */,
 				988D81BF20AA99120037737D /* libglfw3.a in Frameworks */,
 				988D81BD20AA99060037737D /* libtriangle.a in Frameworks */,
 				988D81BC20AA98FA0037737D /* libtbb.dylib in Frameworks */,
@@ -152,6 +158,7 @@
 		988ED1261F57211500B21181 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */,
 				988D81BE20AA99120037737D /* libglfw3.a */,
 				988D81BA20AA98ED0037737D /* libigl_stb_image.dylib */,
 				988D81B820AA98E10037737D /* libglad.a */,
@@ -221,6 +228,8 @@
 				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
 				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
 				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
+				98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */,
+				98E6E69220DDA03300130500 /* CHOLMODSolver.hpp */,
 				98B57EA0207C748600F238C0 /* Timer.hpp */,
 				98FD37F51F98806B00C83AAC /* GIF.hpp */,
 				983E7DB3202240D900412128 /* Diagnostic.hpp */,
@@ -291,6 +300,7 @@
 				988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */,
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,
+				98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */,
 				98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */,
 				98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */,
 				98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */,
@@ -406,6 +416,7 @@
 					/Users/mincli/Documents/tbb2018_20180312oss/include,
 					/Users/mincli/Documents/libigl/external/triangle,
 					/Users/mincli/Documents/libigl/external/glad/include,
+					/Users/mincli/Documents/SuiteSparse/include,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				OTHER_LDFLAGS = "";
@@ -424,6 +435,7 @@
 					/Users/mincli/Documents/tbb2018_20180312oss/include,
 					/Users/mincli/Documents/libigl/external/triangle,
 					/Users/mincli/Documents/libigl/external/glad/include,
+					/Users/mincli/Documents/SuiteSparse/include,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				OTHER_LDFLAGS = "";

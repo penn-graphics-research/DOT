@@ -15,6 +15,7 @@
 #include "AnimScripter.hpp"
 
 #include "PardisoSolver.hpp"
+#include "CHOLMODSolver.hpp"
 
 #include <fstream>
 
@@ -46,13 +47,18 @@ namespace FracCuts {
         bool scaffolding; // whether to enable bijectivity parameterization
         double w_scaf;
         Scaffold scaffold; // air meshes to enforce bijectivity
+        
         // constant precondition matrix for solving the linear system for search directions
         Eigen::SparseMatrix<double> precondMtr;
         Eigen::VectorXi I_mtr, J_mtr; // triplet representation
         Eigen::VectorXd V_mtr;
+        
         // cholesky solver for solving the linear system for search directions
+        //TODO: write a super class for these 3 solvers, template not necessary
         Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> cholSolver;
-        PardisoSolver<Eigen::VectorXi, Eigen::VectorXd> pardisoSolver;
+//        PardisoSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver;
+        CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver;
+        
         Eigen::VectorXd gradient; // energy gradient computed in each iteration
         Eigen::VectorXd searchDir; // search direction comptued in each iteration
         double lastEnergyVal; // for output and line search
