@@ -19,28 +19,28 @@ namespace FracCuts {
     class AutoFlipSVD : Eigen::JacobiSVD<MatrixType>
     {
     protected:
-        bool flipped_U, flipped_V, flipped_sigma;
+        bool flipped_U = false, flipped_V = false, flipped_sigma = false;
         
         typename Eigen::JacobiSVD<MatrixType>::SingularValuesType singularValues_flipped;
         MatrixType matrixU_flipped, matrixV_flipped;
         
     public:
-        AutoFlipSVD(MatrixType mtr, unsigned int computationOptions = 0) :
-            Eigen::JacobiSVD<MatrixType>(mtr, computationOptions),
-            flipped_U(false), flipped_V(false), flipped_sigma(false)
+        AutoFlipSVD(const MatrixType& mtr, unsigned int computationOptions = 0) :
+            Eigen::JacobiSVD<MatrixType>(mtr, computationOptions)
         {
             //!!! this flip algorithm is only valid in 2D
             
             bool fullUComputed = (computationOptions & Eigen::ComputeFullU);
             bool fullVComputed = (computationOptions & Eigen::ComputeFullV);
-            if(fullUComputed && fullVComputed)
-            {
+            if(fullUComputed && fullVComputed) {
                 if(Eigen::JacobiSVD<MatrixType>::m_matrixU.determinant() < 0.0) {
                     matrixU_flipped = Eigen::JacobiSVD<MatrixType>::m_matrixU;
                     matrixU_flipped.col(1) *= -1.0;
                     flipped_U = true;
                     
-                    singularValues_flipped = Eigen::JacobiSVD<MatrixType>::m_singularValues;
+                    if(!flipped_sigma) {
+                        singularValues_flipped = Eigen::JacobiSVD<MatrixType>::m_singularValues;
+                    }
                     singularValues_flipped[1] *= -1.0;
                     flipped_sigma = true;
                 }
@@ -51,19 +51,25 @@ namespace FracCuts {
                     
                     if(!flipped_sigma) {
                         singularValues_flipped = Eigen::JacobiSVD<MatrixType>::m_singularValues;
-                        singularValues_flipped[1] *= -1.0;
-                        flipped_sigma = true;
                     }
-                    else {
-                        singularValues_flipped[1] = Eigen::JacobiSVD<MatrixType>::m_singularValues[1];
-                        flipped_sigma = false;
-                    }
+                    singularValues_flipped[1] *= -1.0;
+                    flipped_sigma = true;
                 }
             }
             else if(mtr.determinant() < 0.0) {
                 singularValues_flipped = Eigen::JacobiSVD<MatrixType>::m_singularValues;
                 singularValues_flipped[1] *= -1.0;
                 flipped_sigma = true;
+            }
+            
+            if(std::isnan(singularValues()[0]) || std::isnan(singularValues()[1])) {
+                // degenerated case
+                singularValues_flipped << 0.0, 0.0;
+                flipped_sigma = true;
+                if(fullUComputed && fullVComputed) {
+                    matrixU_flipped = matrixV_flipped = Eigen::Matrix2d::Identity();
+                    flipped_U = flipped_V = true;
+                }
             }
         }
         

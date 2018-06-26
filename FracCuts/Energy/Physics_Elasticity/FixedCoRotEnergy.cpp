@@ -49,8 +49,14 @@ namespace FracCuts {
                                                  Eigen::VectorXd& dE_div_dsigma) const
     {
         const double sigmaProdm1 = singularValues.prod() - 1.0;
-        Eigen::Vector2d sigmaProd_noI(singularValues.cwiseInverse());
-        sigmaProd_noI *= singularValues.prod();
+        Eigen::Vector2d sigmaProd_noI = Eigen::Vector2d::Ones();
+        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
+            for(int sigmaJ = 0; sigmaJ < singularValues.size(); sigmaJ++) {
+                if(sigmaJ != sigmaI) {
+                    sigmaProd_noI[sigmaI] *= singularValues[sigmaJ];
+                }
+            }
+        }
         
         dE_div_dsigma.resize(singularValues.size());
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
@@ -62,8 +68,14 @@ namespace FracCuts {
                                                    Eigen::MatrixXd& d2E_div_dsigma2) const
     {
         const double sigmaProd = singularValues.prod();
-        Eigen::Vector2d sigmaProd_noI(singularValues.cwiseInverse());
-        sigmaProd_noI *= sigmaProd;
+        Eigen::Vector2d sigmaProd_noI = Eigen::Vector2d::Ones();
+        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
+            for(int sigmaJ = 0; sigmaJ < singularValues.size(); sigmaJ++) {
+                if(sigmaJ != sigmaI) {
+                    sigmaProd_noI[sigmaI] *= singularValues[sigmaJ];
+                }
+            }
+        }
         
         d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {

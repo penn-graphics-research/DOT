@@ -243,7 +243,7 @@ void updateViewerData(void)
         }
         UV_vis.conservativeResize(UV_vis.rows(), 3);
         UV_vis.rightCols(1) = Eigen::VectorXd::Zero(UV_vis.rows());
-        viewer.core.align_camera_center(triSoup[2]->V * texScale, triSoup[2]->F);
+        viewer.core.align_camera_center(triSoup[viewChannel]->V_rest * texScale, F_vis);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
         
         if((UV_vis.rows() != viewer.data().V.rows()) ||
@@ -973,6 +973,12 @@ void converge_preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 
 bool preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 {
+    static bool initViewerData = true;
+    if(initViewerData) {
+        updateViewerData();
+        initViewerData = false;
+    }
+    
     if(optimization_on)
     {
         if(offlineMode) {
@@ -1593,7 +1599,7 @@ int main(int argc, char *argv[])
     timer_step.new_activity("cornerMerge");
     
     // * Our approach
-    texScale = 10.0 / (triSoup[0]->bbox.row(1) - triSoup[0]->bbox.row(0)).maxCoeff();
+//    texScale = 10.0 / (triSoup[0]->bbox.row(1) - triSoup[0]->bbox.row(0)).maxCoeff();
     if(lambda != 1.0) {
         energyParams.emplace_back(1.0 - lambda);
 //        energyTerms.emplace_back(new FracCuts::ARAPEnergy());
@@ -1631,7 +1637,6 @@ int main(int argc, char *argv[])
     GIFDelay = optimizer->getDt() * 100;
 #endif
     triSoup.emplace_back(&optimizer->getResult());
-    triSoup.emplace_back(new FracCuts::TriangleSoup(optimizer->getResult())); // for align camera center
     triSoup_backup = optimizer->getResult();
     triSoup.emplace_back(&optimizer->getData_findExtrema()); // for visualizing UV map for finding extrema
     if((lambda > 0.0) && (!startWithTriSoup)) {
@@ -1695,7 +1700,6 @@ int main(int argc, char *argv[])
     viewer.core.animation_max_fps = 60.0;
     viewer.data().point_size = fracTailSize;
     viewer.data().show_overlay = true;
-    updateViewerData();
     viewer.launch();
     
     

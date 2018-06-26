@@ -73,12 +73,20 @@ namespace FracCuts {
                 break;
             }
                 
-            case AST_ONEPOINT:
-                mesh.V.setZero();
+            case AST_ONEPOINT: {
+                const Eigen::RowVector3d center = mesh.bbox.colwise().mean();
+                mesh.V.rowwise() = center.leftCols(2);
+                mesh.V.col(1).array() += (mesh.bbox(1, 1) - mesh.bbox(0, 1)) / 2.0;
                 break;
+            }
                 
             case AST_RANDOM: {
                 mesh.V.setRandom();
+                mesh.V /= 2.0;
+                Eigen::RowVector3d offset = mesh.bbox.colwise().mean();
+                offset[1] += (mesh.bbox(1, 1) - mesh.bbox(0, 1)) / 2.0;
+                offset.leftCols(2) -= mesh.V.row(0);
+                mesh.V.rowwise() += offset.leftCols(2);
                 break;
             }
                 

@@ -763,9 +763,7 @@ namespace FracCuts {
         coefMtr << svd.singularValues()[0], svd.singularValues()[1],
             svd.singularValues()[1], svd.singularValues()[0];
         const Eigen::LDLT<Eigen::Matrix2d>& solver = coefMtr.ldlt();
-        if(solver.info() != Eigen::Success) {
-            assert(0 && "isometric degeneracy in Hessian computation");
-        }
+        assert(solver.info() == Eigen::Success);
         
         dU_div_dF.resize(4, 4);
         dV_div_dF.resize(4, 4);
