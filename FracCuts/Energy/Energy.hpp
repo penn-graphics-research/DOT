@@ -17,11 +17,13 @@ namespace FracCuts {
     class Energy {
     protected:
         const bool needRefactorize;
+        const bool needElemInvSafeGuard;
         const bool crossSigmaDervative;
         Eigen::Vector2d visRange_energyVal;
         
     public:
-        Energy(bool p_needRefactorize, bool p_crossSigmaDervative = false,
+        Energy(bool p_needRefactorize, bool p_needElemInvSafeGuard = false,
+               bool p_crossSigmaDervative = false,
                double visRange_min = 0.0, double visRange_max = 1.0);
         virtual ~Energy(void);
         
@@ -45,11 +47,29 @@ namespace FracCuts {
         virtual void checkGradient(const TriangleSoup& data) const; // check with finite difference method, according to energyVal
         virtual void checkHessian(const TriangleSoup& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
+        virtual void getEnergyValPerElemBySVD(const TriangleSoup& data,
+                                              Eigen::VectorXd& energyValPerElem,
+                                              bool uniformWeight = false) const;
+        virtual void computeEnergyValBySVD(const TriangleSoup& data, double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
                                          Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                          bool projectSPD = true) const;
         
+        virtual void computeEnergyValBySVD(const TriangleSoup& data, int triI,
+                                           const Eigen::VectorXd& x,
+                                           double& energyVal,
+                                           bool uniformWeight = false) const;
+        virtual void computeGradientBySVD(const TriangleSoup& data, int triI,
+                                          const Eigen::VectorXd& x,
+                                          Eigen::VectorXd& gradient) const;
+        virtual void computeHessianBySVD(const TriangleSoup& data, int triI,
+                                         const Eigen::VectorXd& x,
+                                         Eigen::MatrixXd& hessian,
+                                         bool projectSPD = true) const;
+        
+        virtual void compute_E(const Eigen::VectorXd& singularValues,
+                               double& E) const;
         virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
@@ -57,8 +77,19 @@ namespace FracCuts {
         
         virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
         
-        virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
-        virtual void initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
+        virtual void initStepSize(const TriangleSoup& data,
+                                  const Eigen::VectorXd& searchDir,
+                                  double& stepSize) const;
+        virtual void initStepSize_preventElemInv(const TriangleSoup& data,
+                                                 const Eigen::VectorXd& searchDir,
+                                                 double& stepSize) const;
+        
+        virtual void initStepSize(const Eigen::VectorXd& V,
+                                  const Eigen::VectorXd& searchDir,
+                                  double& stepSize) const;
+        virtual void initStepSize_preventElemInv(const Eigen::VectorXd& V,
+                                                 const Eigen::VectorXd& searchDir,
+                                                 double& stepSize) const;
     };
     
 }

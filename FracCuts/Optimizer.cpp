@@ -948,10 +948,12 @@ namespace FracCuts {
     
     void Optimizer::computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold)
     {
-        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
+//        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
+        energyTerms[0]->computeEnergyValBySVD(data, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
+//            energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
+            energyTerms[eI]->computeEnergyValBySVD(data, energyVal_ET[eI]);
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         

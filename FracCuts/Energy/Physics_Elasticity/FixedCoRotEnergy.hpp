@@ -18,6 +18,8 @@ namespace FracCuts {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
         
+        virtual void compute_E(const Eigen::VectorXd& singularValues,
+                               double& E) const;
         virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,

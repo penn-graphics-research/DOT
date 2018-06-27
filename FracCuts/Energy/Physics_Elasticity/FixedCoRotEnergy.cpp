@@ -15,36 +15,17 @@ namespace FracCuts {
     
     void FixedCoRotEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        energyValPerElem.resize(data.F.rows());
-//        for(int triI = 0; triI < data.F.rows(); triI++) {
-        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
-            
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, Xt, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
-            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = X0.inverse(); //TODO: this only need to be computed once
-            
-            AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
-            
-            const double sigmam12Sum = (svd.singularValues() - Eigen::Vector2d::Ones()).squaredNorm();
-            const double sigmaProdm1 = svd.singularValues().prod() - 1.0;
-            
-            const double w = (uniformWeight ? 1.0 : data.triArea[triI]);
-            energyValPerElem[triI] = w * (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
-        });
-//        }
+        Energy::getEnergyValPerElemBySVD(data, energyValPerElem, uniformWeight);
     }
     
+    void FixedCoRotEnergy::compute_E(const Eigen::VectorXd& singularValues,
+                                     double& E) const
+    {
+        const double sigmam12Sum = (singularValues - Eigen::Vector2d::Ones()).squaredNorm();
+        const double sigmaProdm1 = singularValues.prod() - 1.0;
+        
+        E = u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1;
+    }
     void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                                  Eigen::VectorXd& dE_div_dsigma) const
     {
@@ -124,7 +105,7 @@ namespace FracCuts {
     }
     
     FixedCoRotEnergy::FixedCoRotEnergy(double YM, double PR) :
-        Energy(true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
+        Energy(true, false, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
     {
         const double sigmam12Sum = 2;
         const double sigmaProdm1 = 3;

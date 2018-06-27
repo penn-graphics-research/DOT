@@ -101,70 +101,70 @@ namespace FracCuts {
         
     public: // API
         // precompute preconditioning matrix and factorize for fast solve, prepare initial guess
-        void precompute(void);
+        virtual void precompute(void);
         
 //        void fixDirection(void);
         
         // solve the optimization problem that minimizes E using a hill-climbing method,
         // the final result will be in result
-        int solve(int maxIter = 100);
+        virtual int solve(int maxIter = 100);
         
-        void updatePrecondMtrAndFactorize(void);
+        virtual void updatePrecondMtrAndFactorize(void);
         
-        void updateEnergyData(bool updateEVal = true, bool updateGradient = true, bool updateHessian = true);
-        bool createFracture(double stressThres, int propType,
+        virtual void updateEnergyData(bool updateEVal = true, bool updateGradient = true, bool updateHessian = true);
+        virtual bool createFracture(double stressThres, int propType,
                             bool allowPropagate = true, bool allowInSplit = false);
-        bool createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate);
-        void setConfig(const TriangleSoup& config, int iterNum, int p_topoIter);
-        void setPropagateFracture(bool p_prop);
-        void setScaffolding(bool p_scaffolding);
+        virtual bool createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate);
+        virtual void setConfig(const TriangleSoup& config, int iterNum, int p_topoIter);
+        virtual void setPropagateFracture(bool p_prop);
+        virtual void setScaffolding(bool p_scaffolding);
         
-        void computeLastEnergyVal(void);
+        virtual void computeLastEnergyVal(void);
         
-        void getGradientVisual(Eigen::MatrixXd& arrowVec) const;
-        TriangleSoup& getResult(void);
-        const Scaffold& getScaffold(void) const;
-        const TriangleSoup& getAirMesh(void) const;
-        bool isScaffolding(void) const;
-        const TriangleSoup& getData_findExtrema(void) const;
-        int getIterNum(void) const;
-        int getTopoIter(void) const;
-        void setRelGL2Tol(double p_relTol);
-        void setAllowEDecRelTol(bool p_allowEDecRelTol);
-        double getDt(void) const;
-        void setAnimScriptType(AnimScriptType animScriptType);
+        virtual void getGradientVisual(Eigen::MatrixXd& arrowVec) const;
+        virtual TriangleSoup& getResult(void);
+        virtual const Scaffold& getScaffold(void) const;
+        virtual const TriangleSoup& getAirMesh(void) const;
+        virtual bool isScaffolding(void) const;
+        virtual const TriangleSoup& getData_findExtrema(void) const;
+        virtual int getIterNum(void) const;
+        virtual int getTopoIter(void) const;
+        virtual void setRelGL2Tol(double p_relTol);
+        virtual void setAllowEDecRelTol(bool p_allowEDecRelTol);
+        virtual double getDt(void) const;
+        virtual void setAnimScriptType(AnimScriptType animScriptType);
         
-        void flushEnergyFileOutput(void);
-        void flushGradFileOutput(void);
-        void clearEnergyFileOutputBuffer(void);
-        void clearGradFileOutputBuffer(void);
+        virtual void flushEnergyFileOutput(void);
+        virtual void flushGradFileOutput(void);
+        virtual void clearEnergyFileOutputBuffer(void);
+        virtual void clearGradFileOutputBuffer(void);
         
     protected: // helper functions
-        bool fullyImplicit(void);
+        virtual bool fullyImplicit(void);
         
         // solve for new configuration in the next iteration
         //NOTE: must compute current gradient first
-        bool solve_oneStep(void);
+        virtual bool solve_oneStep(void);
         
-        bool lineSearch(void);
+        virtual bool lineSearch(void);
 
-        void stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
+        virtual void stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
                          TriangleSoup& data, Scaffold& scaffoldData, double stepSize) const;
         
-        void updateTargetGRes(void);
+        virtual void updateTargetGRes(void);
         
-        void computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold = false);
-        void computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold = false);
-        void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr);
-        void computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
+        virtual void computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold = false);
+        virtual void computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold = false);
+        virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr);
+        virtual void computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
         
-        void initStepSize(const TriangleSoup& data, double& stepSize) const;
+        virtual void initStepSize(const TriangleSoup& data, double& stepSize) const;
         
-        void writeEnergyValToFile(bool flush);
-        void writeGradL2NormToFile(bool flush);
+        virtual void writeEnergyValToFile(bool flush);
+        virtual void writeGradL2NormToFile(bool flush);
         
     public: // data access
-        double getLastEnergyVal(bool excludeScaffold = false) const;
+        virtual double getLastEnergyVal(bool excludeScaffold = false) const;
     };
     
 }

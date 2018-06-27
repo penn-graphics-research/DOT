@@ -21,10 +21,12 @@ extern std::ofstream logFile;
 namespace FracCuts {
     
     Energy::Energy(bool p_needRefactorize,
+                   bool p_needElemInvSafeGuard,
                    bool p_crossSigmaDervative,
                    double visRange_min,
                    double visRange_max) :
         needRefactorize(p_needRefactorize),
+        needElemInvSafeGuard(p_needElemInvSafeGuard),
         crossSigmaDervative(p_crossSigmaDervative),
         visRange_energyVal(visRange_min, visRange_max)
     {}
@@ -192,6 +194,46 @@ namespace FracCuts {
         logFile << "h_finiteDiff = \n" << hessian_finiteDiff << std::endl;
     }
     
+    void Energy::getEnergyValPerElemBySVD(const TriangleSoup& data,
+                                          Eigen::VectorXd& energyValPerElem,
+                                          bool uniformWeight) const
+    {
+        energyValPerElem.resize(data.F.rows());
+        //        for(int triI = 0; triI < data.F.rows(); triI++) {
+        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
+            const Eigen::RowVector3i& triVInd = data.F.row(triI);
+            
+            Eigen::Vector3d x0_3D[3] = {
+                data.V_rest.row(triVInd[0]),
+                data.V_rest.row(triVInd[1]),
+                data.V_rest.row(triVInd[2])
+            };
+            Eigen::Vector2d x0[3];
+            IglUtils::mapTriangleTo2D(x0_3D, x0);
+            
+            Eigen::Matrix2d X0, Xt, A;
+            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
+            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            A = X0.inverse(); //TODO: this only need to be computed once
+            
+            AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
+            
+            compute_E(svd.singularValues(), energyValPerElem[triI]);
+            if(!uniformWeight) {
+                energyValPerElem[triI] *= data.triArea[triI];
+            }
+        });
+//        }
+    }
+    
+    void Energy::computeEnergyValBySVD(const TriangleSoup& data, double& energyVal) const
+    {
+        Eigen::VectorXd energyValPerElem;
+        getEnergyValPerElemBySVD(data, energyValPerElem);
+        energyVal = energyValPerElem.sum();
+    }
+    
     void Energy::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
     {
         gradient.resize(data.V.rows() * 2);
@@ -321,6 +363,133 @@ namespace FracCuts {
                                       fixedVertInd, 2, V, I, J);
     }
     
+    void Energy::computeEnergyValBySVD(const TriangleSoup& data, int triI,
+                                       const Eigen::VectorXd& x,
+                                       double& energyVal,
+                                       bool uniformWeight) const
+    {
+        const Eigen::RowVector3i& triVInd = data.F.row(triI);
+        
+        Eigen::Vector3d x0_3D[3] = {
+            data.V_rest.row(triVInd[0]),
+            data.V_rest.row(triVInd[1]),
+            data.V_rest.row(triVInd[2])
+        };
+        Eigen::Vector2d x0[3];
+        IglUtils::mapTriangleTo2D(x0_3D, x0);
+        
+        Eigen::Matrix2d X0, Xt, A;
+        X0 << x0[1] - x0[0], x0[2] - x0[0];
+        Xt << x.segment(2, 2) - x.segment(0, 2), x.segment(4, 2) - x.segment(0, 2);
+        A = X0.inverse(); //TODO: this only need to be computed once
+        
+        AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
+        
+        compute_E(svd.singularValues(), energyVal);
+        if(!uniformWeight) {
+            energyVal *= data.triArea[triI];
+        }
+    }
+    void Energy::computeGradientBySVD(const TriangleSoup& data, int triI,
+                                      const Eigen::VectorXd& x,
+                                      Eigen::VectorXd& gradient) const
+    {
+        const Eigen::RowVector3i& triVInd = data.F.row(triI);
+        
+        Eigen::Vector3d x0_3D[3] = {
+            data.V_rest.row(triVInd[0]),
+            data.V_rest.row(triVInd[1]),
+            data.V_rest.row(triVInd[2])
+        };
+        Eigen::Vector2d x0[3];
+        IglUtils::mapTriangleTo2D(x0_3D, x0);
+        
+        Eigen::Matrix2d X0, Xt, A;
+        X0 << x0[1] - x0[0], x0[2] - x0[0];
+        Xt << x.segment(2, 2) - x.segment(0, 2), x.segment(4, 2) - x.segment(0, 2);
+        A = X0.inverse(); //TODO: this only need to be computed once
+        
+        AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        
+        Eigen::MatrixXd dsigma_div_dx;
+        IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
+        
+        Eigen::VectorXd dE_div_dsigma;
+        compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
+        
+        gradient.resize(6);
+        const double w = data.triArea[triI];
+        for(int triVI = 0; triVI < 3; triVI++) {
+            gradient.segment(triVI * 2, 2) = w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
+        }
+    }
+    void Energy::computeHessianBySVD(const TriangleSoup& data, int triI,
+                                     const Eigen::VectorXd& x,
+                                     Eigen::MatrixXd& hessian,
+                                     bool projectSPD) const
+    {
+        const Eigen::RowVector3i& triVInd = data.F.row(triI);
+        
+        Eigen::Vector3d x0_3D[3] = {
+            data.V_rest.row(triVInd[0]),
+            data.V_rest.row(triVInd[1]),
+            data.V_rest.row(triVInd[2])
+        };
+        Eigen::Vector2d x0[3];
+        IglUtils::mapTriangleTo2D(x0_3D, x0);
+        
+        Eigen::Matrix2d X0, Xt, A;
+        X0 << x0[1] - x0[0], x0[2] - x0[0];
+        Xt << x.segment(2, 2) - x.segment(0, 2), x.segment(4, 2) - x.segment(0, 2);
+        A = X0.inverse(); //TODO: this only need to be computed once
+        
+        AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        
+        // right term:
+        Eigen::VectorXd dE_div_dsigma;
+        compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
+        
+        Eigen::MatrixXd d2sigma_div_dx2;
+        IglUtils::compute_d2sigma_div_dx2(svd, A, d2sigma_div_dx2);
+        
+        Eigen::MatrixXd d2E_div_dx2_right = d2sigma_div_dx2.block(0, 0, 6, 6) * dE_div_dsigma[0] +
+        d2sigma_div_dx2.block(0, 6, 6, 6) * dE_div_dsigma[1];
+        
+        // left term:
+        Eigen::MatrixXd d2E_div_dsigma2;
+        compute_d2E_div_dsigma2(svd.singularValues(), d2E_div_dsigma2);
+        
+        Eigen::MatrixXd dsigma_div_dx;
+        IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
+        
+        Eigen::MatrixXd d2E_div_dx2_left = d2E_div_dsigma2(0, 0) * dsigma_div_dx.col(0) * dsigma_div_dx.col(0).transpose() +
+        d2E_div_dsigma2(1, 1) * dsigma_div_dx.col(1) * dsigma_div_dx.col(1).transpose();
+        
+        // cross sigma derivative
+        if(crossSigmaDervative) {
+            for(int sigmaI = 0; sigmaI < svd.singularValues().size(); sigmaI++) {
+                for(int sigmaJ = sigmaI + 1; sigmaJ < svd.singularValues().size(); sigmaJ++) {
+                    const Eigen::MatrixXd m = dsigma_div_dx.col(sigmaJ) * dsigma_div_dx.col(sigmaI).transpose();
+                    d2E_div_dx2_left += d2E_div_dsigma2(sigmaI, sigmaJ) * m +
+                    d2E_div_dsigma2(sigmaJ, sigmaI) * m.transpose();
+                }
+            }
+        }
+        
+        // add up left term and right term
+        const double w = data.triArea[triI];
+        hessian = w * (d2E_div_dx2_left + d2E_div_dx2_right);
+        
+        if(projectSPD) {
+            IglUtils::makePD(hessian);
+        }
+    }
+    
+    void Energy::compute_E(const Eigen::VectorXd& singularValues,
+                           double& E) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
     void Energy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                        Eigen::VectorXd& dE_div_dsigma) const
     {
@@ -380,10 +549,16 @@ namespace FracCuts {
     }
     
     void Energy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
-    {}
+    {
+        if(needElemInvSafeGuard) {
+            initStepSize_preventElemInv(data, searchDir, stepSize);
+        }
+    }
     
     void Energy::initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
+        assert(searchDir.size() == data.V.rows() * 2);
+        
         double left = 1.0, right = 0.0;
         for(int triI = 0; triI < data.F.rows(); triI++)
         {
@@ -433,6 +608,74 @@ namespace FracCuts {
             if(bound < stepSize) {
                 stepSize = bound;
             }
+        }
+        
+        if((stepSize < right) && (stepSize > left)) {
+            stepSize = left;
+        }
+        assert(stepSize > 0.0);
+    }
+    
+    void Energy::initStepSize(const Eigen::VectorXd& V,
+                              const Eigen::VectorXd& searchDir,
+                              double& stepSize) const
+    {
+        if(needElemInvSafeGuard) {
+            initStepSize_preventElemInv(V, searchDir, stepSize);
+        }
+    }
+    
+    void Energy::initStepSize_preventElemInv(const Eigen::VectorXd& V,
+                                             const Eigen::VectorXd& searchDir,
+                                             double& stepSize) const
+    {
+        assert(V.size() == searchDir.size());
+        
+        double left = 1.0, right = 0.0;
+        
+        const Eigen::Vector2d& U1 = V.segment(0, 2);
+        const Eigen::Vector2d& U2 = V.segment(2, 2);
+        const Eigen::Vector2d& U3 = V.segment(4, 2);
+        
+        const Eigen::Vector2d V1(searchDir.segment(0, 2));
+        const Eigen::Vector2d V2(searchDir.segment(2, 2));
+        const Eigen::Vector2d V3(searchDir.segment(4, 2));
+        
+        const Eigen::Vector2d U2m1 = U2 - U1;
+        const Eigen::Vector2d U3m1 = U3 - U1;
+        const Eigen::Vector2d V2m1 = V2 - V1;
+        const Eigen::Vector2d V3m1 = V3 - V1;
+        
+        const double a = V2m1[0] * V3m1[1] - V2m1[1] * V3m1[0];
+        const double b = U2m1[0] * V3m1[1] - U2m1[1] * V3m1[0] + V2m1[0] * U3m1[1] - V2m1[1] * U3m1[0];
+        const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
+        assert(c > 0.0);
+        const double delta = b * b - 4.0 * a * c;
+        double bound = stepSize;
+        if(a > 0.0) {
+            if((b < 0.0) && (delta > 0.0)) {
+                const double r_left = (-b - sqrt(delta)) / 2.0 / a;
+                assert(r_left > 0.0);
+                const double r_right = (-b + sqrt(delta)) / 2.0 / a;
+                if(r_left < left) {
+                    left = r_left;
+                }
+                if(r_right > right) {
+                    right = r_right;
+                }
+            }
+        }
+        else if(a < 0.0) {
+            assert(delta > 0.0);
+            bound = (-b - sqrt(delta)) / 2.0 / a;
+        }
+        else {
+            if(b < 0.0) {
+                bound = -c / b;
+            }
+        }
+        if(bound < stepSize) {
+            stepSize = bound;
         }
         
         if((stepSize < right) && (stepSize > left)) {

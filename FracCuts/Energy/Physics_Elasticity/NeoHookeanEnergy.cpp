@@ -15,36 +15,18 @@ namespace FracCuts {
     
     void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        energyValPerElem.resize(data.F.rows());
-        //        for(int triI = 0; triI < data.F.rows(); triI++) {
-        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
-            
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, Xt, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
-            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = X0.inverse(); //TODO: this only need to be computed once
-            
-            AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
-            
-            const double sigma2Sum = svd.singularValues().squaredNorm();
-            const double sigmaProd = svd.singularValues().prod();
-            const double log_sigmaProd = std::log(sigmaProd);
-            
-            const double w = (uniformWeight ? 1.0 : data.triArea[triI]);
-            energyValPerElem[triI] = w * (u / 2.0 * (sigma2Sum - svd.singularValues().size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd);
-        });
+        Energy::getEnergyValPerElemBySVD(data, energyValPerElem, uniformWeight);
     }
     
+    void NeoHookeanEnergy::compute_E(const Eigen::VectorXd& singularValues,
+                                     double& E) const
+    {
+        const double sigma2Sum = singularValues.squaredNorm();
+        const double sigmaProd = singularValues.prod();
+        const double log_sigmaProd = std::log(sigmaProd);
+        
+        E = u / 2.0 * (sigma2Sum - singularValues.size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd;
+    }
     void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                        Eigen::VectorXd& dE_div_dsigma) const
     {
@@ -69,12 +51,6 @@ namespace FracCuts {
                 d2E_div_dsigma2(sigmaI, sigmaJ) = d2E_div_dsigma2(sigmaJ, sigmaI) = lambda / singularValues[sigmaI] / singularValues[sigmaJ];
             }
         }
-    }
-    
-    // to prevent element inversion
-    void NeoHookeanEnergy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
-    {
-        initStepSize_preventElemInv(data, searchDir, stepSize);
     }
     
     void NeoHookeanEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
@@ -114,7 +90,7 @@ namespace FracCuts {
     }
     
     NeoHookeanEnergy::NeoHookeanEnergy(double YM, double PR) :
-        Energy(true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
+        Energy(true, true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
     {
         const double sigma2Sum = 8;
         const double sigmaProd = 4;

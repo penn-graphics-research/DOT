@@ -18,13 +18,12 @@ namespace FracCuts {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
         
+        virtual void compute_E(const Eigen::VectorXd& singularValues,
+                               double& E) const;
         virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
                                              Eigen::MatrixXd& d2E_div_dsigma2) const;
-        
-        // to prevent element inversion
-        virtual void initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const;
         
         virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
         

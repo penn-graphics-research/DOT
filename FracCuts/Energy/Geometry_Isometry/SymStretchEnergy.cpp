@@ -733,11 +733,6 @@ namespace FracCuts {
         hessian.makeCompressed();
     }
     
-    void SymStretchEnergy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
-    {
-        Energy::initStepSize_preventElemInv(data, searchDir, stepSize);
-    }
-    
     void SymStretchEnergy::checkEnergyVal(const TriangleSoup& data) const
     {
         logFile << "check energyVal computation..." << std::endl;
@@ -774,6 +769,15 @@ namespace FracCuts {
         logFile << "energyVal computation error = " << err << std::endl;
     }
     
+    void SymStretchEnergy::compute_E(const Eigen::VectorXd& singularValues,
+                                     double& E) const
+    {
+        E = 0.0;
+        Eigen::VectorXd sigma2 = singularValues.cwiseProduct(singularValues);
+        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
+            E += sigma2[sigmaI] + 1.0 / sigma2[sigmaI];
+        }
+    }
     void SymStretchEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
                                                  Eigen::VectorXd& dE_div_dsigma) const
     {
@@ -794,7 +798,7 @@ namespace FracCuts {
     }
     
     SymStretchEnergy::SymStretchEnergy(void) :
-        Energy(true, false, 4.0, 8.5)
+        Energy(true, true, false, 4.0, 8.5)
     {}
     
     void SymStretchEnergy::computeStressTensor(const Eigen::Vector3d v[3], const Eigen::Vector2d u[3], Eigen::Matrix2d& stressTensor)
