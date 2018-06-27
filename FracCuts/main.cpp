@@ -1621,7 +1621,7 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0]);
     }
     // Optimizer DADMMTimeStepper
-    optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
+    optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     if(suffix == ".primitive") {
         std::map<std::string, FracCuts::AnimScriptType> str2AST;

@@ -68,9 +68,9 @@ namespace FracCuts {
         }
         
         const double dualTol = targetGRes * 6;
-        const int primalMaxIter = 10; //!!! how many primal updates to run between each dual update?
-        const double primalTol = targetGRes; //!!! use primal update tol?
-        const int localMaxIter = 10; //!!! how many local copy updates to run between each global update?
+        const int primalMaxIter = 20; //!!! how many primal updates to run between each dual update?
+        const double primalTol = 1.0e-6; //!!! use primal update tol?
+        const int localMaxIter = 1; //!!! how many local copy updates to run between each global update?
         const double localTol = targetGRes / result.F.rows(); //!!! use local copy update tol?
         
         while(true) {
@@ -207,7 +207,8 @@ namespace FracCuts {
             double gradient_sqn = gradient.squaredNorm();
             std::cout << "\t||gradient||^2 = " << gradient_sqn << std::endl;
             
-            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol)) {
+//            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol)) {
+            if(gradient_sqn < 1e-6) {
                 logFile << "||gradient||^2 = " << gradient_sqn << std::endl;
                 break;
             }
