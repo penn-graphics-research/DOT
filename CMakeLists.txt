@@ -3,6 +3,7 @@ project(OptCuts_dynamic)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+
 # libigl
 option(LIBIGL_USE_STATIC_LIBRARY "Use libigl as static library" OFF)
 option(LIBIGL_WITH_ANTTWEAKBAR       "Use AntTweakBar"    OFF)
@@ -25,6 +26,7 @@ option(LIBIGL_WITH_XML               "Use XML"            OFF)
 
 find_package(LIBIGL REQUIRED QUIET)
 
+
 # Check to see if PARDISO is available
 find_library(PARDISO
   pardiso500-INTEL1301-X86-64
@@ -42,10 +44,37 @@ find_library(PARDISO
 )
 
 
+# TBB
 include(tbb/cmake/TBBGet.cmake)
 tbb_get(TBB_ROOT tbb_root CONFIG_DIR TBB_DIR)
 find_package(TBB REQUIRED tbb)
 
-file(GLOB SRCFILES FracCuts/*.cpp)
+
+# CHOLMOD
+find_library(SUITESPARSE
+  libcholmod.3.0.12
+  PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ext/SUITESPARSE
+)
+include_directories(
+  "/Users/mincli/Documents/SuiteSparse/include"
+)
+
+# project source files
+file(GLOB SRCFILES 
+  "FracCuts/*.cpp" 
+  "FracCuts/Energy/*.cpp" 
+  "FracCuts/Energy/Physics_Elasticity/*.cpp"
+  "FracCuts/Energy/Geometry_Isometry/*.cpp"
+  "FracCuts/Energy/Connectivity/*.cpp"
+  "FracCuts/Utils/*.cpp"
+)
+include_directories(
+  "FracCuts"
+  "FracCuts/Energy"
+  "FracCuts/Utils"
+)
+
+
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png ${PARDISO} TBB::tbb)
+
+target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png ${PARDISO} TBB::tbb ${SUITESPARSE})
