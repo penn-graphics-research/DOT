@@ -37,13 +37,12 @@ namespace FracCuts {
         
         u.resize(result.F.rows(), 4);
         
-        Eigen::MatrixXd d2E_div_dF2_rest;
-        energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
-        double ki = d2E_div_dF2_rest.norm();
-        double wi = dt * std::sqrt(ki);
+        double bulkModulus;
+        energyTerms[0]->getBulkModulus(bulkModulus);
+        double wi = dt * std::sqrt(bulkModulus);
         weights.resize(result.F.rows());
         for(int triI = 0; triI < result.F.rows(); triI++) {
-            weights[triI] = wi;
+            weights[triI] = wi * std::sqrt(result.triArea[triI]);
         }
         weights2 = weights.cwiseProduct(weights);
         

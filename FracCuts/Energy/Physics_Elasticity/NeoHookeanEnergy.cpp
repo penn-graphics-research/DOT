@@ -100,4 +100,9 @@ namespace FracCuts {
         Energy::setVisRange_energyVal(0.0, visRange_max);
     }
     
+    void NeoHookeanEnergy::getBulkModulus(double& bulkModulus)
+    {
+        bulkModulus = lambda + (2.0/3.0) * u;
+    }
+    
 }

@@ -774,4 +774,9 @@ namespace FracCuts {
         assert(stepSize > 0.0);
     }
     
+    void Energy::getBulkModulus(double& bulkModulus)
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    
 }

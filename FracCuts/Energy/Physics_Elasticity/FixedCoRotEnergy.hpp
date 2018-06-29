@@ -27,6 +27,8 @@ namespace FracCuts {
         
         virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
         
+        virtual void getBulkModulus(double& bulkModulus);
+        
     public:
         FixedCoRotEnergy(double YM = 100.0, double PR = 0.4); //TODO: organize material parameters
         

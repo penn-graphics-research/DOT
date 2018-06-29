@@ -102,6 +102,8 @@ namespace FracCuts {
         virtual void initStepSize_preventElemInv(const Eigen::VectorXd& V,
                                                  const Eigen::VectorXd& searchDir,
                                                  double& stepSize) const;
+        
+        virtual void getBulkModulus(double& bulkModulus);
     };
     
 }
