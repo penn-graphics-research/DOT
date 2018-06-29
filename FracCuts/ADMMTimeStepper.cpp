@@ -123,8 +123,6 @@ namespace FracCuts {
         assert(linSysSolver_xUpdate.info() == Eigen::Success);
         
         D_mult_x.resize(result.F.rows(), 4);
-        
-        targetGRes *= 10000.0; //!!!
     }
     
     bool ADMMTimeStepper::fullyImplicit(void)
@@ -153,7 +151,7 @@ namespace FracCuts {
             double sqn_g = gradient.squaredNorm();
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
-            if(sqn_g < targetGRes) {
+            if(sqn_g < targetGRes * 1000.0) { //!!!
                 break;
             }
         }
@@ -163,13 +161,16 @@ namespace FracCuts {
     
     void ADMMTimeStepper::zuUpdate(void)
     {
-        int localMaxIter = 20;
+        int localMaxIter = __INT_MAX__;
         double localTol = targetGRes / result.F.rows();
         tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+//        for(int triI = 0; triI < result.F.rows(); triI++) {
             Eigen::VectorXd zi = z.row(triI).transpose();
             Eigen::VectorXd g;
             for(int j = 0; j < localMaxIter; j++) {
                 computeGradient_zUpdate(triI, zi.transpose(), g);
+//                std::cout << "  " << triI << "-" << j << " ||g_local||^2 = "
+//                    << g.squaredNorm() << std::endl;
                 if(g.squaredNorm() < localTol) {
                     break;
                 }
@@ -190,7 +191,7 @@ namespace FracCuts {
                 // Armijo's rule:
                 const double m = p.dot(g);
                 const double c1m = 1.0e-4 * m;
-                Eigen::VectorXd zi0 = zi;
+                const Eigen::VectorXd zi0 = zi;
                 double E0;
                 computeEnergyVal_zUpdate(triI, zi0.transpose(), E0);
                 zi = zi0 + alpha * p;
@@ -207,6 +208,7 @@ namespace FracCuts {
             
             u.row(triI) += D_mult_x.row(triI) - z.row(triI);
         });
+//        }
     }
     void ADMMTimeStepper::xUpdate(void)
     {
@@ -273,7 +275,7 @@ namespace FracCuts {
     {
         energyTerms[0]->computeGradientBySVD_F(result, triI, zi, g);
         g *= dtSq;
-        g -= ((D_mult_x.row(triI) - zi + u.row(triI)) * weights[triI]).transpose() ;
+        g -= ((D_mult_x.row(triI) - zi + u.row(triI)) * weights2[triI]).transpose() ;
     }
     void ADMMTimeStepper::computeHessianProxy_zUpdate(int triI,
                                                       const Eigen::RowVectorXd& zi,
@@ -281,7 +283,7 @@ namespace FracCuts {
     {
         energyTerms[0]->computeHessianBySVD_F(result, triI, zi, P);
         P *= dtSq;
-        P.diagonal().array() += weights[triI];
+        P.diagonal().array() += weights2[triI];
     }
     
 }
