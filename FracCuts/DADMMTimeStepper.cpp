@@ -53,6 +53,8 @@ namespace FracCuts {
             incTriAmt[triVInd[1]]++;
             incTriAmt[triVInd[2]]++;
         }
+        
+        targetGRes *= 100.0;
     }
     
     bool DADMMTimeStepper::fullyImplicit(void)
@@ -171,19 +173,19 @@ namespace FracCuts {
 //                }
 //                lastAugLagE = augLagE;
                 
-                g_global_sqn = 0.0;
-                for(int triI = 0; triI < result.F.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
-                    for(int localVI = 0; localVI < 3; localVI++) {
-                        g_global_sqn += (rho * (V_localCopy.block(triI, localVI * 2, 1, 2) -
-                                                result.V.row(triVInd[localVI])) +
-                                         y.block(triI, localVI * 2, 1, 2)).squaredNorm();
-                    }
-                }
-                std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
-                if(g_global_sqn < primalTol) {
-                    break;
-                }
+//                g_global_sqn = 0.0;
+//                for(int triI = 0; triI < result.F.rows(); triI++) {
+//                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
+//                    for(int localVI = 0; localVI < 3; localVI++) {
+//                        g_global_sqn += (rho * (V_localCopy.block(triI, localVI * 2, 1, 2) -
+//                                                result.V.row(triVInd[localVI])) +
+//                                         y.block(triI, localVI * 2, 1, 2)).squaredNorm();
+//                    }
+//                }
+//                std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
+//                if(g_global_sqn < primalTol) {
+//                    break;
+//                }
             }
             
             // dual update
@@ -200,15 +202,15 @@ namespace FracCuts {
             }
             //        });
             
-            double g_y_sqnorm = (y - y_old).squaredNorm() / kappa / kappa;
-            std::cout << "\t||g_y||^2 = " << g_y_sqnorm << std::endl;
+//            double g_y_sqnorm = (y - y_old).squaredNorm() / kappa / kappa;
+//            std::cout << "\t||g_y||^2 = " << g_y_sqnorm << std::endl;
             
             computeGradient(result, scaffold, gradient);
             double gradient_sqn = gradient.squaredNorm();
             std::cout << "\t||gradient||^2 = " << gradient_sqn << std::endl;
             
 //            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol)) {
-            if(gradient_sqn < 1e-6) {
+            if(gradient_sqn < targetGRes) {
                 logFile << "||gradient||^2 = " << gradient_sqn << std::endl;
                 break;
             }

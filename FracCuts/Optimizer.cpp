@@ -256,6 +256,9 @@ namespace FracCuts {
         static bool lastPropagate = false;
         for(int iterI = 0; iterI < maxIter; iterI++)
         {
+#ifndef STATIC_SOLVE
+            animScripter.stepAnimScript(result, dt);
+#endif
             if(!mute) { timer.start(1); }
             computeGradient(result, scaffold, gradient);
             const double sqn_g = gradient.squaredNorm();
@@ -281,7 +284,6 @@ namespace FracCuts {
                     if(!mute) { timer.stop(); }
                     return 1;
 #else
-                animScripter.stepAnimScript(result, dt);
                 if(fullyImplicit()) {
                     std::cout << "line search with Armijo's rule failed!!!" << std::endl;
                     logFile << "line search with Armijo's rule failed!!!" << std::endl;

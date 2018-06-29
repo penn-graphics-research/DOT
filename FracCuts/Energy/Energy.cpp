@@ -485,6 +485,96 @@ namespace FracCuts {
         }
     }
     
+    void Energy::computeEnergyValBySVD_F(const TriangleSoup& data, int triI,
+                                         const Eigen::RowVectorXd& F,
+                                         double& energyVal,
+                                         bool uniformWeight) const
+    {
+        Eigen::Matrix2d F_mtr;
+        F_mtr << F.segment(0, 2), F.segment(2, 2);
+        AutoFlipSVD<Eigen::MatrixXd> svd(F_mtr); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
+        
+        compute_E(svd.singularValues(), energyVal);
+        if(!uniformWeight) {
+            energyVal *= data.triArea[triI];
+        }
+    }
+    void Energy::computeGradientBySVD_F(const TriangleSoup& data, int triI,
+                                        const Eigen::RowVectorXd& F,
+                                        Eigen::VectorXd& gradient) const
+    {
+        Eigen::Matrix2d F_mtr;
+        F_mtr << F.segment(0, 2), F.segment(2, 2);
+        AutoFlipSVD<Eigen::MatrixXd> svd(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        
+        Eigen::VectorXd dE_div_dsigma;
+        compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
+        
+        gradient = Eigen::VectorXd::Zero(4);
+        for(int dimI = 0; dimI < 2; dimI++) {
+            Eigen::Matrix2d dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            Eigen::RowVectorXd dsigma_div_dF_vec;
+            dsigma_div_dF_vec.resize(4);
+            dsigma_div_dF_vec << dsigma_div_dF.row(0), dsigma_div_dF.row(1);
+            gradient += dsigma_div_dF_vec.transpose() * dE_div_dsigma[dimI];
+        }
+        
+        const double w = data.triArea[triI];
+        gradient *= w;
+    }
+    void Energy::computeHessianBySVD_F(const TriangleSoup& data, int triI,
+                                       const Eigen::RowVectorXd& F,
+                                       Eigen::MatrixXd& hessian,
+                                       bool projectSPD) const
+    {
+        Eigen::Matrix2d F_mtr;
+        F_mtr << F.segment(0, 2), F.segment(2, 2);
+        AutoFlipSVD<Eigen::MatrixXd> svd(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        
+        // right term:
+        Eigen::VectorXd dE_div_dsigma;
+        compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
+        
+        Eigen::MatrixXd d2sigma_div_dF2;
+        IglUtils::compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
+        
+        Eigen::MatrixXd d2E_div_dF2_right = d2sigma_div_dF2.block(0, 0, 4, 4) * dE_div_dsigma[0] +
+            d2sigma_div_dF2.block(0, 4, 4, 4) * dE_div_dsigma[1];
+        
+        // left term:
+        Eigen::MatrixXd d2E_div_dsigma2;
+        compute_d2E_div_dsigma2(svd.singularValues(), d2E_div_dsigma2);
+        
+        Eigen::MatrixXd dsigma_div_dF;
+        dsigma_div_dF.resize(4, 2);
+        for(int dimI = 0; dimI < 2; dimI++) {
+            Eigen::Matrix2d dsigmai_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            dsigma_div_dF.col(dimI) << dsigmai_div_dF.row(0).transpose(), dsigmai_div_dF.row(1).transpose();
+        }
+        
+        Eigen::MatrixXd d2E_div_dF2_left = d2E_div_dsigma2(0, 0) * dsigma_div_dF.col(0) * dsigma_div_dF.col(0).transpose() +
+        d2E_div_dsigma2(1, 1) * dsigma_div_dF.col(1) * dsigma_div_dF.col(1).transpose();
+        
+        // cross sigma derivative
+        if(crossSigmaDervative) {
+            for(int sigmaI = 0; sigmaI < svd.singularValues().size(); sigmaI++) {
+                for(int sigmaJ = sigmaI + 1; sigmaJ < svd.singularValues().size(); sigmaJ++) {
+                    const Eigen::MatrixXd m = dsigma_div_dF.col(sigmaJ) * dsigma_div_dF.col(sigmaI).transpose();
+                    d2E_div_dF2_left += d2E_div_dsigma2(sigmaI, sigmaJ) * m +
+                    d2E_div_dsigma2(sigmaJ, sigmaI) * m.transpose();
+                }
+            }
+        }
+        
+        // add up left term and right term
+        const double w = data.triArea[triI];
+        hessian = w * (d2E_div_dF2_left + d2E_div_dF2_right);
+        
+        if(projectSPD) {
+            IglUtils::makePD(hessian);
+        }
+    }
+    
     void Energy::compute_E(const Eigen::VectorXd& singularValues,
                            double& E) const
     {

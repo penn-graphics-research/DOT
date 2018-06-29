@@ -2,6 +2,7 @@
 #include "IglUtils.hpp"
 #include "Optimizer.hpp"
 #include "DADMMTimeStepper.hpp"
+#include "ADMMTimeStepper.hpp"
 #include "SymStretchEnergy.hpp"
 #include "ARAPEnergy.hpp"
 #include "NeoHookeanEnergy.hpp"
@@ -1620,7 +1621,7 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0]);
     }
-    // Optimizer DADMMTimeStepper
+    // Optimizer DADMMTimeStepper ADMMTimeStepper
     optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     if(suffix == ".primitive") {
