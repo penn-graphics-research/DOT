@@ -29,7 +29,6 @@ namespace FracCuts {
         std::vector<std::map<int, double>> offset_fixVerts; // for modifying the linSys to fix vertices
 //        Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> linSysSolver_xUpdate;
         //TODO: try PARDISO and CHOLMOD, wrap Eigen and write CMake
-        CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver_xUpdate;
         
     public:
         ADMMTimeStepper(const TriangleSoup& p_data0,
@@ -40,7 +39,8 @@ namespace FracCuts {
                         bool p_scaffolding = false,
                         const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                         const Eigen::MatrixXi& E = Eigen::MatrixXi(),
-                        const Eigen::VectorXi& bnd = Eigen::VectorXi());
+                        const Eigen::VectorXi& bnd = Eigen::VectorXi(),
+                        AnimScriptType animScriptType = AST_NULL);
         
     public:
         virtual void precompute(void);

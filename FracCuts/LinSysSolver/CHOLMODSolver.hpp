@@ -9,6 +9,8 @@
 #ifndef CHOLMODSolver_hpp
 #define CHOLMODSolver_hpp
 
+#include "LinSysSolver.hpp"
+
 #include "cholmod.h"
 
 #include <Eigen/Eigen>
@@ -19,7 +21,7 @@
 namespace FracCuts {
     
     template <typename vectorTypeI, typename vectorTypeS>
-    class CHOLMODSolver
+    class CHOLMODSolver : public LinSysSolver<vectorTypeI, vectorTypeS>
     {
     protected:
         cholmod_common cm;

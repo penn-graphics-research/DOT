@@ -24,16 +24,12 @@ namespace FracCuts {
                                        bool p_scaffolding,
                                        const Eigen::MatrixXd& UV_bnds,
                                        const Eigen::MatrixXi& E,
-                                       const Eigen::VectorXi& bnd) :
+                                       const Eigen::VectorXi& bnd,
+                                       AnimScriptType animScriptType) :
         Optimizer(p_data0, p_energyTerms, p_energyParams,
                   p_propagateFracture, p_mute, p_scaffolding,
-                  UV_bnds, E, bnd)
-    {}
-    
-    void DADMMTimeStepper::precompute(void)
+                  UV_bnds, E, bnd, animScriptType)
     {
-        Optimizer::precompute();
-        
         V_localCopy.resize(result.F.rows(), 6);
         for(int triI = 0; triI < result.F.rows(); triI++) {
             const Eigen::RowVector3i& triVInd = result.F.row(triI);
@@ -53,9 +49,10 @@ namespace FracCuts {
             incTriAmt[triVInd[1]]++;
             incTriAmt[triVInd[2]]++;
         }
-        
-        targetGRes *= 100.0;
     }
+    
+    void DADMMTimeStepper::precompute(void)
+    {}
     
     bool DADMMTimeStepper::fullyImplicit(void)
     {
@@ -70,9 +67,9 @@ namespace FracCuts {
         }
         
         const double dualTol = targetGRes * 6;
-        const int primalMaxIter = 20; //!!! how many primal updates to run between each dual update?
-        const double primalTol = 1.0e-6; //!!! use primal update tol?
-        const int localMaxIter = 1; //!!! how many local copy updates to run between each global update?
+        const int primalMaxIter = 1; //!!! how many primal updates to run between each dual update?
+        const double primalTol = targetGRes * 1000.0; //!!! use primal update tol?
+        const int localMaxIter = 10; //!!! how many local copy updates to run between each global update?
         const double localTol = targetGRes / result.F.rows(); //!!! use local copy update tol?
         
         while(true) {
@@ -173,19 +170,19 @@ namespace FracCuts {
 //                }
 //                lastAugLagE = augLagE;
                 
-//                g_global_sqn = 0.0;
-//                for(int triI = 0; triI < result.F.rows(); triI++) {
-//                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
-//                    for(int localVI = 0; localVI < 3; localVI++) {
-//                        g_global_sqn += (rho * (V_localCopy.block(triI, localVI * 2, 1, 2) -
-//                                                result.V.row(triVInd[localVI])) +
-//                                         y.block(triI, localVI * 2, 1, 2)).squaredNorm();
-//                    }
-//                }
+                g_global_sqn = 0.0;
+                for(int triI = 0; triI < result.F.rows(); triI++) {
+                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
+                    for(int localVI = 0; localVI < 3; localVI++) {
+                        g_global_sqn += (rho * (V_localCopy.block(triI, localVI * 2, 1, 2) -
+                                                result.V.row(triVInd[localVI])) +
+                                         y.block(triI, localVI * 2, 1, 2)).squaredNorm();
+                    }
+                }
 //                std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
-//                if(g_global_sqn < primalTol) {
-//                    break;
-//                }
+                if(g_global_sqn < primalTol) {
+                    break;
+                }
             }
             
             // dual update
@@ -202,15 +199,18 @@ namespace FracCuts {
             }
             //        });
             
-//            double g_y_sqnorm = (y - y_old).squaredNorm() / kappa / kappa;
-//            std::cout << "\t||g_y||^2 = " << g_y_sqnorm << std::endl;
+            std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
+            
+            double g_y_sqnorm = (y - y_old).squaredNorm() / kappa / kappa;
+            std::cout << "\t||g_y||^2 = " << g_y_sqnorm << std::endl;
             
             computeGradient(result, scaffold, gradient);
             double gradient_sqn = gradient.squaredNorm();
             std::cout << "\t||gradient||^2 = " << gradient_sqn << std::endl;
             
-//            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol)) {
-            if(gradient_sqn < targetGRes) {
+            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol) &&
+               (gradient_sqn < targetGRes * 1000.0))
+            {
                 logFile << "||gradient||^2 = " << gradient_sqn << std::endl;
                 break;
             }

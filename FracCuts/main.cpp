@@ -1621,9 +1621,8 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0]);
     }
-    // Optimizer DADMMTimeStepper ADMMTimeStepper
-    optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
-    //TODO: bijectivity for other mode?
+    
+    FracCuts::AnimScriptType animScriptType;
     if(suffix == ".primitive") {
         std::map<std::string, FracCuts::AnimScriptType> str2AST;
         str2AST["hang"] = FracCuts::AST_HANG;
@@ -1632,8 +1631,13 @@ int main(int argc, char *argv[])
         str2AST["bend"] = FracCuts::AST_BEND;
         str2AST["onepoint"] = FracCuts::AST_ONEPOINT;
         str2AST["random"] = FracCuts::AST_RANDOM;
-        optimizer->setAnimScriptType(str2AST[meshName]);
+        animScriptType = str2AST[meshName];
     }
+    
+    // Optimizer/DADMMTimeStepper/ADMMTimeStepper
+    //TODO: enable specify time stepper type in config file
+    optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), animScriptType); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
+    //TODO: bijectivity for other mode?
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
 #ifndef STATIC_SOLVE

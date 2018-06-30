@@ -101,6 +101,7 @@
 		98E6E69720E2C00300130500 /* DADMMTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DADMMTimeStepper.hpp; sourceTree = "<group>"; };
 		98E6E69920E585CF00130500 /* ADMMTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMTimeStepper.cpp; sourceTree = "<group>"; };
 		98E6E69A20E585CF00130500 /* ADMMTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMTimeStepper.hpp; sourceTree = "<group>"; };
+		98E6E69E20E7ECCB00130500 /* LinSysSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LinSysSolver.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -147,6 +148,7 @@
 			isa = PBXGroup;
 			children = (
 				98E6E68620DB15CC00130500 /* Energy */,
+				98E6E69C20E7E58800130500 /* LinSysSolver */,
 				988ED12D1F5727F400B21181 /* TriangleSoup.cpp */,
 				988ED12E1F5727F400B21181 /* TriangleSoup.hpp */,
 				987382CF2076F49A0040BBCE /* Scaffold.cpp */,
@@ -236,16 +238,24 @@
 				98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */,
 				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
 				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
-				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
-				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
-				98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */,
-				98E6E69220DDA03300130500 /* CHOLMODSolver.hpp */,
 				98B57EA0207C748600F238C0 /* Timer.hpp */,
 				98FD37F51F98806B00C83AAC /* GIF.hpp */,
 				983E7DB3202240D900412128 /* Diagnostic.hpp */,
 				983E7DB62022421400412128 /* MeshProcessing.hpp */,
 			);
 			path = Utils;
+			sourceTree = "<group>";
+		};
+		98E6E69C20E7E58800130500 /* LinSysSolver */ = {
+			isa = PBXGroup;
+			children = (
+				98E6E69E20E7ECCB00130500 /* LinSysSolver.hpp */,
+				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
+				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
+				98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */,
+				98E6E69220DDA03300130500 /* CHOLMODSolver.hpp */,
+			);
+			path = LinSysSolver;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

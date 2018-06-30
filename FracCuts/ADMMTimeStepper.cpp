@@ -22,20 +22,17 @@ namespace FracCuts {
                                      bool p_scaffolding,
                                      const Eigen::MatrixXd& UV_bnds,
                                      const Eigen::MatrixXi& E,
-                                     const Eigen::VectorXi& bnd) :
+                                     const Eigen::VectorXi& bnd,
+                                     AnimScriptType animScriptType) :
         Optimizer(p_data0, p_energyTerms, p_energyParams,
                   p_propagateFracture, p_mute, p_scaffolding,
-                  UV_bnds, E, bnd)
-    {}
-    
-    void ADMMTimeStepper::precompute(void)
+                  UV_bnds, E, bnd, animScriptType)
     {
-        Optimizer::precompute();
-        
-        
         z.resize(result.F.rows(), 4);
-        
         u.resize(result.F.rows(), 4);
+        rhs_xUpdate.resize(result.V.rows() * 2);
+        M_mult_xHat.resize(result.V.rows() * 2);
+        D_mult_x.resize(result.F.rows(), 4);
         
         // initialize weights
         double bulkModulus;
@@ -68,15 +65,15 @@ namespace FracCuts {
             const double mA12mA22 = -A(0, 1) - A(1, 1);
             D_array[triI].resize(4, 6);
             D_array[triI] <<
-                mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0), 0.0,
-                mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1), 0.0,
-                0.0, mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0),
-                0.0, mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1);
+            mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0), 0.0,
+            mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1), 0.0,
+            0.0, mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0),
+            0.0, mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1);
         }
-        
-        rhs_xUpdate.resize(result.V.rows() * 2);
-        M_mult_xHat.resize(result.V.rows() * 2);
-        
+    }
+    
+    void ADMMTimeStepper::precompute(void)
+    {
         // construct and prefactorize the linear system
         std::vector<Eigen::Triplet<double>> triplet(result.F.rows() * 4 * 3);
         for(int triI = 0; triI < result.F.rows(); triI++) {
@@ -121,11 +118,9 @@ namespace FracCuts {
         }
         coefMtr.makeCompressed();
         
-        linSysSolver_xUpdate.set_pattern(coefMtr);
-        linSysSolver_xUpdate.analyze_pattern();
-        linSysSolver_xUpdate.factorize(); //TODO: error check
-        
-        D_mult_x.resize(result.F.rows(), 4);
+        linSysSolver->set_pattern(coefMtr);
+        linSysSolver->analyze_pattern();
+        linSysSolver->factorize(); //TODO: error check
     }
     
     bool ADMMTimeStepper::fullyImplicit(void)
@@ -238,7 +233,7 @@ namespace FracCuts {
         }
         
         // solve linear system with pre-factorized info and update x
-        linSysSolver_xUpdate.solve(rhs_xUpdate, x_solved); //TODO: error check
+        linSysSolver->solve(rhs_xUpdate, x_solved); //TODO: error check
 //        for(int vI = 0; vI < result.V.rows(); vI++) {
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
             result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();

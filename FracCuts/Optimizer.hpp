@@ -57,7 +57,7 @@ namespace FracCuts {
         //TODO: write a super class for these 3 solvers, template not necessary
         Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> cholSolver;
 //        PardisoSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver;
-        CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver;
+        LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *linSysSolver;
         
         Eigen::VectorXd gradient; // energy gradient computed in each iteration
         Eigen::VectorXd searchDir; // search direction comptued in each iteration
@@ -96,7 +96,8 @@ namespace FracCuts {
                   int p_propagateFracture = 1, bool p_mute = false, bool p_scaffolding = false,
                   const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                   const Eigen::MatrixXi& E = Eigen::MatrixXi(),
-                  const Eigen::VectorXi& bnd = Eigen::VectorXi());
+                  const Eigen::VectorXi& bnd = Eigen::VectorXi(),
+                  AnimScriptType animScriptType = AST_NULL);
         ~Optimizer(void);
         
     public: // API

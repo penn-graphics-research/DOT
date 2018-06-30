@@ -34,7 +34,8 @@ namespace FracCuts {
     Optimizer::Optimizer(const TriangleSoup& p_data0,
                          const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
-                         const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd) :
+                         const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
+                         AnimScriptType animScriptType) :
         data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams),
         gravity(0.0, -9.80665)
     {
@@ -105,6 +106,35 @@ namespace FracCuts {
 #else
         dt = dtSq = 1.0;
 #endif
+        
+#ifdef LINSYSSOLVER_USE_CHOLMOD
+        linSysSolver = new CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#endif
+        if(!linSysSolver) {
+            assert(0 && "LinSysSolver type macro not defined!");
+        }
+        
+        setAnimScriptType(animScriptType);
+        
+        result = data0;
+        animScripter.initAnimScript(result);
+        resultV_n = result.V;
+        if(scaffolding) {
+            scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
+            result.scaffold = &scaffold;
+            scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
+            scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
+        }
+        
+        lastEDec = 0.0;
+        data_findExtrema = data0;
+        updateTargetGRes();
+        velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        computeEnergyVal(result, scaffold, lastEnergyVal);
+        if(!mute) {
+            writeEnergyValToFile(true);
+            std::cout << "E_initial = " << lastEnergyVal << std::endl;
+        }
     }
     
     Optimizer::~Optimizer(void)
@@ -115,6 +145,7 @@ namespace FracCuts {
         if(file_gradientPerIter.is_open()) {
             file_gradientPerIter.close();
         }
+        delete linSysSolver;
     }
     
     void Optimizer::computeLastEnergyVal(void)
@@ -199,16 +230,6 @@ namespace FracCuts {
     
     void Optimizer::precompute(void)
     {
-        result = data0;
-        animScripter.initAnimScript(result);
-        resultV_n = result.V;
-        if(scaffolding) {
-            scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
-            result.scaffold = &scaffold;
-            scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
-            scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
-        }
-        
         computePrecondMtr(result, scaffold, precondMtr);
         
         if(!pardisoThreadAmt) {
@@ -220,17 +241,17 @@ namespace FracCuts {
         }
         else {
             if(!mute) { timer_step.start(1); }
-            linSysSolver.set_type(pardisoThreadAmt, -2);
-//            linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-            linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+            linSysSolver->set_type(pardisoThreadAmt, -2);
+//            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
+            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                       scaffolding ? fixedV_withScaf : result.fixedVert);
             if(!mute) { timer_step.stop(); timer_step.start(2); }
-            linSysSolver.analyze_pattern();
+            linSysSolver->analyze_pattern();
             if(!mute) { timer_step.stop(); }
             if(!needRefactorize) {
                 try {
                     if(!mute) { timer_step.start(3); }
-                    linSysSolver.factorize();
+                    linSysSolver->factorize();
                     if(!mute) { timer_step.stop(); }
                 }
                 catch(std::exception e) {
@@ -238,16 +259,6 @@ namespace FracCuts {
                     exit(-1);
                 }
             }
-        }
-        
-        lastEDec = 0.0;
-        data_findExtrema = data0;
-        updateTargetGRes();
-        velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
-        computeEnergyVal(result, scaffold, lastEnergyVal);
-        if(!mute) {
-            writeEnergyValToFile(true);
-            std::cout << "E_initial = " << lastEnergyVal << std::endl;
         }
     }
     
@@ -359,10 +370,10 @@ namespace FracCuts {
         }
         else {
             if(!mute) { timer_step.start(1); }
-//            linSysSolver.update_a(V_mtr);
-            linSysSolver.update_a(I_mtr, J_mtr, V_mtr);
+//            linSysSolver->update_a(V_mtr);
+            linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
             if(!mute) { timer_step.stop(); timer_step.start(3); }
-            linSysSolver.factorize();
+            linSysSolver->factorize();
             if(!mute) { timer_step.stop(); }
         }
     }
@@ -437,15 +448,15 @@ namespace FracCuts {
             }
             else {
                 if(!mute) { timer_step.start(1); }
-//                linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-                linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+//                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
+                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                           scaffolding ? fixedV_withScaf : result.fixedVert);
                 if(!mute) { timer_step.stop(); timer_step.start(2); }
-                linSysSolver.analyze_pattern();
+                linSysSolver->analyze_pattern();
                 if(!mute) { timer_step.stop(); }
                 if(!needRefactorize) {
                     if(!mute) { timer_step.start(3); }
-                    linSysSolver.factorize();
+                    linSysSolver->factorize();
                     if(!mute) { timer_step.stop(); }
                 }
             }
@@ -671,8 +682,8 @@ namespace FracCuts {
                 if(!fractureInitiated) {
                     if(scaffolding) {
                         if(!mute) { timer_step.start(1); }
-//                        linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr);
-                        linSysSolver.set_pattern(I_mtr, J_mtr, V_mtr,
+//                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
+                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr,
                                                   scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                                   scaffolding ? fixedV_withScaf : result.fixedVert);
                         
@@ -680,7 +691,7 @@ namespace FracCuts {
                             std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
                         }
                         if(!mute) { timer_step.stop(); timer_step.start(2); }
-                        linSysSolver.analyze_pattern();
+                        linSysSolver->analyze_pattern();
                         if(!mute) { timer_step.stop(); }
                     }
                     else {
@@ -688,8 +699,8 @@ namespace FracCuts {
                             std::cout << "updating matrix entries..." << std::endl;
                         }
                         if(!mute) { timer_step.start(1); }
-//                        linSysSolver.update_a(V_mtr);
-                        linSysSolver.update_a(I_mtr, J_mtr, V_mtr);
+//                        linSysSolver->update_a(V_mtr);
+                        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
                         if(!mute) { timer_step.stop(); }
                     }
                 }
@@ -698,7 +709,7 @@ namespace FracCuts {
                         std::cout << "numerically factorizing Hessian/Proxy matrix..." << std::endl;
                     }
                     if(!mute) { timer_step.start(3); }
-                    linSysSolver.factorize();
+                    linSysSolver->factorize();
                     if(!mute) { timer_step.stop(); }
                 }
                 catch(std::exception e) {
@@ -723,7 +734,7 @@ namespace FracCuts {
                 std::cout << "back solve..." << std::endl;
             }
             if(!mute) { timer_step.start(4); }
-            linSysSolver.solve(minusG, searchDir);
+            linSysSolver->solve(minusG, searchDir);
             if(!mute) { timer_step.stop(); }
         }
         fractureInitiated = false;
