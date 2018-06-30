@@ -14,8 +14,7 @@
 #include "Scaffold.hpp"
 #include "AnimScripter.hpp"
 
-#include "PardisoSolver.hpp"
-#include "CHOLMODSolver.hpp"
+#include "LinSysSolver.hpp"
 
 #include <fstream>
 

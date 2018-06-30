@@ -9,6 +9,9 @@
 #include "Optimizer.hpp"
 #include "SymStretchEnergy.hpp"
 #include "SeparationEnergy.hpp"
+#include "PardisoSolver.hpp"
+#include "CHOLMODSolver.hpp"
+#include "EigenLibSolver.hpp"
 #include "IglUtils.hpp"
 #include "Timer.hpp"
 
@@ -109,10 +112,11 @@ namespace FracCuts {
         
 #ifdef LINSYSSOLVER_USE_CHOLMOD
         linSysSolver = new CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#elif defined(LINSYSSOLVER_USE_PARDISO)
+        linSysSolver = new PardisoSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#else
+        linSysSolver = new EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>();
 #endif
-        if(!linSysSolver) {
-            assert(0 && "LinSysSolver type macro not defined!");
-        }
         
         setAnimScriptType(animScriptType);
         

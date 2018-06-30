@@ -35,6 +35,7 @@
 		98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */; };
 		98E6E69820E2C00300130500 /* DADMMTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E69620E2C00300130500 /* DADMMTimeStepper.cpp */; };
 		98E6E69B20E585CF00130500 /* ADMMTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E69920E585CF00130500 /* ADMMTimeStepper.cpp */; };
+		98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E6A220E8046700130500 /* EigenLibSolver.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -102,6 +103,8 @@
 		98E6E69920E585CF00130500 /* ADMMTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMTimeStepper.cpp; sourceTree = "<group>"; };
 		98E6E69A20E585CF00130500 /* ADMMTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMTimeStepper.hpp; sourceTree = "<group>"; };
 		98E6E69E20E7ECCB00130500 /* LinSysSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LinSysSolver.hpp; sourceTree = "<group>"; };
+		98E6E6A220E8046700130500 /* EigenLibSolver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EigenLibSolver.cpp; sourceTree = "<group>"; };
+		98E6E6A320E8046700130500 /* EigenLibSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = EigenLibSolver.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -250,6 +253,8 @@
 			isa = PBXGroup;
 			children = (
 				98E6E69E20E7ECCB00130500 /* LinSysSolver.hpp */,
+				98E6E6A220E8046700130500 /* EigenLibSolver.cpp */,
+				98E6E6A320E8046700130500 /* EigenLibSolver.hpp */,
 				98CE476D1F71E66300627725 /* PardisoSolver.cpp */,
 				98CE476E1F71E66300627725 /* PardisoSolver.hpp */,
 				98E6E69120DDA03300130500 /* CHOLMODSolver.cpp */,
@@ -322,6 +327,7 @@
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,
 				98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */,
+				98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */,
 				98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */,
 				98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */,
 				98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */,

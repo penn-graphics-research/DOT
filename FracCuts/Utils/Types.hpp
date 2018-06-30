@@ -12,7 +12,8 @@
 #include <cstdio>
 
 //#define STATIC_SOLVE
-#define LINSYSSOLVER_USE_CHOLMOD
+
+//#define LINSYSSOLVER_USE_CHOLMOD
 
 namespace FracCuts {
     enum MethodType {

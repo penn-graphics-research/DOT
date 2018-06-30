@@ -1,47 +1,25 @@
 //
-//  CHOLMODSolver.cpp
+//  EigenLibSolver.cpp
 //  FracCuts
 //
-//  Created by Minchen Li on 6/22/18.
+//  Created by Minchen Li on 6/30/18.
 //  Copyright © 2018 Minchen Li. All rights reserved.
 //
 
-#include "CHOLMODSolver.hpp"
-
-#include <iostream>
+#include "EigenLibSolver.hpp"
 
 namespace FracCuts {
     
     template <typename vectorTypeI, typename vectorTypeS>
-    CHOLMODSolver<vectorTypeI, vectorTypeS>::CHOLMODSolver(void)
-    {
-        cholmod_start(&cm);
-        A = NULL;
-        L = NULL;
-        b = NULL;
-    }
-    
-    template <typename vectorTypeI, typename vectorTypeS>
-    CHOLMODSolver<vectorTypeI, vectorTypeS>::~CHOLMODSolver(void)
-    {
-        cholmod_free_sparse(&A, &cm);
-        cholmod_free_factor(&L, &cm);
-        cholmod_free_dense(&b, &cm);
-        cholmod_finish(&cm);
-    }
-    
-    template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_type(int threadAmt,
-                                                           int _mtype,
-                                                           bool is_upper_half)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::set_type(int threadAmt, int _mtype, bool is_upper_half)
     {}
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const vectorTypeI &II,
-                                                              const vectorTypeI &JJ,
-                                                              const vectorTypeS &SS,
-                                                              const std::vector<std::set<int>>& vNeighbor,
-                                                              const std::set<int>& fixedVert)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const vectorTypeI &II,
+                                                               const vectorTypeI &JJ,
+                                                               const vectorTypeS &SS,
+                                                               const std::vector<std::set<int>>& vNeighbor,
+                                                               const std::set<int>& fixedVert)
     {
         assert(II.size() == JJ.size());
         assert(II.size() == SS.size());
@@ -95,32 +73,25 @@ namespace FracCuts {
                 ia[rowI * 2 + 2] = ia[rowI * 2 + 1] + 1;
             }
         }
-        //TODO: directly save into A
-        if(!A) {
-            A = cholmod_allocate_sparse(numRows, numRows, ja.size(), true, true, -1, CHOLMOD_REAL, &cm);
-        }
+        //TODO: directly save into coefMtr
+        coefMtr.resize(numRows, numRows);
+        coefMtr.reserve(ja.size());
         ia -= Eigen::VectorXi::Ones(ia.size()); ja -= Eigen::VectorXi::Ones(ja.size());
-        memcpy(A->i, ja.data(), ja.size() * sizeof(ja[0]));
-        memcpy(A->p, ia.data(), ia.size() * sizeof(ia[0]));
+        memcpy(coefMtr.innerIndexPtr(), ja.data(), ja.size() * sizeof(ja[0]));
+        memcpy(coefMtr.outerIndexPtr(), ia.data(), ia.size() * sizeof(ia[0]));
         
         update_a(II, JJ, SS);
     }
     template <typename vectorTypeI, typename vectorTypeS>
-    void  CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr) //NOTE: mtr must be SPD
     {
-        numRows = static_cast<int>(mtr.rows());
-        if(!A) {
-            A = cholmod_allocate_sparse(numRows, numRows, mtr.nonZeros(), true, true, -1, CHOLMOD_REAL, &cm);
-        }
-        memcpy(A->i, mtr.innerIndexPtr(), mtr.nonZeros() * sizeof(mtr.innerIndexPtr()[0]));
-        memcpy(A->p, mtr.outerIndexPtr(), (numRows + 1) * sizeof(mtr.outerIndexPtr()[0]));
-        memcpy(A->x, mtr.valuePtr(), mtr.nonZeros() * sizeof(mtr.valuePtr()[0]));
+        coefMtr = mtr;
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::update_a(const vectorTypeI &II,
-                                                           const vectorTypeI &JJ,
-                                                           const vectorTypeS &SS)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::update_a(const vectorTypeI &II,
+                                                            const vectorTypeI &JJ,
+                                                            const vectorTypeS &SS)
     {
         //TODO: faster O(1) indices!!
         
@@ -139,41 +110,34 @@ namespace FracCuts {
             }
         }
         //    a[IJ2aI[2].find(2)->second] = 1.0;
-        //TODO: directly save into A
-        memcpy(A->x, a.data(), a.size() * sizeof(a[0]));
+        //TODO: directly save into coefMtr
+        memcpy(coefMtr.valuePtr(), a.data(), a.size() * sizeof(a[0]));
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::analyze_pattern(void)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::analyze_pattern(void)
     {
-        cholmod_free_factor(&L, &cm);
-        L = cholmod_analyze(A, &cm);
+        simplicialLDLT.analyzePattern(coefMtr);
+        assert(simplicialLDLT.info() == Eigen::Success);
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    bool CHOLMODSolver<vectorTypeI, vectorTypeS>::factorize(void)
+    bool EigenLibSolver<vectorTypeI, vectorTypeS>::factorize(void)
     {
-        return !cholmod_factorize(A, L, &cm);
+        simplicialLDLT.factorize(coefMtr);
+        bool succeeded = (simplicialLDLT.info() == Eigen::Success);
+        assert(succeeded);
+        return succeeded;
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::solve(Eigen::VectorXd &rhs,
-                                                        Eigen::VectorXd &result)
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::solve(Eigen::VectorXd &rhs,
+                                                         Eigen::VectorXd &result)
     {
-        //TODO: directly point to rhs?
-        if(!b) {
-            b = cholmod_allocate_dense(numRows, 1, numRows, CHOLMOD_REAL, &cm);
-        }
-        memcpy(b->x, rhs.data(), rhs.size() * sizeof(rhs[0]));
-        cholmod_dense *x;
-        x = cholmod_solve(CHOLMOD_A, L, b, &cm);
-        result.resize(rhs.size());
-        memcpy(result.data(), x->x, result.size() * sizeof(result[0]));
-        cholmod_free_dense(&x, &cm);
+        result = simplicialLDLT.solve(rhs);
+        assert(simplicialLDLT.info() == Eigen::Success);
     }
     
-    template class CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>;
+    template class EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>;
     
 }
-
-
