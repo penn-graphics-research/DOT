@@ -118,6 +118,7 @@ namespace FracCuts {
         }
         coefMtr.makeCompressed();
         
+        linSysSolver->set_type(1, 2);
         linSysSolver->set_pattern(coefMtr);
         linSysSolver->analyze_pattern();
         linSysSolver->factorize(); //TODO: error check
