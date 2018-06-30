@@ -105,6 +105,17 @@ namespace FracCuts {
         
         update_a(II, JJ, SS);
     }
+    template <typename vectorTypeI, typename vectorTypeS>
+    void  CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr)
+    {
+        numRows = static_cast<int>(mtr.rows());
+        if(!A) {
+            A = cholmod_allocate_sparse(numRows, numRows, mtr.nonZeros(), true, true, -1, CHOLMOD_REAL, &cm);
+        }
+        memcpy(A->i, mtr.innerIndexPtr(), mtr.nonZeros() * sizeof(mtr.innerIndexPtr()[0]));
+        memcpy(A->p, mtr.outerIndexPtr(), (numRows + 1) * sizeof(mtr.outerIndexPtr()[0]));
+        memcpy(A->x, mtr.valuePtr(), mtr.nonZeros() * sizeof(mtr.valuePtr()[0]));
+    }
     
     template <typename vectorTypeI, typename vectorTypeS>
     void CHOLMODSolver<vectorTypeI, vectorTypeS>::update_a(const vectorTypeI &II,

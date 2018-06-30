@@ -22,13 +22,14 @@ namespace FracCuts {
     protected:
         Eigen::MatrixXd z, u;
         Eigen::VectorXd weights, weights2;
-        std::vector<Eigen::MatrixXd> D_array;
+        std::vector<Eigen::MatrixXd> D_array; // maps xi to zi
         
-        Eigen::VectorXd rhs_xUpdate, M_mult_xHat;
-        std::map<std::pair<int, int>, double> offset_fixVerts;
-        Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> linSysSolver_xUpdate;
-        //TODO: try PARDISO and CHOLMOD
+        Eigen::VectorXd rhs_xUpdate, M_mult_xHat, x_solved;
         Eigen::MatrixXd D_mult_x;
+        std::vector<std::map<int, double>> offset_fixVerts; // for modifying the linSys to fix vertices
+//        Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> linSysSolver_xUpdate;
+        //TODO: try PARDISO and CHOLMOD, wrap Eigen and write CMake
+        CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver_xUpdate;
         
     public:
         ADMMTimeStepper(const TriangleSoup& p_data0,
@@ -53,6 +54,7 @@ namespace FracCuts {
         
         void compute_Di_mult_xi(int elemI);
         
+        // local energy computation
         void computeEnergyVal_zUpdate(int triI,
                                       const Eigen::RowVectorXd& zi,
                                       double& Ei) const;

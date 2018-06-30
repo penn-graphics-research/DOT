@@ -37,6 +37,7 @@ namespace FracCuts {
         
         u.resize(result.F.rows(), 4);
         
+        // initialize weights
         double bulkModulus;
         energyTerms[0]->getBulkModulus(bulkModulus);
         double wi = dt * std::sqrt(bulkModulus);
@@ -99,7 +100,8 @@ namespace FracCuts {
             coefMtr.coeffRef(vI * 2, vI * 2) += massI;
             coefMtr.coeffRef(vI * 2 + 1, vI * 2 + 1) += massI;
         }
-        offset_fixVerts.clear();
+        offset_fixVerts.resize(0);
+        offset_fixVerts.resize(result.V.rows() * 2);
         for (int k = 0; k < coefMtr.outerSize(); ++k) {
             for (Eigen::SparseMatrix<double>::InnerIterator it(coefMtr, k); it; ++it)
             {
@@ -107,7 +109,7 @@ namespace FracCuts {
                 bool fixed_colV = (result.fixedVert.find(it.col() / 2) != result.fixedVert.end());
                 if(fixed_rowV || fixed_colV) {
                     if(!fixed_rowV) {
-                        offset_fixVerts[std::pair<int, int>(it.row(), it.col())] = it.value();
+                        offset_fixVerts[it.row()][it.col()] = it.value();
                     }
                     it.valueRef() = 0.0;
                 }
@@ -119,8 +121,9 @@ namespace FracCuts {
         }
         coefMtr.makeCompressed();
         
-        linSysSolver_xUpdate.compute(coefMtr);
-        assert(linSysSolver_xUpdate.info() == Eigen::Success);
+        linSysSolver_xUpdate.set_pattern(coefMtr);
+        linSysSolver_xUpdate.analyze_pattern();
+        linSysSolver_xUpdate.factorize(); //TODO: error check
         
         D_mult_x.resize(result.F.rows(), 4);
     }
@@ -128,13 +131,15 @@ namespace FracCuts {
     bool ADMMTimeStepper::fullyImplicit(void)
     {
         // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx
-        for(int vI = 0; vI < result.V.rows(); vI++) {
+//        for(int vI = 0; vI < result.V.rows(); vI++) {
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
             if(result.fixedVert.find(vI) == result.fixedVert.end()) {
                 result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
             }
             M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) *
                 result.V.row(vI).transpose();
-        }
+//        }
+        });
         u.setZero();
         tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
             compute_Di_mult_xi(triI);
@@ -185,7 +190,7 @@ namespace FracCuts {
                 
                 // line search init
                 double alpha = 1.0;
-                energyTerms[0]->initStepSize(zi, p, alpha);
+                energyTerms[0]->initStepSize(zi, p, alpha); //TODO: different in F space
                 alpha *= 0.99;
                 
                 // Armijo's rule:
@@ -221,22 +226,22 @@ namespace FracCuts {
             rhs_xUpdate.segment(triVInd[1] * 2, 2) += rhs_right_triI.segment(2, 2);
             rhs_xUpdate.segment(triVInd[2] * 2, 2) += rhs_right_triI.segment(4, 2);
         }
-        //TODO: arrange by row and parallelize
-        for(const auto& entryI : offset_fixVerts) {
-            int vI = entryI.first.second / 2;
-            int dimI = entryI.first.second % 2;
-            rhs_xUpdate[entryI.first.first] -= entryI.second * result.V(vI, dimI);
-        }
+        tbb::parallel_for(0, (int)offset_fixVerts.size(), 1, [&](int rowI) {
+            for(const auto& entryI : offset_fixVerts[rowI]) {
+                int vI = entryI.first / 2;
+                int dimI = entryI.first % 2;
+                rhs_xUpdate[rowI] -= entryI.second * result.V(vI, dimI);
+            }
+        });
         for(const auto& fVI : result.fixedVert) {
             rhs_xUpdate.segment(fVI * 2, 2) = result.V.row(fVI).transpose();
         }
         
         // solve linear system with pre-factorized info and update x
-        Eigen::VectorXd x = linSysSolver_xUpdate.solve(rhs_xUpdate);
-        assert(linSysSolver_xUpdate.info() == Eigen::Success);
+        linSysSolver_xUpdate.solve(rhs_xUpdate, x_solved); //TODO: error check
 //        for(int vI = 0; vI < result.V.rows(); vI++) {
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
-            result.V.row(vI) = x.segment(vI * 2, 2).transpose();
+            result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
 //        }
         });
         

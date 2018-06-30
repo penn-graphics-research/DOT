@@ -43,6 +43,7 @@ namespace FracCuts {
                          const vectorTypeS &SS,
                          const std::vector<std::set<int>>& vNeighbor,
                          const std::set<int>& fixedVert);
+        void set_pattern(const Eigen::SparseMatrix<double>& mtr); //NOTE: mtr must be SPD
         
         void update_a(const vectorTypeI &II,
                       const vectorTypeI &JJ,
