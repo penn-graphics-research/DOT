@@ -64,6 +64,9 @@ namespace FracCuts {
                 for(const auto& colI : vNeighbor[rowI]) {
                     if(fixedVert.find(colI) == fixedVert.end()) {
                         if(colI > rowI) {
+                            // only the lower-left part
+                            // colI > rowI means upper-right, but we are preparing CSR here
+                            // in a row-major manner and CHOLMOD is actually column-major
                             IJ2aI[rowI * 2][colI * 2] = static_cast<int>(ja.size());
                             IJ2aI[rowI * 2][colI * 2 + 1] = static_cast<int>(ja.size()) + 1;
                             ja.conservativeResize(ja.size() + 2);
@@ -98,8 +101,9 @@ namespace FracCuts {
         //TODO: directly save into A
         if(!A) {
             A = cholmod_allocate_sparse(numRows, numRows, ja.size(), true, true, -1, CHOLMOD_REAL, &cm);
+            // -1: upper right part will be ignored during computation
         }
-        ia -= Eigen::VectorXi::Ones(ia.size()); ja -= Eigen::VectorXi::Ones(ja.size());
+        ia.array() -= 1; ja.array() -= 1; // CHOLMOD's index starts from 0
         memcpy(A->i, ja.data(), ja.size() * sizeof(ja[0]));
         memcpy(A->p, ia.data(), ia.size() * sizeof(ia[0]));
         
@@ -111,6 +115,7 @@ namespace FracCuts {
         numRows = static_cast<int>(mtr.rows());
         if(!A) {
             A = cholmod_allocate_sparse(numRows, numRows, mtr.nonZeros(), true, true, -1, CHOLMOD_REAL, &cm);
+            // -1: upper right part will be ignored during computation
         }
         memcpy(A->i, mtr.innerIndexPtr(), mtr.nonZeros() * sizeof(mtr.innerIndexPtr()[0]));
         memcpy(A->p, mtr.outerIndexPtr(), (numRows + 1) * sizeof(mtr.outerIndexPtr()[0]));

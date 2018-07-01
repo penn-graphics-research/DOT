@@ -42,6 +42,9 @@ namespace FracCuts {
                 for(const auto& colI : vNeighbor[rowI]) {
                     if(fixedVert.find(colI) == fixedVert.end()) {
                         if(colI > rowI) {
+                            // only the lower-left part
+                            // colI > rowI means upper-right, but we are preparing CSR here
+                            // in a row-major manner and CHOLMOD is actually column-major
                             IJ2aI[rowI * 2][colI * 2] = static_cast<int>(ja.size());
                             IJ2aI[rowI * 2][colI * 2 + 1] = static_cast<int>(ja.size()) + 1;
                             ja.conservativeResize(ja.size() + 2);

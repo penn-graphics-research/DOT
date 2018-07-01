@@ -343,6 +343,10 @@ namespace FracCuts {
                 for(const auto& colI : vNeighbor[rowI]) {
                     if(fixedVert.find(colI) == fixedVert.end()) {
                         if(colI > rowI) {
+                            //NOTE: using Pardiso to factorize SPD matrix requires
+                            // only the lower-left part being stored
+                            // colI > rowI means upper-right, but we are preparing CSR here
+                            // in a row-major manner and Pardiso is actually column-major
                             IJ2aI[rowI * 2][colI * 2] = static_cast<int>(ja.size());
                             IJ2aI[rowI * 2][colI * 2 + 1] = static_cast<int>(ja.size()) + 1;
                             ja.conservativeResize(ja.size() + 2);
@@ -398,14 +402,21 @@ namespace FracCuts {
     template <typename vectorTypeI, typename vectorTypeS>
     void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr)
     {
-        Eigen::SparseMatrix<double> mtr_upperRight = mtr.triangularView<Eigen::Lower>();
-        numRows = static_cast<int>(mtr_upperRight.rows());
-        ja.resize(mtr_upperRight.nonZeros());
+        //NOTE: using Pardiso to factorize SPD matrix requires only the lower-left part being stored
+        Eigen::SparseMatrix<double> mtr_lowerLeft = mtr.triangularView<Eigen::Lower>();
+        
+        numRows = static_cast<int>(mtr_lowerLeft.rows());
+        ja.resize(mtr_lowerLeft.nonZeros());
         ia.resize(numRows + 1);
-        a.resize(mtr_upperRight.nonZeros());
-        memcpy(ja.data(), mtr_upperRight.innerIndexPtr(), mtr_upperRight.nonZeros() * sizeof(mtr_upperRight.innerIndexPtr()[0]));
-        memcpy(ia.data(), mtr_upperRight.outerIndexPtr(), (numRows + 1) * sizeof(mtr_upperRight.outerIndexPtr()[0]));
-        memcpy(a.data(), mtr_upperRight.valuePtr(), mtr_upperRight.nonZeros() * sizeof(mtr_upperRight.valuePtr()[0]));
+        a.resize(mtr_lowerLeft.nonZeros());
+        memcpy(ja.data(), mtr_lowerLeft.innerIndexPtr(),
+               mtr_lowerLeft.nonZeros() * sizeof(mtr_lowerLeft.innerIndexPtr()[0]));
+        memcpy(ia.data(), mtr_lowerLeft.outerIndexPtr(),
+               (numRows + 1) * sizeof(mtr_lowerLeft.outerIndexPtr()[0]));
+        memcpy(a.data(), mtr_lowerLeft.valuePtr(),
+               mtr_lowerLeft.nonZeros() * sizeof(mtr_lowerLeft.valuePtr()[0]));
+        
+        //NOTE: Pardiso requires the indices start from 1
         ja.array() += 1;
         ia.array() += 1;
     }
