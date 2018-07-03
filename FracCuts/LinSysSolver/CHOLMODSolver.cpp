@@ -34,7 +34,9 @@ namespace FracCuts {
     void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_type(int threadAmt,
                                                            int _mtype,
                                                            bool is_upper_half)
-    {}
+    {
+        //TODO: support more matrix types, currently only SPD
+    }
     
     template <typename vectorTypeI, typename vectorTypeS>
     void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const vectorTypeI &II,

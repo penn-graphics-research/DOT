@@ -11,8 +11,6 @@
 
 #include "Optimizer.hpp"
 
-#include "CHOLMODSolver.hpp"
-
 #include <map>
 
 namespace FracCuts {
@@ -27,8 +25,6 @@ namespace FracCuts {
         Eigen::VectorXd rhs_xUpdate, M_mult_xHat, x_solved;
         Eigen::MatrixXd D_mult_x;
         std::vector<std::map<int, double>> offset_fixVerts; // for modifying the linSys to fix vertices
-//        Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> linSysSolver_xUpdate;
-        //TODO: try PARDISO and CHOLMOD, wrap Eigen and write CMake
         
     public:
         ADMMTimeStepper(const TriangleSoup& p_data0,

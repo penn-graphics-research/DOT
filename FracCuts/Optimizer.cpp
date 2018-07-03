@@ -9,9 +9,15 @@
 #include "Optimizer.hpp"
 #include "SymStretchEnergy.hpp"
 #include "SeparationEnergy.hpp"
-#include "PardisoSolver.hpp"
-#include "CHOLMODSolver.hpp"
-#include "EigenLibSolver.hpp"
+
+#ifdef LINSYSSOLVER_USE_CHOLMOD
+    #include "CHOLMODSolver.hpp"
+#elif defined(LINSYSSOLVER_USE_PARDISO)
+    #include "PardisoSolver.hpp"
+#else
+    #include "EigenLibSolver.hpp"
+#endif
+
 #include "IglUtils.hpp"
 #include "Timer.hpp"
 
