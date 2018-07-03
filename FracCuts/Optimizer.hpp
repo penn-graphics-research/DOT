@@ -52,10 +52,7 @@ namespace FracCuts {
         Eigen::VectorXi I_mtr, J_mtr; // triplet representation
         Eigen::VectorXd V_mtr;
         
-        // cholesky solver for solving the linear system for search directions
-        //TODO: write a super class for these 3 solvers, template not necessary
-        Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> cholSolver;
-//        PardisoSolver<Eigen::VectorXi, Eigen::VectorXd> linSysSolver;
+        // SPD solver for solving the linear system for search directions
         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *linSysSolver;
         
         Eigen::VectorXd gradient; // energy gradient computed in each iteration

@@ -242,32 +242,23 @@ namespace FracCuts {
     {
         computePrecondMtr(result, scaffold, precondMtr);
         
-        if(!pardisoThreadAmt) {
-            cholSolver.analyzePattern(precondMtr);
-            cholSolver.factorize(precondMtr);
-            if(cholSolver.info() != Eigen::Success) {
-                assert(0 && "Cholesky decomposition failed!");
-            }
-        }
-        else {
-            if(!mute) { timer_step.start(1); }
-            linSysSolver->set_type(pardisoThreadAmt, 2);
+        if(!mute) { timer_step.start(1); }
+        linSysSolver->set_type(pardisoThreadAmt, 2);
 //            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
-                                      scaffolding ? fixedV_withScaf : result.fixedVert);
-            if(!mute) { timer_step.stop(); timer_step.start(2); }
-            linSysSolver->analyze_pattern();
-            if(!mute) { timer_step.stop(); }
-            if(!needRefactorize) {
-                try {
-                    if(!mute) { timer_step.start(3); }
-                    linSysSolver->factorize();
-                    if(!mute) { timer_step.stop(); }
-                }
-                catch(std::exception e) {
-                    IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_factorizeFail", I_mtr, J_mtr, V_mtr, true);
-                    exit(-1);
-                }
+        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+                                  scaffolding ? fixedV_withScaf : result.fixedVert);
+        if(!mute) { timer_step.stop(); timer_step.start(2); }
+        linSysSolver->analyze_pattern();
+        if(!mute) { timer_step.stop(); }
+        if(!needRefactorize) {
+            try {
+                if(!mute) { timer_step.start(3); }
+                linSysSolver->factorize();
+                if(!mute) { timer_step.stop(); }
+            }
+            catch(std::exception e) {
+                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_factorizeFail", I_mtr, J_mtr, V_mtr, true);
+                exit(-1);
             }
         }
     }
@@ -371,21 +362,13 @@ namespace FracCuts {
             std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
         }
         computePrecondMtr(result, scaffold, precondMtr);
-        if(!pardisoThreadAmt) {
-            cholSolver.factorize(precondMtr);
-            if(cholSolver.info() != Eigen::Success) {
-                IglUtils::writeSparseMatrixToFile(outputFolderPath + "precondMtr_decomposeFailed", precondMtr);
-                assert(0 && "Cholesky decomposition failed!");
-            }
-        }
-        else {
-            if(!mute) { timer_step.start(1); }
+        
+        if(!mute) { timer_step.start(1); }
 //            linSysSolver->update_a(V_mtr);
-            linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-            if(!mute) { timer_step.stop(); timer_step.start(3); }
-            linSysSolver->factorize();
-            if(!mute) { timer_step.stop(); }
-        }
+        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
+        if(!mute) { timer_step.stop(); timer_step.start(3); }
+        linSysSolver->factorize();
+        if(!mute) { timer_step.stop(); }
     }
     
     void Optimizer::setConfig(const TriangleSoup& config, int iterNum, int p_topoIter)
@@ -446,29 +429,18 @@ namespace FracCuts {
                 std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
             }
             computePrecondMtr(result, scaffold, precondMtr);
-            if(!pardisoThreadAmt) {
-                cholSolver.analyzePattern(precondMtr);
-                if(!needRefactorize) {
-                    cholSolver.factorize(precondMtr);
-                    if(cholSolver.info() != Eigen::Success) {
-                        IglUtils::writeSparseMatrixToFile(outputFolderPath + "precondMtr_decomposeFailed", precondMtr);
-                        assert(0 && "Cholesky decomposition failed!");
-                    }
-                }
-            }
-            else {
-                if(!mute) { timer_step.start(1); }
+            
+            if(!mute) { timer_step.start(1); }
 //                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
-                                          scaffolding ? fixedV_withScaf : result.fixedVert);
-                if(!mute) { timer_step.stop(); timer_step.start(2); }
-                linSysSolver->analyze_pattern();
+            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+                                      scaffolding ? fixedV_withScaf : result.fixedVert);
+            if(!mute) { timer_step.stop(); timer_step.start(2); }
+            linSysSolver->analyze_pattern();
+            if(!mute) { timer_step.stop(); }
+            if(!needRefactorize) {
+                if(!mute) { timer_step.start(3); }
+                linSysSolver->factorize();
                 if(!mute) { timer_step.stop(); }
-                if(!needRefactorize) {
-                    if(!mute) { timer_step.start(3); }
-                    linSysSolver->factorize();
-                    if(!mute) { timer_step.stop(); }
-                }
             }
         }
     }
@@ -678,75 +650,53 @@ namespace FracCuts {
                 computePrecondMtr(result, scaffold, precondMtr);
             }
             
-            if(!pardisoThreadAmt) {
-                if(!mute) {
-                    std::cout << "factorizing proxy/Hessian matrix..." << std::endl;
-                }
-                cholSolver.factorize(precondMtr);
-                if(cholSolver.info() != Eigen::Success) {
-                    IglUtils::writeSparseMatrixToFile(outputFolderPath + "precondMtr_decomposeFailed", precondMtr);
-                    assert(0 && "Cholesky decomposition failed!");
-                }
-            }
-            else {
-                if(!fractureInitiated) {
-                    if(scaffolding) {
-                        if(!mute) { timer_step.start(1); }
+            if(!fractureInitiated) {
+                if(scaffolding) {
+                    if(!mute) { timer_step.start(1); }
 //                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr,
-                                                  scaffolding ? vNeighbor_withScaf : result.vNeighbor,
-                                                  scaffolding ? fixedV_withScaf : result.fixedVert);
-                        
-                        if(!mute) {
-                            std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
-                        }
-                        if(!mute) { timer_step.stop(); timer_step.start(2); }
-                        linSysSolver->analyze_pattern();
-                        if(!mute) { timer_step.stop(); }
-                    }
-                    else {
-                        if(!mute) {
-                            std::cout << "updating matrix entries..." << std::endl;
-                        }
-                        if(!mute) { timer_step.start(1); }
-//                        linSysSolver->update_a(V_mtr);
-                        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-                        if(!mute) { timer_step.stop(); }
-                    }
-                }
-                try {
+                    linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr,
+                                              scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+                                              scaffolding ? fixedV_withScaf : result.fixedVert);
+                    
                     if(!mute) {
-                        std::cout << "numerically factorizing Hessian/Proxy matrix..." << std::endl;
+                        std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
                     }
-                    if(!mute) { timer_step.start(3); }
-                    linSysSolver->factorize();
+                    if(!mute) { timer_step.stop(); timer_step.start(2); }
+                    linSysSolver->analyze_pattern();
                     if(!mute) { timer_step.stop(); }
                 }
-                catch(std::exception e) {
-                    IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr", I_mtr, J_mtr, V_mtr, true);
-                    exit(-1);
+                else {
+                    if(!mute) {
+                        std::cout << "updating matrix entries..." << std::endl;
+                    }
+                    if(!mute) { timer_step.start(1); }
+//                        linSysSolver->update_a(V_mtr);
+                    linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
+                    if(!mute) { timer_step.stop(); }
                 }
+            }
+            try {
+                if(!mute) {
+                    std::cout << "numerically factorizing Hessian/Proxy matrix..." << std::endl;
+                }
+                if(!mute) { timer_step.start(3); }
+                linSysSolver->factorize();
+                if(!mute) { timer_step.stop(); }
+            }
+            catch(std::exception e) {
+                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr", I_mtr, J_mtr, V_mtr, true);
+                exit(-1);
             }
         }
         
-        if(!pardisoThreadAmt) {
-            if(!mute) {
-                std::cout << "back solve..." << std::endl;
-            }
-            searchDir = cholSolver.solve(-gradient);
-            if(cholSolver.info() != Eigen::Success) {
-                assert(0 && "Cholesky solve failed!");
-            }
+        Eigen::VectorXd minusG = -gradient;
+        if(!mute) {
+            std::cout << "back solve..." << std::endl;
         }
-        else {
-            Eigen::VectorXd minusG = -gradient;
-            if(!mute) {
-                std::cout << "back solve..." << std::endl;
-            }
-            if(!mute) { timer_step.start(4); }
-            linSysSolver->solve(minusG, searchDir);
-            if(!mute) { timer_step.stop(); }
-        }
+        if(!mute) { timer_step.start(4); }
+        linSysSolver->solve(minusG, searchDir);
+        if(!mute) { timer_step.stop(); }
+        
         fractureInitiated = false;
         
         if(!mute) { timer_step.start(5); }
