@@ -30,6 +30,7 @@ namespace FracCuts {
     {
         z.resize(result.F.rows(), 4);
         u.resize(result.F.rows(), 4);
+        dz.resize(result.F.rows(), 4);
         rhs_xUpdate.resize(result.V.rows() * 2);
         M_mult_xHat.resize(result.V.rows() * 2);
         D_mult_x.resize(result.F.rows(), 4);
@@ -146,6 +147,7 @@ namespace FracCuts {
         int ADMMIterAmt = 10000;
         for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             zuUpdate();
+            checkRes();
             xUpdate();
             
             computeGradient(result, scaffold, gradient);
@@ -205,11 +207,27 @@ namespace FracCuts {
                 }
             }
             
+            dz.row(triI) = zi.transpose() - z.row(triI);
             z.row(triI) = zi.transpose();
             
             u.row(triI) += D_mult_x.row(triI) - z.row(triI);
         });
 //        }
+    }
+    void ADMMTimeStepper::checkRes(void)
+    {
+        Eigen::VectorXd s = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        double sqn_r = 0.0;
+        for(int triI = 0; triI < result.F.rows(); triI++) {
+            const Eigen::VectorXd& s_triI = D_array[triI].transpose() * (dz.row(triI) * weights2[triI]).transpose();
+            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            s.segment(triVInd[0] * 2, 2) += s_triI.segment(0, 2);
+            s.segment(triVInd[1] * 2, 2) += s_triI.segment(2, 2);
+            s.segment(triVInd[2] * 2, 2) += s_triI.segment(4, 2);
+            
+            sqn_r += (D_mult_x.row(triI) - z.row(triI)).squaredNorm() * weights2[triI];
+        }
+        std::cout << "||s||^2 = " << s.squaredNorm() << ", ||r||^2 = " << sqn_r << ", ";
     }
     void ADMMTimeStepper::xUpdate(void)
     {

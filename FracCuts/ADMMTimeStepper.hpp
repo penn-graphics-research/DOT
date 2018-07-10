@@ -18,7 +18,7 @@ namespace FracCuts {
     class ADMMTimeStepper : public Optimizer
     {
     protected:
-        Eigen::MatrixXd z, u;
+        Eigen::MatrixXd z, u, dz;
         Eigen::VectorXd weights, weights2;
         std::vector<Eigen::MatrixXd> D_array; // maps xi to zi
         
@@ -46,6 +46,7 @@ namespace FracCuts {
         
     protected:
         void zuUpdate(void); // local solve
+        void checkRes(void);
         void xUpdate(void); // global solve
         
         void compute_Di_mult_xi(int elemI);
