@@ -16,11 +16,11 @@ namespace FracCuts {
     class DADMMTimeStepper : public Optimizer
     {
     protected:
-        Eigen::MatrixXd V_localCopy;
-        Eigen::MatrixXd y;
-        double rho, kappa;
+        Eigen::MatrixXd z, u, dz;
+        Eigen::VectorXd weights, weights2;
         
-        Eigen::VectorXi incTriAmt;
+        Eigen::VectorXd rhs_xUpdate, M_mult_xHat, coefMtr_diag;
+        Eigen::MatrixXd D_mult_x;
         
     public:
         DADMMTimeStepper(const TriangleSoup& p_data0,
@@ -41,21 +41,22 @@ namespace FracCuts {
         virtual bool fullyImplicit(void);
         
     protected:
-        void computeEnergyVal_decentral(const TriangleSoup& globalMesh,
-                                        int partitionI,
-                                        const Eigen::RowVectorXd& localCopy,
-                                        const Eigen::RowVectorXd& dualVar,
-                                        double& E) const;
-        void computeGradient_decentral(const TriangleSoup& globalMesh,
-                                       int partitionI,
-                                       const Eigen::RowVectorXd& localCopy,
-                                       const Eigen::RowVectorXd& dualVar,
-                                       Eigen::VectorXd& g) const;
-        void computeHessianProxy_decentral(const TriangleSoup& globalMesh,
-                                           int partitionI,
-                                           const Eigen::RowVectorXd& localCopy,
-                                           const Eigen::RowVectorXd& dualVar,
-                                           Eigen::MatrixXd& P) const;
+        void zuUpdate(void); // local solve
+        void checkRes(void);
+        void xUpdate(void); // global solve
+        
+        void compute_Di_mult_xi(int elemI);
+        
+        // local energy computation
+        void computeEnergyVal_zUpdate(int triI,
+                                      const Eigen::RowVectorXd& zi,
+                                      double& Ei) const;
+        void computeGradient_zUpdate(int triI,
+                                     const Eigen::RowVectorXd& zi,
+                                     Eigen::VectorXd& g) const;
+        void computeHessianProxy_zUpdate(int triI,
+                                         const Eigen::RowVectorXd& zi,
+                                         Eigen::MatrixXd& P) const;
     };
 }
 

@@ -1,18 +1,16 @@
 //
-//  DADMMTimeStepper.cpp
+//  ADMMTimeStepper.cpp
 //  FracCuts
 //
-//  Created by Minchen Li on 6/26/18.
+//  Created by Minchen Li on 6/28/18.
 //  Copyright © 2018 Minchen Li. All rights reserved.
 //
 
 #include "DADMMTimeStepper.hpp"
 
+#include "IglUtils.hpp"
+
 #include <tbb/tbb.h>
-
-#include <iostream>
-
-extern std::ofstream logFile;
 
 namespace FracCuts {
     
@@ -26,286 +24,257 @@ namespace FracCuts {
                                        const Eigen::MatrixXi& E,
                                        const Eigen::VectorXi& bnd,
                                        AnimScriptType animScriptType) :
-        Optimizer(p_data0, p_energyTerms, p_energyParams,
-                  p_propagateFracture, p_mute, p_scaffolding,
-                  UV_bnds, E, bnd, animScriptType)
+    Optimizer(p_data0, p_energyTerms, p_energyParams,
+    p_propagateFracture, p_mute, p_scaffolding,
+              UV_bnds, E, bnd, animScriptType)
     {
-        V_localCopy.resize(result.F.rows(), 6);
-        for(int triI = 0; triI < result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
-            V_localCopy.row(triI) <<
-                result.V.row(triVInd[0]),
-                result.V.row(triVInd[1]),
-                result.V.row(triVInd[2]);
-        }
-        y = Eigen::MatrixXd::Zero(result.F.rows(), 6);
-        rho = 10.0;
-        kappa = 0.1;
+        z.resize(result.F.rows(), 6);
+        u.resize(result.F.rows(), 6);
+        dz.resize(result.F.rows(), 6);
+        rhs_xUpdate.resize(result.V.rows() * 2);
+        M_mult_xHat.resize(result.V.rows() * 2);
+        coefMtr_diag.resize(result.V.rows() * 2);
+        D_mult_x.resize(result.F.rows(), 6);
         
-        incTriAmt = Eigen::VectorXi::Zero(result.V.rows());
+        // initialize weights
+        double bulkModulus;
+        energyTerms[0]->getBulkModulus(bulkModulus);
+        double wi = dt * std::sqrt(bulkModulus);
+        weights.resize(result.F.rows());
         for(int triI = 0; triI < result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
-            incTriAmt[triVInd[0]]++;
-            incTriAmt[triVInd[1]]++;
-            incTriAmt[triVInd[2]]++;
+            weights[triI] = wi * std::sqrt(result.triArea[triI]) * 20; //TODO: figure out parameters
         }
+        weights2 = weights.cwiseProduct(weights);
     }
     
     void DADMMTimeStepper::precompute(void)
-    {}
+    {
+        // construct and prefactorize the linear system
+        std::vector<Eigen::Triplet<double>> triplet(result.F.rows() * 6);
+        for(int triI = 0; triI < result.F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            for(int localVI = 0; localVI < 3; localVI++) {
+                triplet.emplace_back(triI * 6 + localVI * 2, triVInd[localVI] * 2, weights[triI]);
+                triplet.emplace_back(triI * 6 + localVI * 2 + 1, triVInd[localVI] * 2 + 1, weights[triI]);
+            }
+        }
+        Eigen::SparseMatrix<double> WD;
+        WD.resize(result.F.rows() * 6, result.V.rows() * 2);
+        WD.setFromTriplets(triplet.begin(), triplet.end());
+        
+        Eigen::SparseMatrix<double> coefMtr = WD.transpose() * WD;
+        for(int vI = 0; vI < result.V.rows(); vI++) {
+            double massI = result.massMatrix.coeffRef(vI, vI);
+            coefMtr.coeffRef(vI * 2, vI * 2) += massI;
+            coefMtr.coeffRef(vI * 2 + 1, vI * 2 + 1) += massI;
+        }
+        for(const auto& fVI : result.fixedVert) {
+            coefMtr.coeffRef(fVI * 2, fVI * 2) = 1.0;
+            coefMtr.coeffRef(fVI * 2 + 1, fVI * 2 + 1) = 1.0;
+        }
+        coefMtr.makeCompressed();
+        
+        for (int k = 0; k < coefMtr.outerSize(); ++k) {
+            for (Eigen::SparseMatrix<double>::InnerIterator it(coefMtr, k); it; ++it)
+            {
+                if(it.row() == it.col()) {
+                    coefMtr_diag[it.row()] = it.value();
+                }
+            }
+        }
+    }
     
     bool DADMMTimeStepper::fullyImplicit(void)
     {
-        //!!! only need to handle position constraints here
-        V_localCopy.resize(result.F.rows(), 6);
-        for(int triI = 0; triI < result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
-            V_localCopy.row(triI) <<
-            result.V.row(triVInd[0]),
-            result.V.row(triVInd[1]),
-            result.V.row(triVInd[2]);
-        }
-        
-        const double dualTol = targetGRes * 6;
-        const int primalMaxIter = 1; //!!! how many primal updates to run between each dual update?
-        const double primalTol = targetGRes * 1000.0; //!!! use primal update tol?
-        const int localMaxIter = 10; //!!! how many local copy updates to run between each global update?
-        const double localTol = targetGRes / result.F.rows(); //!!! use local copy update tol?
-        
-        while(true) {
-//            double lastAugLagE = 0.0;
-            double g_global_sqn = 0.0;
-            for(int i = 0; i < primalMaxIter; i++) {
-                // local copy update
-//                for(int triI = 0; triI < result.F.rows(); triI++) {
-                tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
-                    Eigen::VectorXd x = V_localCopy.row(triI).transpose();
-                    Eigen::VectorXd g;
-                    for(int j = 0; j < localMaxIter; j++) {
-                        computeGradient_decentral(result, triI, x.transpose(), y.row(triI), g);
-                        if(g.squaredNorm() < localTol) {
-                            break;
-                        }
-                        
-                        Eigen::MatrixXd P;
-                        computeHessianProxy_decentral(result, triI, x.transpose(), y.row(triI), P);
-                        
-                        // solve for search direction
-                        Eigen::VectorXd p = P.ldlt().solve(-g);
-                        
-                        // line search init
-                        double alpha = 1.0;
-                        energyTerms[0]->initStepSize(x, p, alpha);
-                        alpha *= 0.99;
-                        
-                        // Armijo's rule:
-                        const double m = p.dot(g);
-                        const double c1m = 1.0e-4 * m;
-                        Eigen::VectorXd x0 = x;
-                        double E0;
-                        computeEnergyVal_decentral(result, triI, x0.transpose(), y.row(triI), E0);
-                        x = x0 + alpha * p;
-                        double E;
-                        computeEnergyVal_decentral(result, triI, x.transpose(), y.row(triI), E);
-                        while(E > E0 + alpha * c1m) {
-                            alpha /= 2.0;
-                            x = x0 + alpha * p;
-                            computeEnergyVal_decentral(result, triI, x.transpose(), y.row(triI), E);
-                        }
-    //                    assert(TriangleSoup::checkInversion(x));
-                    }
-                    
-                    V_localCopy.row(triI) = x.transpose();
-//                }
-                });
-                
-                //        //DEBUG
-                //        FILE *out = fopen("/Users/mincli/Desktop/output_FracCuts/triSoup.obj", "w"); assert(out);
-                //        for(int triI = 0; triI < V_localCopy.rows(); triI++) {
-                //            fprintf(out, "v %le %le 0.0\n", V_localCopy(triI, 0), V_localCopy(triI, 1));
-                //            fprintf(out, "v %le %le 0.0\n", V_localCopy(triI, 2), V_localCopy(triI, 3));
-                //            fprintf(out, "v %le %le 0.0\n", V_localCopy(triI, 4), V_localCopy(triI, 5));
-                //        }
-                //        for(int triI = 0; triI < V_localCopy.rows(); triI++) {
-                //            fprintf(out, "f %d %d %d\n", triI * 3 + 1, triI * 3 + 2, triI * 3 + 3);
-                //        }
-                //        fclose(out);
-                
-                // global update
-                result.V.setZero();
-                for(int triI = 0; triI < result.F.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
-                    result.V.row(triVInd[0]) += (V_localCopy.block(triI, 0, 1, 2) +
-                                                 y.block(triI, 0, 1, 2) / rho);
-                    result.V.row(triVInd[1]) += (V_localCopy.block(triI, 2, 1, 2) +
-                                                 y.block(triI, 2, 1, 2) / rho);
-                    result.V.row(triVInd[2]) += (V_localCopy.block(triI, 4, 1, 2) +
-                                                 y.block(triI, 4, 1, 2) / rho);
-                }
-                for(int vI = 0; vI < result.V.rows(); vI++) {
-                    result.V.row(vI) /= incTriAmt[vI];
-                }
-                
-                //        out = fopen("/Users/mincli/Desktop/output_FracCuts/mesh.obj", "w"); assert(out);
-                //        for(int vI = 0; vI < result.V.rows(); vI++) {
-                //            fprintf(out, "v %le %le 0.0\n", result.V(vI, 0), result.V(vI, 1));
-                //        }
-                //        for(int triI = 0; triI < result.F.rows(); triI++) {
-                //            fprintf(out, "f %d %d %d\n", result.F(triI, 0) + 1,
-                //                    result.F(triI, 1) + 1, result.F(triI, 2) + 1);
-                //        }
-                //        fclose(out);
-                //        computeEnergyVal(result, scaffold, lastEnergyVal);
-                //        std::cout << "energyVal = " << lastEnergyVal << std::endl;
-                
-//                double augLagE = 0.0;
-//                for(int triI = 0; triI < result.F.rows(); triI++) {
-//                    double E_triI;
-//                    computeEnergyVal_decentral(result, triI, V_localCopy.row(triI), y.row(triI), E_triI);
-//                    augLagE += E_triI;
-//                }
-//                std::cout << "\taugLagE = " << augLagE << std::endl;
-//                if(std::abs((lastAugLagE - augLagE) / augLagE) < 1.0e-6) {
-//                    break;
-//                }
-//                lastAugLagE = augLagE;
-                
-                g_global_sqn = 0.0;
-                for(int triI = 0; triI < result.F.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd = result.F.row(triI);
-                    for(int localVI = 0; localVI < 3; localVI++) {
-                        g_global_sqn += (rho * (V_localCopy.block(triI, localVI * 2, 1, 2) -
-                                                result.V.row(triVInd[localVI])) +
-                                         y.block(triI, localVI * 2, 1, 2)).squaredNorm();
-                    }
-                }
-//                std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
-                if(g_global_sqn < primalTol) {
-                    break;
-                }
+        // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx
+//        for(int vI = 0; vI < result.V.rows(); vI++) {
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
+            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
             }
+            M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) * result.V.row(vI).transpose();
+//        }
+        });
+        u.setZero();
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+            compute_Di_mult_xi(triI);
+            z.row(triI) = D_mult_x.row(triI);
+        });
+        
+        // ADMM iterations
+        int ADMMIterAmt = 200;
+        for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+            file_iterStats << globalIterNum << " ";
             
-            // dual update
-            Eigen::MatrixXd y_old = y;
-            for(int triI = 0; triI < result.F.rows(); triI++) {
-                //        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
-                const Eigen::RowVector3i& triVInd = result.F.row(triI);
-                y.block(triI, 0, 1, 2) += kappa * (V_localCopy.block(triI, 0, 1, 2) -
-                                                   result.V.row(triVInd[0]));
-                y.block(triI, 2, 1, 2) += kappa * (V_localCopy.block(triI, 2, 1, 2) -
-                                                   result.V.row(triVInd[1]));
-                y.block(triI, 4, 1, 2) += kappa * (V_localCopy.block(triI, 4, 1, 2) -
-                                                   result.V.row(triVInd[2]));
-            }
-            //        });
-            
-            std::cout << "\t||g_global||^2 = " << g_global_sqn << std::endl;
-            
-            double g_y_sqnorm = (y - y_old).squaredNorm() / kappa / kappa;
-            std::cout << "\t||g_y||^2 = " << g_y_sqnorm << std::endl;
+            zuUpdate();
+            checkRes();
+            xUpdate();
             
             computeGradient(result, scaffold, gradient);
-            double gradient_sqn = gradient.squaredNorm();
-            std::cout << "\t||gradient||^2 = " << gradient_sqn << std::endl;
-            
-            if((g_y_sqnorm < dualTol) && (g_global_sqn < primalTol) &&
-               (gradient_sqn < targetGRes * 1000.0))
-            {
-                logFile << "||gradient||^2 = " << gradient_sqn << std::endl;
+            double sqn_g = gradient.squaredNorm();
+            std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
+                " ||gradient||^2 = " << sqn_g << std::endl;
+            file_iterStats << sqn_g << std::endl;
+            if(sqn_g < targetGRes * 1000.0) { //!!!
                 break;
+            }
+            
+            if(ADMMIterI == ADMMIterAmt - 1) {
+                return true;
             }
         }
         
         return false;
     }
     
-    // add dynamic and gravity
-    void DADMMTimeStepper::computeEnergyVal_decentral(const TriangleSoup& globalMesh,
-                                                      int partitionI,
-                                                      const Eigen::RowVectorXd& localCopy,
-                                                      const Eigen::RowVectorXd& dualVar,
-                                                      double& E) const
+    void DADMMTimeStepper::zuUpdate(void)
     {
-        energyTerms[0]->computeEnergyValBySVD(globalMesh, partitionI, localCopy.transpose(), E);
-        
-        // dynamics and gravity
-        E *= dtSq;
-        const Eigen::RowVector3i& triVInd = globalMesh.F.row(partitionI);
-        for(int localVI = 0; localVI < 3; localVI++) {
-            int vI = triVInd[localVI];
-            double massI = globalMesh.massMatrix.coeff(vI, vI);
-            E += (localCopy.segment(localVI * 2, 2) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()  - dtSq * gravity.transpose()).squaredNorm() * massI / 2.0;
+        int localMaxIter = __INT_MAX__;
+        double localTol = targetGRes / result.F.rows();
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+//        for(int triI = 0; triI < result.F.rows(); triI++) {
+            Eigen::VectorXd zi = z.row(triI).transpose();
+            Eigen::VectorXd g;
+            for(int j = 0; j < localMaxIter; j++) {
+                computeGradient_zUpdate(triI, zi.transpose(), g);
+                if(g.squaredNorm() < localTol) {
+                    break;
+                }
+                
+                Eigen::MatrixXd P;
+                computeHessianProxy_zUpdate(triI, zi.transpose(), P);
+                
+                // solve for search direction
+                Eigen::VectorXd p = P.ldlt().solve(-g);
+                
+                // line search init
+                double alpha = 1.0;
+                energyTerms[0]->initStepSize(zi, p, alpha);
+                alpha *= 0.99;
+                
+                // Armijo's rule:
+                const double m = p.dot(g);
+                const double c1m = 1.0e-4 * m;
+                const Eigen::VectorXd zi0 = zi;
+                double E0;
+                computeEnergyVal_zUpdate(triI, zi0.transpose(), E0);
+                zi = zi0 + alpha * p;
+                double E;
+                computeEnergyVal_zUpdate(triI, zi.transpose(), E);
+                while(E > E0 + alpha * c1m) {
+                    alpha /= 2.0;
+                    zi = zi0 + alpha * p;
+                    computeEnergyVal_zUpdate(triI, zi.transpose(), E);
+                }
+            }
+            
+            dz.row(triI) = zi.transpose() - z.row(triI);
+            z.row(triI) = zi.transpose();
+            
+            u.row(triI) += D_mult_x.row(triI) - z.row(triI);
+        });
+//        }
+    }
+    void DADMMTimeStepper::checkRes(void)
+    {
+        Eigen::VectorXd s = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        double sqn_r = 0.0;
+        for(int triI = 0; triI < result.F.rows(); triI++) {
+            const Eigen::VectorXd& s_triI = (dz.row(triI) * weights2[triI]).transpose();
+            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            s.segment(triVInd[0] * 2, 2) += s_triI.segment(0, 2);
+            s.segment(triVInd[1] * 2, 2) += s_triI.segment(2, 2);
+            s.segment(triVInd[2] * 2, 2) += s_triI.segment(4, 2);
+            
+            sqn_r += (D_mult_x.row(triI) - z.row(triI)).squaredNorm() * weights2[triI];
         }
-
-        // DADMM
-        E += rho / 2.0 * ((localCopy.segment(0, 2) - globalMesh.V.row(triVInd[0])).squaredNorm() +
-                          (localCopy.segment(2, 2) - globalMesh.V.row(triVInd[1])).squaredNorm() +
-                          (localCopy.segment(4, 2) - globalMesh.V.row(triVInd[2])).squaredNorm());
-        E += (dualVar.segment(0, 2).dot(localCopy.segment(0, 2) - globalMesh.V.row(triVInd[0])) +
-              dualVar.segment(2, 2).dot(localCopy.segment(2, 2) - globalMesh.V.row(triVInd[1])) +
-              dualVar.segment(4, 2).dot(localCopy.segment(4, 2) - globalMesh.V.row(triVInd[2])));
+        double sqn_s = s.squaredNorm();
+        std::cout << "||s||^2 = " << sqn_s << ", ||r||^2 = " << sqn_r << ", ";
+        file_iterStats << sqn_s << " " << sqn_r << " ";
+    }
+    void DADMMTimeStepper::xUpdate(void)
+    {
+        // compute rhs
+        rhs_xUpdate = M_mult_xHat;
+        for(int triI = 0; triI < result.F.rows(); triI++) {
+            const Eigen::VectorXd& rhs_right_triI = ((z.row(triI) - u.row(triI)) * weights2[triI]).transpose();
+            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            rhs_xUpdate.segment(triVInd[0] * 2, 2) += rhs_right_triI.segment(0, 2);
+            rhs_xUpdate.segment(triVInd[1] * 2, 2) += rhs_right_triI.segment(2, 2);
+            rhs_xUpdate.segment(triVInd[2] * 2, 2) += rhs_right_triI.segment(4, 2);
+        }
+        for(const auto& fVI : result.fixedVert) {
+            rhs_xUpdate.segment(fVI * 2, 2) = result.V.row(fVI).transpose();
+        }
+        
+        // solve linear system with pre-factorized info and update x
+//        for(int vI = 0; vI < result.V.rows(); vI++) {
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
+            result.V(vI, 0) = rhs_xUpdate[vI * 2] / coefMtr_diag[vI * 2];
+            result.V(vI, 1) = rhs_xUpdate[vI * 2 + 1] / coefMtr_diag[vI * 2 + 1];
+//        }
+        });
+        
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+            compute_Di_mult_xi(triI);
+        });
     }
     
-    void DADMMTimeStepper::computeGradient_decentral(const TriangleSoup& globalMesh,
-                                                     int partitionI,
-                                                     const Eigen::RowVectorXd& localCopy,
-                                                     const Eigen::RowVectorXd& dualVar,
-                                                     Eigen::VectorXd& g) const
+    void DADMMTimeStepper::compute_Di_mult_xi(int triI)
     {
-        energyTerms[0]->computeGradientBySVD(globalMesh, partitionI, localCopy.transpose(), g);
+        assert(triI < result.F.rows());
         
-        // dynamics and gravity
+        const Eigen::RowVector3i& triVInd = result.F.row(triI);
+        
+        D_mult_x.row(triI) <<
+            result.V.row(triVInd[0]),
+            result.V.row(triVInd[1]),
+            result.V.row(triVInd[2]);
+    }
+    
+    void DADMMTimeStepper::computeEnergyVal_zUpdate(int triI,
+                                                   const Eigen::RowVectorXd& zi,
+                                                   double& Ei) const
+    {
+        energyTerms[0]->computeEnergyValBySVD(result, triI, zi, Ei);
+        Ei *= dtSq;
+        Ei += (D_mult_x.row(triI) - zi + u.row(triI)).squaredNorm() * weights2[triI] / 2.0;
+    }
+    void DADMMTimeStepper::computeGradient_zUpdate(int triI,
+                                                  const Eigen::RowVectorXd& zi,
+                                                  Eigen::VectorXd& g) const
+    {
+        energyTerms[0]->computeGradientBySVD(result, triI, zi, g);
         g *= dtSq;
-        const Eigen::RowVector3i& triVInd = globalMesh.F.row(partitionI);
+        g -= ((D_mult_x.row(triI) - zi + u.row(triI)) * weights2[triI]).transpose();
+        
+        const Eigen::RowVector3i& triVInd = result.F.row(triI);
         for(int localVI = 0; localVI < 3; localVI++) {
             int vI = triVInd[localVI];
-            if(globalMesh.fixedVert.find(vI) != globalMesh.fixedVert.end()) {
+            if(result.fixedVert.find(vI) != result.fixedVert.end()) {
                 g.segment(localVI * 2, 2).setZero();
             }
-            else {
-                double massI = globalMesh.massMatrix.coeff(vI, vI);
-                g.segment(localVI * 2, 2) += massI * (localCopy.segment(localVI * 2, 2).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2) - dtSq * gravity);
-            }
         }
-
-        // DADMM
-        g.segment(0, 2) += (dualVar.segment(0, 2) +
-                            rho * (localCopy.segment(0, 2) - globalMesh.V.row(triVInd[0]))).transpose();
-        g.segment(2, 2) += (dualVar.segment(2, 2) +
-                            rho * (localCopy.segment(2, 2) - globalMesh.V.row(triVInd[1]))).transpose();
-        g.segment(4, 2) += (dualVar.segment(4, 2) +
-                            rho * (localCopy.segment(4, 2) - globalMesh.V.row(triVInd[2]))).transpose();
     }
-    
-    void DADMMTimeStepper::computeHessianProxy_decentral(const TriangleSoup& globalMesh,
-                                                         int partitionI,
-                                                         const Eigen::RowVectorXd& localCopy,
-                                                         const Eigen::RowVectorXd& dualVar,
-                                                         Eigen::MatrixXd& P) const
+    void DADMMTimeStepper::computeHessianProxy_zUpdate(int triI,
+                                                      const Eigen::RowVectorXd& zi,
+                                                      Eigen::MatrixXd& P) const
     {
-        energyTerms[0]->computeHessianBySVD(globalMesh, partitionI, localCopy.transpose(), P);
-        
-        // dynamics and gravity
+        energyTerms[0]->computeHessianBySVD(result, triI, zi, P);
         P *= dtSq;
-        const Eigen::RowVector3i& triVInd = globalMesh.F.row(partitionI);
+        P.diagonal().array() += weights2[triI];
+        
+        const Eigen::RowVector3i& triVInd = result.F.row(triI);
         for(int localVI = 0; localVI < 3; localVI++) {
             int vI = triVInd[localVI];
-            if(globalMesh.fixedVert.find(vI) != globalMesh.fixedVert.end()) {
+            if(result.fixedVert.find(vI) != result.fixedVert.end()) {
                 P.row(localVI * 2).setZero();
                 P.row(localVI * 2 + 1).setZero();
                 P.col(localVI * 2).setZero();
                 P.col(localVI * 2 + 1).setZero();
                 P.block(localVI * 2, localVI * 2, 2, 2).setIdentity();
             }
-            else {
-                double massI = globalMesh.massMatrix.coeff(vI, vI);
-                P(localVI * 2, localVI * 2) += massI;
-                P(localVI * 2 + 1, localVI * 2 + 1) += massI;
-            }
         }
-
-        // DADMM
-        P.diagonal().array() += rho;
     }
     
 }
