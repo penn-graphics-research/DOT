@@ -11,7 +11,9 @@
 
 #include <igl/avg_edge_length.h>
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 #include <fstream>
 #include <iostream>
@@ -199,8 +201,12 @@ namespace FracCuts {
                                           bool uniformWeight) const
     {
         energyValPerElem.resize(data.F.rows());
-        //        for(int triI = 0; triI < data.F.rows(); triI++) {
-        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < data.F.rows(); triI++)
+#endif
+        {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Vector3d x0_3D[3] = {
@@ -223,8 +229,10 @@ namespace FracCuts {
             if(!uniformWeight) {
                 energyValPerElem[triI] *= data.triArea[triI];
             }
-        });
-//        }
+        }
+#ifdef USE_TBB
+        );
+#endif
     }
     
     void Energy::computeEnergyValBySVD(const TriangleSoup& data, double& energyVal) const
@@ -281,8 +289,12 @@ namespace FracCuts {
     {
         std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
         std::vector<Eigen::VectorXi> vInds(data.F.rows());
-        //        for(int triI = 0; triI < data.F.rows(); triI++) {
-        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < data.F.rows(); triI++)
+#endif
+        {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Vector3d x0_3D[3] = {
@@ -347,8 +359,10 @@ namespace FracCuts {
                     vInd[vI] = -1;
                 }
             }
-            //        }
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
         for(int triI = 0; triI < data.F.rows(); triI++) {
             IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], 2, V, I, J);
         }

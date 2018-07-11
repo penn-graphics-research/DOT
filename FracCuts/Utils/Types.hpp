@@ -16,6 +16,8 @@
 //#define LINSYSSOLVER_USE_CHOLMOD
 #define LINSYSSOLVER_USE_PARDISO
 
+#define USE_TBB
+
 namespace FracCuts {
     enum MethodType {
         MT_OURS,

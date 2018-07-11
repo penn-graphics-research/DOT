@@ -9,8 +9,6 @@
 #include "NeoHookeanEnergy.hpp"
 #include "IglUtils.hpp"
 
-#include <tbb/tbb.h>
-
 namespace FracCuts {
     
     void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const

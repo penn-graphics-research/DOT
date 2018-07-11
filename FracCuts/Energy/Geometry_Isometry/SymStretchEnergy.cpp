@@ -12,7 +12,9 @@
 #include <igl/cotmatrix.h>
 #include <igl/massmatrix.h>
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 #include <limits>
 #include <fstream>
@@ -449,8 +451,12 @@ namespace FracCuts {
 //        clock_t start = clock();
         std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
         std::vector<Eigen::VectorXi> vInds(data.F.rows());
-        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI) {
-//        for(int triI = 0; triI < data.F.rows(); triI++) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < data.F.rows(); triI++)
+#endif
+        {
             const Eigen::Vector3i& triVInd = data.F.row(triI);
             
             const Eigen::Vector2d& U1 = data.V.row(triVInd[0]);
@@ -545,8 +551,10 @@ namespace FracCuts {
                     vInd[vI] = -1;
                 }
             }
-//        }
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
         for(int triI = 0; triI < data.F.rows(); triI++) {
             IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], 2, V, I, J);
         }

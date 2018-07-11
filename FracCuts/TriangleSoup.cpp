@@ -19,7 +19,9 @@
 #include <igl/boundary_loop.h>
 #include <igl/harmonic.h>
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 #include <fstream>
 
@@ -939,10 +941,18 @@ namespace FracCuts {
                 paths_p.resize(bestCandVerts.size());
                 newVertPoses_p.resize(bestCandVerts.size());
                 energyChanges_p.resize(bestCandVerts.size());
-                tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI) {
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI)
+#else
+                for(int candI = 0; candI < bestCandVerts.size(); candI++)
+#endif
+                {
                     EwDecs[candI] = computeLocalEwDec(bestCandVerts[candI], lambda_t, paths_p[candI], newVertPoses_p[candI],
                                                       energyChanges_p[candI]);
-                });
+                }
+#ifdef USE_TBB
+                );
+#endif
             }
             else {
                 operationType = 0;
@@ -950,12 +960,18 @@ namespace FracCuts {
                 paths_bSplit.resize(bestCandVerts.size());
                 newVertPoses_bSplit.resize(bestCandVerts.size());
                 energyChanges_bSplit.resize(bestCandVerts.size());
-//                for(int candI = 0; candI < bestCandVerts.size(); candI++) {
-                tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI) {
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI)
+#else
+                for(int candI = 0; candI < bestCandVerts.size(); candI++)
+#endif
+                {
                     EwDecs[candI] = computeLocalEwDec(bestCandVerts[candI], lambda_t, paths_bSplit[candI], newVertPoses_bSplit[candI],
                                                       energyChanges_bSplit[candI]);
-                });
-//                }
+                }
+#ifdef USE_TBB
+                );
+#endif
             }
         }
         else {
@@ -966,15 +982,21 @@ namespace FracCuts {
             paths_iSplit.resize(bestCandVerts.size());
             newVertPoses_iSplit.resize(bestCandVerts.size());
             energyChanges_iSplit.resize(bestCandVerts.size());
-//            for(int candI = 0; candI < bestCandVerts.size(); candI++) {
-            tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI) {
+#ifdef USE_TBB
+            tbb::parallel_for(0, (int)bestCandVerts.size(), 1, [&](int candI)
+#else
+            for(int candI = 0; candI < bestCandVerts.size(); candI++)
+#endif
+            {
                 EwDecs[candI] = computeLocalEwDec(bestCandVerts[candI], lambda_t, paths_iSplit[candI], newVertPoses_iSplit[candI],
                                                         energyChanges_iSplit[candI]);
                 if(EwDecs[candI] != -__DBL_MAX__) {
                     EwDecs[candI] *= 0.5;
                 }
-            });
-//            }
+            }
+#ifdef USE_TBB
+            );
+#endif
         }
             
         int candI_max = 0;

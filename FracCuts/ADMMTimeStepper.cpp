@@ -10,7 +10,9 @@
 
 #include "IglUtils.hpp"
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 namespace FracCuts {
     
@@ -129,19 +131,36 @@ namespace FracCuts {
     {
         // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx
 //        for(int vI = 0; vI < result.V.rows(); vI++) {
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+        {
             if(result.fixedVert.find(vI) == result.fixedVert.end()) {
                 result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
             }
             M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) *
                 result.V.row(vI).transpose();
-//        }
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
+        
         u.setZero();
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+        
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < result.F.rows(); triI++)
+#endif
+        {
             compute_Di_mult_xi(triI);
             z.row(triI) = D_mult_x.row(triI);
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
         
         // ADMM iterations
         int ADMMIterAmt = 100;
@@ -173,8 +192,12 @@ namespace FracCuts {
     {
         int localMaxIter = __INT_MAX__;
         double localTol = targetGRes / result.F.rows();
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
-//        for(int triI = 0; triI < result.F.rows(); triI++) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < result.F.rows(); triI++)
+#endif
+        {
             Eigen::VectorXd zi = z.row(triI).transpose();
             Eigen::VectorXd g;
             for(int j = 0; j < localMaxIter; j++) {
@@ -218,8 +241,10 @@ namespace FracCuts {
             z.row(triI) = zi.transpose();
             
             u.row(triI) += D_mult_x.row(triI) - z.row(triI);
-        });
-//        }
+        }
+#ifdef USE_TBB
+        );
+#endif
     }
     void ADMMTimeStepper::checkRes(void)
     {
@@ -249,28 +274,50 @@ namespace FracCuts {
             rhs_xUpdate.segment(triVInd[1] * 2, 2) += rhs_right_triI.segment(2, 2);
             rhs_xUpdate.segment(triVInd[2] * 2, 2) += rhs_right_triI.segment(4, 2);
         }
-        tbb::parallel_for(0, (int)offset_fixVerts.size(), 1, [&](int rowI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)offset_fixVerts.size(), 1, [&](int rowI)
+#else
+        for(int rowI = 0; rowI < offset_fixVerts.size(); rowI++)
+#endif
+        {
             for(const auto& entryI : offset_fixVerts[rowI]) {
                 int vI = entryI.first / 2;
                 int dimI = entryI.first % 2;
                 rhs_xUpdate[rowI] -= entryI.second * result.V(vI, dimI);
             }
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
         for(const auto& fVI : result.fixedVert) {
             rhs_xUpdate.segment(fVI * 2, 2) = result.V.row(fVI).transpose();
         }
         
         // solve linear system with pre-factorized info and update x
         linSysSolver->solve(rhs_xUpdate, x_solved); //TODO: error check
-//        for(int vI = 0; vI < result.V.rows(); vI++) {
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+        {
             result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
-//        }
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
         
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI) {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < result.F.rows(); triI++)
+#endif
+        {
             compute_Di_mult_xi(triI);
-        });
+        }
+#ifdef USE_TBB
+        );
+#endif
     }
     
     void ADMMTimeStepper::compute_Di_mult_xi(int triI)

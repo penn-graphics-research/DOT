@@ -9,8 +9,6 @@
 #include "FixedCoRotEnergy.hpp"
 #include "IglUtils.hpp"
 
-#include <tbb/tbb.h>
-
 namespace FracCuts {
     
     void FixedCoRotEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
