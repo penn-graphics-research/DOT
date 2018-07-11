@@ -110,8 +110,14 @@ void proceedOptimization(int proceedNum = 1)
         if((!offlineMode) && (methodType == FracCuts::MT_NOCUT)) {
             saveInfo(false, true, false); //!!! output mesh for making video, PNG output only works under online rendering mode
         }
+        showDistortion = 1;
         std::cout << "Iteration" << iterNum << ":" << std::endl;
         converged = optimizer->solve(1);
+        if(converged == 2) {
+            showDistortion = 0;
+            converged = 0;
+            logFile << "maxIter reached for timeStep" << iterNum << std::endl;
+        }
         iterNum = optimizer->getIterNum();
     }
 }

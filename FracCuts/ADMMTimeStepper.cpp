@@ -144,8 +144,10 @@ namespace FracCuts {
         });
         
         // ADMM iterations
-        int ADMMIterAmt = 10000;
+        int ADMMIterAmt = 100;
         for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+            file_iterStats << globalIterNum << " ";
+            
             zuUpdate();
             checkRes();
             xUpdate();
@@ -154,8 +156,13 @@ namespace FracCuts {
             double sqn_g = gradient.squaredNorm();
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
+            file_iterStats << sqn_g << std::endl;
             if(sqn_g < targetGRes * 1000.0) { //!!!
                 break;
+            }
+            
+            if(ADMMIterI == ADMMIterAmt - 1) {
+                return true;
             }
         }
         
@@ -227,7 +234,9 @@ namespace FracCuts {
             
             sqn_r += (D_mult_x.row(triI) - z.row(triI)).squaredNorm() * weights2[triI];
         }
-        std::cout << "||s||^2 = " << s.squaredNorm() << ", ||r||^2 = " << sqn_r << ", ";
+        double sqn_s = s.squaredNorm();
+        std::cout << "||s||^2 = " << sqn_s << ", ||r||^2 = " << sqn_r << ", ";
+        file_iterStats << sqn_s << " " << sqn_r << " ";
     }
     void ADMMTimeStepper::xUpdate(void)
     {

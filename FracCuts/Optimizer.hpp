@@ -76,6 +76,8 @@ namespace FracCuts {
         std::ofstream file_energyValPerIter;
         std::ofstream file_gradientPerIter;
         
+        std::ofstream file_iterStats;
+        
 //        std::map<int, double> directionFix;
 //        double lambda_df;
         

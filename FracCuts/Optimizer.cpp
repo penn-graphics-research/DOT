@@ -65,6 +65,7 @@ namespace FracCuts {
         if(!mute) {
             file_energyValPerIter.open(outputFolderPath + "energyValPerIter.txt");
             file_gradientPerIter.open(outputFolderPath + "gradientPerIter.txt");
+            file_iterStats.open(outputFolderPath + "iterStats.txt");
         }
         
         if(!data0.checkInversion()) {
@@ -154,6 +155,9 @@ namespace FracCuts {
         }
         if(file_gradientPerIter.is_open()) {
             file_gradientPerIter.close();
+        }
+        if(file_iterStats.is_open()) {
+            file_iterStats.close();
         }
         delete linSysSolver;
     }
@@ -266,6 +270,7 @@ namespace FracCuts {
     int Optimizer::solve(int maxIter)
     {
         static bool lastPropagate = false;
+        int returnFlag = 0;
         for(int iterI = 0; iterI < maxIter; iterI++)
         {
 #ifndef STATIC_SOLVE
@@ -297,8 +302,7 @@ namespace FracCuts {
                     return 1;
 #else
                 if(fullyImplicit()) {
-                    std::cout << "line search with Armijo's rule failed!!!" << std::endl;
-                    logFile << "line search with Armijo's rule failed!!!" << std::endl;
+                    returnFlag = 2;
 #endif
                 }
 #ifndef STATIC_SOLVE
@@ -348,7 +352,7 @@ namespace FracCuts {
                 }
             }
         }
-        return 0;
+        return returnFlag;
     }
     
     void Optimizer::updatePrecondMtrAndFactorize(void)
