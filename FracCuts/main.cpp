@@ -67,7 +67,7 @@ std::vector<int> path_queried;
 Eigen::MatrixXd newVertPos_queried;
 
 std::ofstream logFile;
-std::string outputFolderPath = "/Users/mincli/Desktop/output_FracCuts/";
+std::string outputFolderPath = "output/";
 const std::string meshFolder = "/Users/mincli/Desktop/meshes/";
 
 // visualization
@@ -1408,6 +1408,8 @@ int main(int argc, char *argv[])
 #ifdef STATIC_SOLVE
     folderTail += "QuasiStatic";
 #endif
+    
+    mkdir(outputFolderPath.c_str(), 0777);
 
 #define USE_INPUT_UV
 #ifdef USE_INPUT_UV
@@ -1642,7 +1644,7 @@ int main(int argc, char *argv[])
     
     // Optimizer/DADMMTimeStepper/ADMMTimeStepper
     //TODO: enable specify time stepper type in config file
-    optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), animScriptType); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
+    optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), animScriptType); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
