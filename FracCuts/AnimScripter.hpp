@@ -47,6 +47,9 @@ namespace FracCuts {
         
     public:
         void setAnimScriptType(AnimScriptType p_animScriptType);
+        
+    public:
+        static AnimScriptType getAnimScriptTypeByStr(const std::string& str);
     };
     
 }

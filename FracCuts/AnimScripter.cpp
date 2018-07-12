@@ -139,4 +139,29 @@ namespace FracCuts {
         animScriptType = p_animScriptType;
     }
     
+    AnimScriptType AnimScripter::getAnimScriptTypeByStr(const std::string& str)
+    {
+        if(str == "hang") {
+            return AST_HANG;
+        }
+        else if(str == "stretch") {
+            return AST_STRETCH;
+        }
+        else if(str == "squash") {
+            return AST_SQUASH;
+        }
+        else if(str == "bend") {
+            return AST_BEND;
+        }
+        else if(str == "onepoint") {
+            return AST_ONEPOINT;
+        }
+        else if(str == "random") {
+            return AST_RANDOM;
+        }
+        else {
+            return AST_NULL;
+        }
+    }
+    
 }

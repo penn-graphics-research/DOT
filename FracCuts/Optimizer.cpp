@@ -110,9 +110,7 @@ namespace FracCuts {
         w_scaf = energyParams[0] * 0.01;
         
 #ifndef STATIC_SOLVE
-        dt = 0.025;
-        dtSq = dt * dt;
-        frameAmt = 10.0 / dt;
+        setTime(10.0, 0.025);
 #else
         dt = dtSq = 1.0;
 #endif
@@ -215,6 +213,13 @@ namespace FracCuts {
     void Optimizer::setAnimScriptType(AnimScriptType animScriptType)
     {
         animScripter.setAnimScriptType(animScriptType);
+    }
+    
+    void Optimizer::setTime(double duration, double dt)
+    {
+        this->dt = dt;
+        dtSq = dt * dt;
+        frameAmt = duration / dt;
     }
     
 //    void Optimizer::fixDirection(void)

@@ -99,6 +99,7 @@ namespace FracCuts {
         ~Optimizer(void);
         
     public: // API
+        virtual void setTime(double duration, double dt);
         // precompute preconditioning matrix and factorize for fast solve, prepare initial guess
         virtual void precompute(void);
         

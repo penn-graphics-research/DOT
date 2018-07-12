@@ -1,5 +1,6 @@
 #include "Types.hpp"
 #include "IglUtils.hpp"
+#include "Config.hpp"
 #include "Optimizer.hpp"
 #include "DADMMTimeStepper.hpp"
 #include "ADMMTimeStepper.hpp"
@@ -34,6 +35,7 @@
 
 
 // optimization
+FracCuts::Config config;
 FracCuts::MethodType methodType;
 std::vector<const FracCuts::TriangleSoup*> triSoup;
 int vertAmt_input;
@@ -1289,12 +1291,13 @@ int main(int argc, char *argv[])
         loadSucceed = igl::readOBJ(meshFilePath, V, UV, N, F, FUV, FN);
     }
     else if(suffix == ".primitive") {
-        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, 1.0, 0.05, false);
+        loadSucceed = !config.loadFromFile(meshFilePath);
+        double spacing = config.size / std::sqrt(config.resolution / 2.0);
+        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, config.size, spacing, false);
         V = primitive.V_rest;
         UV = primitive.V;
         F = primitive.F;
         borderVerts_primitive = primitive.borderVerts_primitive;
-        loadSucceed = true;
     }
     else {
         std::cout << "unkown mesh file format!" << std::endl;
@@ -1577,21 +1580,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     
-//    // * ARAP
-//    igl::ARAPData arap_data;
-//    arap_data.with_dynamics = false;
-//    Eigen::VectorXi b  = Eigen::VectorXi::Zero(0);
-//    Eigen::MatrixXd bc = Eigen::MatrixXd::Zero(0, 0);
-//    
-//    // Initialize ARAP
-////    arap_data.max_iter = 300;
-//    // 2 means that we're going to *solve* in 2d
-//    arap_precomputation(V[0], F[0], 2, b, arap_data);
-//    
-//    // Solve arap using the harmonic map as initial guess
-////    triSoup = FracCuts::TriangleSoup(V[0], F[0], UV[0]);
-//    arap_solve(bc, arap_data, UV[0]);
-    
     // setup timer
     timer.new_activity("topology");
     timer.new_activity("descent");
@@ -1612,10 +1600,23 @@ int main(int argc, char *argv[])
 //    texScale = 10.0 / (triSoup[0]->bbox.row(1) - triSoup[0]->bbox.row(0)).maxCoeff();
     if(lambda != 1.0) {
         energyParams.emplace_back(1.0 - lambda);
-//        energyTerms.emplace_back(new FracCuts::ARAPEnergy());
-//        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
-//        energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy());
-        energyTerms.emplace_back(new FracCuts::FixedCoRotEnergy());
+        switch(config.energyType) {
+            case FracCuts::ET_NH:
+                energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy(config.YM, config.PR));
+                break;
+                
+            case FracCuts::ET_FCR:
+                energyTerms.emplace_back(new FracCuts::FixedCoRotEnergy(config.YM, config.PR));
+                break;
+                
+            case FracCuts::ET_SD:
+                energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+                break;
+                
+            case FracCuts::ET_ARAP:
+                energyTerms.emplace_back(new FracCuts::ARAPEnergy());
+                break;
+        }
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
@@ -1630,21 +1631,21 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0]);
     }
     
-    FracCuts::AnimScriptType animScriptType;
-    if(suffix == ".primitive") {
-        std::map<std::string, FracCuts::AnimScriptType> str2AST;
-        str2AST["hang"] = FracCuts::AST_HANG;
-        str2AST["stretch"] = FracCuts::AST_STRETCH;
-        str2AST["squash"] = FracCuts::AST_SQUASH;
-        str2AST["bend"] = FracCuts::AST_BEND;
-        str2AST["onepoint"] = FracCuts::AST_ONEPOINT;
-        str2AST["random"] = FracCuts::AST_RANDOM;
-        animScriptType = str2AST[meshName];
+    switch (config.integratorType) {
+        case FracCuts::IT_NEWTON:
+            optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
+            break;
+            
+        case FracCuts::IT_ADMM:
+            optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
+            break;
+            
+        case FracCuts::IT_DADMM:
+            optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
+            break;
     }
+    optimizer->setTime(config.duration, config.dt);
     
-    // Optimizer/DADMMTimeStepper/ADMMTimeStepper
-    //TODO: enable specify time stepper type in config file
-    optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), animScriptType); // for random one point initial cut, don't need air meshes in the beginning since it's impossible for a quad to intersect itself
     //TODO: bijectivity for other mode?
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);

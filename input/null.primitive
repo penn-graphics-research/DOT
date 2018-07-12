@@ -1,4 +1,4 @@
-script bend
+script null
 energy FCR
 integrator Newton
 resolution 1000

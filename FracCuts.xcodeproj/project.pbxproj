@@ -36,6 +36,7 @@
 		98E6E69820E2C00300130500 /* DADMMTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E69620E2C00300130500 /* DADMMTimeStepper.cpp */; };
 		98E6E69B20E585CF00130500 /* ADMMTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E69920E585CF00130500 /* ADMMTimeStepper.cpp */; };
 		98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E6A220E8046700130500 /* EigenLibSolver.cpp */; };
+		98E6E6A720F7C59700130500 /* Config.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98E6E6A520F7C59700130500 /* Config.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -105,6 +106,8 @@
 		98E6E69E20E7ECCB00130500 /* LinSysSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = LinSysSolver.hpp; sourceTree = "<group>"; };
 		98E6E6A220E8046700130500 /* EigenLibSolver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EigenLibSolver.cpp; sourceTree = "<group>"; };
 		98E6E6A320E8046700130500 /* EigenLibSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = EigenLibSolver.hpp; sourceTree = "<group>"; };
+		98E6E6A520F7C59700130500 /* Config.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Config.cpp; sourceTree = "<group>"; };
+		98E6E6A620F7C59700130500 /* Config.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Config.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -165,6 +168,8 @@
 				98E6E69720E2C00300130500 /* DADMMTimeStepper.hpp */,
 				98E6E68320DB110000130500 /* AnimScripter.cpp */,
 				98E6E68420DB110000130500 /* AnimScripter.hpp */,
+				98E6E6A520F7C59700130500 /* Config.cpp */,
+				98E6E6A620F7C59700130500 /* Config.hpp */,
 				98E6E68A20DB18B800130500 /* Utils */,
 			);
 			path = FracCuts;
@@ -326,6 +331,7 @@
 				988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */,
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,
+				98E6E6A720F7C59700130500 /* Config.cpp in Sources */,
 				98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */,
 				98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */,
 				98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */,
