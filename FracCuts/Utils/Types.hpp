@@ -14,9 +14,9 @@
 //#define STATIC_SOLVE
 
 //#define LINSYSSOLVER_USE_CHOLMOD
-#define LINSYSSOLVER_USE_PARDISO
+//#define LINSYSSOLVER_USE_PARDISO
 
-#define USE_TBB
+//#define USE_TBB
 
 namespace FracCuts {
     enum MethodType {

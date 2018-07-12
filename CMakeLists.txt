@@ -27,54 +27,27 @@ option(LIBIGL_WITH_XML               "Use XML"            OFF)
 find_package(LIBIGL REQUIRED QUIET)
 
 
-# Check to see if PARDISO is available
-find_library(PARDISO
-  pardiso500-INTEL1301-X86-64
-  pardiso500-GNU461-X86-64
-  pardiso500-GNU472-X86-64
-  pardiso500-GNU481-X86-64
-  pardiso500-MPI-INTEL1301-X86-64
-  pardiso500-MPI-GNU450-X86-64
-  pardiso500-MPI-GNU461-X86-64
-  pardiso500-MPI-GNU463-X86-64
-  pardiso500-MPI-GNU472-X86-64
-  pardiso500-WIN-X86-64
-  pardiso500-MACOS-X86-64
-  PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ext/pardiso
-)
-
-
-# TBB
-include(tbb/cmake/TBBGet.cmake)
-tbb_get(TBB_ROOT tbb_root CONFIG_DIR TBB_DIR)
-find_package(TBB REQUIRED tbb)
-
-
-# CHOLMOD
-find_library(SUITESPARSE
-  libcholmod.3.0.12
-  PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ext/SUITESPARSE
-)
-include_directories(
-  "/Users/mincli/Documents/SuiteSparse/include"
-)
-
 # project source files
-file(GLOB SRCFILES 
+file(GLOB SRCFILES
   "FracCuts/*.cpp" 
   "FracCuts/Energy/*.cpp" 
   "FracCuts/Energy/Physics_Elasticity/*.cpp"
   "FracCuts/Energy/Geometry_Isometry/*.cpp"
   "FracCuts/Energy/Connectivity/*.cpp"
   "FracCuts/Utils/*.cpp"
+  "FracCuts/LinSysSolver/EigenLibSolver.cpp"
 )
 include_directories(
   "FracCuts"
   "FracCuts/Energy"
+  "FracCuts/Energy/Physics_Elasticity"
+  "FracCuts/Energy/Geometry_Isometry"
+  "FracCuts/Energy/Connectivity"
   "FracCuts/Utils"
+  "FracCuts/LinSysSolver"
 )
 
 
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
 
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png ${PARDISO} TBB::tbb ${SUITESPARSE})
+target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png)
