@@ -1,8 +1,22 @@
-# OptCuts
-* FracCuts: source code
-* FracCuts.xcodeproj: XCode project file
-* paper: paper draft
-* batch.py: a python script to automatically run a batch of examples
+# OptCuts_dynamic
+* FracCuts.xcodeproj: Minchen's local XCode project file
+* FracCuts/: source code
+* cmake/: CMake system for project setup
+* input/: input data
+* output/: output data (will be created)
+* tbb/: Intel TBB library
+* batch.py: a python script to automatically run a batch of examples (from input/ by default)
+
+## Installation with CMake for Xcode on Mac
+```
+cd OptCuts_dynamic
+mkdir build
+cd build
+cmake .. -G "Xcode"
+cmake --build . --config Release
+cd ..
+python batch.py
+```
 
 ## Compile
 IntelTBB, PARDISO, LibIGL, GLFW, Eigen are also needed.
