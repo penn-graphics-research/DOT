@@ -23,17 +23,17 @@ namespace FracCuts {
         ET_ARAP
     };
     
-    enum IntegratorType {
-        IT_NEWTON,
-        IT_ADMM,
-        IT_DADMM
+    enum TimeStepperType {
+        TST_NEWTON,
+        TST_ADMM,
+        TST_DADMM
     };
     
     class Config
     {
     public:
         EnergyType energyType;
-        IntegratorType integratorType;
+        TimeStepperType timeStepperType;
         int resolution;
         double size;
         double duration, dt;
@@ -42,7 +42,7 @@ namespace FracCuts {
         
     public:
         static const std::vector<std::string> energyTypeStrs;
-        static const std::vector<std::string> integratorTypeStrs;
+        static const std::vector<std::string> timeStepperTypeStrs;
         
     public:
         Config(void);
@@ -54,8 +54,8 @@ namespace FracCuts {
     public:
         static EnergyType getEnergyTypeByStr(const std::string& str);
         static std::string getStrByEnergyType(EnergyType energyType);
-        static IntegratorType getIntegratorTypeByStr(const std::string& str);
-        static std::string getStrByIntegratorType(IntegratorType integratorType);
+        static TimeStepperType getTimeStepperTypeByStr(const std::string& str);
+        static std::string getStrByTimeStepperType(TimeStepperType timeStepperType);
     };
     
 }

@@ -1490,16 +1490,16 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0]);
     }
     
-    switch (config.integratorType) {
-        case FracCuts::IT_NEWTON:
+    switch (config.timeStepperType) {
+        case FracCuts::TST_NEWTON:
             optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
             break;
             
-        case FracCuts::IT_ADMM:
+        case FracCuts::TST_ADMM:
             optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
             break;
             
-        case FracCuts::IT_DADMM:
+        case FracCuts::TST_DADMM:
             optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
             break;
     }

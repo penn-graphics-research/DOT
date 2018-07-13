@@ -1,6 +1,6 @@
 script onepoint
 energy FCR
-integrator Newton
+timeStepper Newton
 resolution 1000
 size 1.0
 time 10.0 0.025

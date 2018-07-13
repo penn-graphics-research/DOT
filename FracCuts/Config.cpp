@@ -17,7 +17,7 @@ namespace FracCuts {
     const std::vector<std::string> Config::energyTypeStrs = {
         "NH", "FCR", "SD", "ARAP"
     };
-    const std::vector<std::string> Config::integratorTypeStrs = {
+    const std::vector<std::string> Config::timeStepperTypeStrs = {
         "Newton", "ADMM", "DADMM"
     };
     
@@ -39,10 +39,10 @@ namespace FracCuts {
                     ss >> type;
                     energyType = getEnergyTypeByStr(type);
                 }
-                else if(token == "integrator") {
+                else if(token == "timeStepper") {
                     std::string type;
                     ss >> type;
-                    integratorType = getIntegratorTypeByStr(type);
+                    timeStepperType = getTimeStepperTypeByStr(type);
                 }
                 else if(token == "resolution") {
                     ss >> resolution;
@@ -77,7 +77,7 @@ namespace FracCuts {
         inputStr += (AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
                      getStrByEnergyType(energyType) + "_" +
                      IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR)) + "_" +
-                     getStrByIntegratorType(integratorType) + "_" +
+                     getStrByTimeStepperType(timeStepperType) + "_" +
                      IglUtils::rtos(dt) + "_" + std::to_string(resolution);
     }
     
@@ -96,20 +96,20 @@ namespace FracCuts {
         assert(energyType < energyTypeStrs.size());
         return energyTypeStrs[energyType];
     }
-    IntegratorType Config::getIntegratorTypeByStr(const std::string& str)
+    TimeStepperType Config::getTimeStepperTypeByStr(const std::string& str)
     {
-        for(int i = 0; i < integratorTypeStrs.size(); i++) {
-            if(str == integratorTypeStrs[i]) {
-                return IntegratorType(i);
+        for(int i = 0; i < timeStepperTypeStrs.size(); i++) {
+            if(str == timeStepperTypeStrs[i]) {
+                return TimeStepperType(i);
             }
         }
-        std::cout << "use default integrator type: Newton" << std::endl;
-        return IT_NEWTON;
+        std::cout << "use default time stepper type: Newton" << std::endl;
+        return TST_NEWTON;
     }
-    std::string Config::getStrByIntegratorType(IntegratorType integratorType)
+    std::string Config::getStrByTimeStepperType(TimeStepperType timeStepperType)
     {
-        assert(integratorType < integratorTypeStrs.size());
-        return integratorTypeStrs[integratorType];
+        assert(timeStepperType < timeStepperTypeStrs.size());
+        return timeStepperTypeStrs[timeStepperType];
     }
     
 }
