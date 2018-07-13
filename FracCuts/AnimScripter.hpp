@@ -38,6 +38,9 @@ namespace FracCuts {
         std::map<int, double> angVel_handleVerts;
         std::map<int, Eigen::Vector2d> rotCenter_handleVerts;
         
+    protected:
+        static const std::vector<std::string> animScriptTypeStrs;
+        
     public:
         AnimScripter(AnimScriptType p_animScriptType = AST_NULL);
         
@@ -50,6 +53,7 @@ namespace FracCuts {
         
     public:
         static AnimScriptType getAnimScriptTypeByStr(const std::string& str);
+        static std::string getStrByAnimScriptType(AnimScriptType animScriptType);
     };
     
 }

@@ -120,7 +120,7 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 200;
+        int ADMMIterAmt = 1000;
         for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             

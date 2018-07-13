@@ -41,12 +41,21 @@ namespace FracCuts {
         AnimScriptType animScriptType;
         
     public:
+        static const std::vector<std::string> energyTypeStrs;
+        static const std::vector<std::string> integratorTypeStrs;
+        
+    public:
         Config(void);
         int loadFromFile(const std::string& filePath);
         
     public:
+        void appendInfoStr(std::string& inputStr) const;
+        
+    public:
         static EnergyType getEnergyTypeByStr(const std::string& str);
+        static std::string getStrByEnergyType(EnergyType energyType);
         static IntegratorType getIntegratorTypeByStr(const std::string& str);
+        static std::string getStrByIntegratorType(IntegratorType integratorType);
     };
     
 }

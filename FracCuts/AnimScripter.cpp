@@ -10,6 +10,10 @@
 
 namespace FracCuts {
     
+    const std::vector<std::string> AnimScripter::animScriptTypeStrs = {
+        "null", "hang", "stretch", "squash", "bend", "onepoint", "random"
+    };
+    
     AnimScripter::AnimScripter(AnimScriptType p_animScriptType) :
         animScriptType(p_animScriptType)
     {}
@@ -141,27 +145,17 @@ namespace FracCuts {
     
     AnimScriptType AnimScripter::getAnimScriptTypeByStr(const std::string& str)
     {
-        if(str == "hang") {
-            return AST_HANG;
+        for(int i = 0; i < animScriptTypeStrs.size(); i++) {
+            if(str == animScriptTypeStrs[i]) {
+                return AnimScriptType(i);
+            }
         }
-        else if(str == "stretch") {
-            return AST_STRETCH;
-        }
-        else if(str == "squash") {
-            return AST_SQUASH;
-        }
-        else if(str == "bend") {
-            return AST_BEND;
-        }
-        else if(str == "onepoint") {
-            return AST_ONEPOINT;
-        }
-        else if(str == "random") {
-            return AST_RANDOM;
-        }
-        else {
-            return AST_NULL;
-        }
+        return AST_NULL;
+    }
+    std::string AnimScripter::getStrByAnimScriptType(AnimScriptType animScriptType)
+    {
+        assert(animScriptType < animScriptTypeStrs.size());
+        return animScriptTypeStrs[animScriptType];
     }
     
 }

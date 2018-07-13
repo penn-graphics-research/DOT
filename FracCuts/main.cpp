@@ -1412,167 +1412,26 @@ int main(int argc, char *argv[])
     folderTail += "QuasiStatic";
 #endif
     
+    // construct mesh data structure
+    FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, UV, FUV, startWithTriSoup);
+    // primitive test cases
+    if(suffix == ".primitive") {
+        temp->borderVerts_primitive = borderVerts_primitive;
+    }
+    triSoup.emplace_back(temp);
+    
+    // create output folder
     mkdir(outputFolderPath.c_str(), 0777);
-
-#define USE_INPUT_UV
-#ifdef USE_INPUT_UV
-    if(UV.rows() != 0) {
-        bool onlyUseInputSeam = false;
-        if(onlyUseInputSeam) {
-            // generate Tutte embedding using input seams
-            Eigen::VectorXi bnd;
-            igl::boundary_loop(FUV, bnd);
-            Eigen::MatrixXd bnd_uv;
-            FracCuts::IglUtils::map_vertices_to_circle(UV, bnd, bnd_uv);
-            Eigen::SparseMatrix<double> A, M;
-            FracCuts::IglUtils::computeUniformLaplacian(FUV, A);
-            igl::harmonic(A, M, bnd, bnd_uv, 1, UV);
-        }
-        
-        // with input UV
-        FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, UV, FUV, startWithTriSoup);
-        const std::string inputTypeStr = (onlyUseInputSeam ? "_inputSeam_" : "_inputUV_");
-        outputFolderPath += meshName + inputTypeStr + FracCuts::IglUtils::rtos(lambda) + "_" +
-            FracCuts::IglUtils::rtos(delta) + "_" +startDS + folderTail;
-        
-//        //TEST: for commercial software output
-//        double area = 0;
-//        for(int triI = 0; triI < temp->F.rows(); triI++) {
-//            const Eigen::RowVector3i& triVInd = temp->F.row(triI);
-//            const Eigen::RowVector2d& uv01 = temp->V.row(triVInd[1]) - temp->V.row(triVInd[0]);
-//            const Eigen::RowVector2d& uv02 = temp->V.row(triVInd[2]) - temp->V.row(triVInd[0]);
-//            area += 0.5 * std::abs(uv01[0] * uv02[1] - uv01[1] * uv02[0]);
-//        }
-//        double mult = std::sqrt(temp->surfaceArea / area);
-//        for(int vI = 0; vI < temp->V.rows(); vI++) {
-//            temp->V.row(vI) *=  mult;
-//        }
-        
-        std::vector<std::vector<int>> bnd_all;
-        igl::boundary_loop(temp->F, bnd_all);
-        int UVGridDim = std::ceil(std::sqrt(bnd_all.size()));
-        if(!temp->checkInversion() || (bijectiveParam && (UVGridDim > 1))) {
-            std::cout << "local injectivity violated in given input UV map, " <<
-                "or multi-chart bijective UV map needs to be ensured, " <<
-                "obtaining new initial UV map by applying Tutte's embedding..." << std::endl;
-
-            Eigen::VectorXi bnd_stacked;
-            Eigen::MatrixXd bnd_uv_stacked;
-            int curBndVAmt = 0;
-            for(int bndI = 0; bndI < bnd_all.size(); bndI++) {
-                // map boundary to unit circle
-                bnd_stacked.conservativeResize(curBndVAmt + bnd_all[bndI].size());
-                bnd_stacked.tail(bnd_all[bndI].size()) = Eigen::VectorXi::Map(bnd_all[bndI].data(),
-                                                                              bnd_all[bndI].size());
-
-                Eigen::MatrixXd bnd_uv;
-                igl::map_vertices_to_circle(temp->V_rest,
-                                            bnd_stacked.tail(bnd_all[bndI].size()),
-                                            bnd_uv);
-                double xOffset = bndI % UVGridDim * 2.1, yOffset = bndI / UVGridDim * 2.1;
-                for(int bnd_uvI = 0; bnd_uvI < bnd_uv.rows(); bnd_uvI++) {
-                    bnd_uv(bnd_uvI, 0) += xOffset;
-                    bnd_uv(bnd_uvI, 1) += yOffset;
-                }
-                bnd_uv_stacked.conservativeResize(curBndVAmt + bnd_uv.rows(), 2);
-                bnd_uv_stacked.bottomRows(bnd_uv.rows()) = bnd_uv;
-
-                curBndVAmt = bnd_stacked.size();
-            }
-            // Harmonic map with uniform weights
-            Eigen::MatrixXd UV_Tutte;
-            Eigen::SparseMatrix<double> A, M;
-            FracCuts::IglUtils::computeUniformLaplacian(temp->F, A);
-            igl::harmonic(A, M, bnd_stacked, bnd_uv_stacked, 1, temp->V);
-
-            if(!temp->checkInversion()) {
-                std::cout << "local injectivity still violated in the computed initial UV map, " <<
-                    "please carefully check UV topology for e.g. non-manifold vertices. " <<
-                    "Exit program..." << std::endl;
-                exit(-1);
-            }
-        }
-        
-        // primitive test cases
-        if(suffix == ".primitive") {
-            temp->borderVerts_primitive = borderVerts_primitive;
-        }
-        
-        triSoup.emplace_back(temp);
-//        temp->saveAsMesh("/Users/mincli/Desktop/output_FracCuts/test.obj");//DEBUG
+    if(suffix == ".primitive") {
+        config.appendInfoStr(outputFolderPath);
+        outputFolderPath += folderTail;
     }
     else {
-#endif
-        // no input UV
-        // * Harmonic map for initialization
-        Eigen::VectorXi bnd;
-        igl::boundary_loop(F, bnd); // Find the open boundary
-        if(bnd.size()) {
-            // disk-topology
-            
-            //TODO: what if it has multiple boundaries? or multi-components?
-            // Map the boundary to a circle, preserving edge proportions
-            Eigen::MatrixXd bnd_uv;
-//            igl::map_vertices_to_circle(V, bnd, bnd_uv);
-            FracCuts::IglUtils::map_vertices_to_circle(V, bnd, bnd_uv);
-            
-            Eigen::MatrixXd UV_Tutte;
-            
-//            // Harmonic parametrization
-//            igl::harmonic(V, F, bnd, bnd_uv, 1, UV_Tutte);
-            
-            // Harmonic map with uniform weights
-            Eigen::SparseMatrix<double> A, M;
-            FracCuts::IglUtils::computeUniformLaplacian(F, A);
-            igl::harmonic(A, M, bnd, bnd_uv, 1, UV_Tutte);
-//            FracCuts::IglUtils::computeMVCMtr(V, F, A);
-//            FracCuts::IglUtils::fixedBoundaryParam_MVC(A, bnd, bnd_uv, UV_Tutte);
-            
-            triSoup.emplace_back(new FracCuts::TriangleSoup(V, F, UV_Tutte, Eigen::MatrixXi(), startWithTriSoup));
-            outputFolderPath += meshName + "_Tutte_" + FracCuts::IglUtils::rtos(lambda) + "_" + FracCuts::IglUtils::rtos(delta) +
-                "_" + startDS + folderTail;
-        }
-        else {
-            // closed surface
-            if(igl::euler_characteristic(V, F) != 2) {
-                std::cout << "Input surface genus > 0 or has multiple connected components!" << std::endl;
-                return -1;
-            }
-            
-            if(startWithTriSoup) {
-                // rigid initialization, the most stable initialization for AutoCuts...
-                assert((lambda > 0.0) && startWithTriSoup);
-                triSoup.emplace_back(new FracCuts::TriangleSoup(V, F, Eigen::MatrixXd()));
-                outputFolderPath += meshName + "_rigid_" + FracCuts::IglUtils::rtos(lambda) + "_" + FracCuts::IglUtils::rtos(delta) +
-                    "_" + startDS + folderTail;
-            }
-            else {
-                FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, Eigen::MatrixXd(), Eigen::MatrixXi(), false);
-//                temp->farthestPointCut(); // open up a boundary for Tutte embedding
-//                temp->highCurvOnePointCut();
-                temp->onePointCut();
-                rand1PInitCut = true;
-                
-                igl::boundary_loop(temp->F, bnd);
-                assert(bnd.size());
-                Eigen::MatrixXd bnd_uv;
-                FracCuts::IglUtils::map_vertices_to_circle(temp->V_rest, bnd, bnd_uv);
-                Eigen::SparseMatrix<double> A, M;
-                FracCuts::IglUtils::computeUniformLaplacian(temp->F, A);
-                Eigen::MatrixXd UV_Tutte;
-                igl::harmonic(A, M, bnd, bnd_uv, 1, UV_Tutte);
-                triSoup.emplace_back(new FracCuts::TriangleSoup(V, F, UV_Tutte, temp->F, startWithTriSoup, temp->initSeamLen));
-                
-                delete temp;
-                outputFolderPath += meshName + "_Tutte_" + FracCuts::IglUtils::rtos(lambda) + "_" + FracCuts::IglUtils::rtos(delta) +
-                                "_" + startDS + folderTail;
-            }
-        }
-#ifdef USE_INPUT_UV
+        outputFolderPath += meshName + "_" +startDS + folderTail;
     }
-#endif
-    
     mkdir(outputFolderPath.c_str(), 0777);
+    
+    // create log file
     outputFolderPath += '/';
     logFile.open(outputFolderPath + "log.txt");
     if(!logFile.is_open()) {

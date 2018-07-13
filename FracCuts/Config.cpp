@@ -7,11 +7,19 @@
 //
 
 #include "Config.hpp"
+#include "IglUtils.hpp"
 
 #include <fstream>
 #include <sstream>
 
 namespace FracCuts {
+    
+    const std::vector<std::string> Config::energyTypeStrs = {
+        "NH", "FCR", "SD", "ARAP"
+    };
+    const std::vector<std::string> Config::integratorTypeStrs = {
+        "Newton", "ADMM", "DADMM"
+    };
     
     Config::Config(void) :
     resolution(100), size(1.0), duration(10.0), dt(0.025), YM(100.0), PR(0.4)
@@ -64,38 +72,44 @@ namespace FracCuts {
         }
     }
     
-    EnergyType Config::getEnergyTypeByStr(const std::string& str) {
-        if(str == "NH") {
-            return ET_NH;
-        }
-        else if(str == "FCR") {
-            return ET_FCR;
-        }
-        else if(str == "SD") {
-            return ET_SD;
-        }
-        else if(str == "ARAP") {
-            return ET_ARAP;
-        }
-        else {
-            std::cout << "use default energy type: NH" << std::endl;
-            return ET_NH;
-        }
+    void Config::appendInfoStr(std::string& inputStr) const
+    {
+        inputStr += (AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
+                     getStrByEnergyType(energyType) + "_" +
+                     IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR)) + "_" +
+                     getStrByIntegratorType(integratorType) + "_" +
+                     IglUtils::rtos(dt) + "_" + std::to_string(resolution);
     }
-    IntegratorType Config::getIntegratorTypeByStr(const std::string& str) {
-        if(str == "Newton") {
-            return IT_NEWTON;
+    
+    EnergyType Config::getEnergyTypeByStr(const std::string& str)
+    {
+        for(int i = 0; i < energyTypeStrs.size(); i++) {
+            if(str == energyTypeStrs[i]) {
+                return EnergyType(i);
+            }
         }
-        else if(str == "ADMM") {
-            return IT_ADMM;
+        std::cout << "use default energy type: NH" << std::endl;
+        return ET_NH;
+    }
+    std::string Config::getStrByEnergyType(EnergyType energyType)
+    {
+        assert(energyType < energyTypeStrs.size());
+        return energyTypeStrs[energyType];
+    }
+    IntegratorType Config::getIntegratorTypeByStr(const std::string& str)
+    {
+        for(int i = 0; i < integratorTypeStrs.size(); i++) {
+            if(str == integratorTypeStrs[i]) {
+                return IntegratorType(i);
+            }
         }
-        else if(str == "DADMM") {
-            return IT_DADMM;
-        }
-        else {
-            std::cout << "use default integrator type: Newton" << std::endl;
-            return IT_NEWTON;
-        }
+        std::cout << "use default integrator type: Newton" << std::endl;
+        return IT_NEWTON;
+    }
+    std::string Config::getStrByIntegratorType(IntegratorType integratorType)
+    {
+        assert(integratorType < integratorTypeStrs.size());
+        return integratorTypeStrs[integratorType];
     }
     
 }
