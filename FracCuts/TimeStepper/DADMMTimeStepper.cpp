@@ -144,7 +144,7 @@ namespace FracCuts {
         }
         innerIterAmt += ADMMIterI;
         
-        return (ADMMIterI == ADMMIterAmt - 1);
+        return (ADMMIterI == ADMMIterAmt);
     }
     
     void DADMMTimeStepper::zuUpdate(void)
