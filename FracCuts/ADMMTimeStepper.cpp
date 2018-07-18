@@ -135,7 +135,6 @@ namespace FracCuts {
     bool ADMMTimeStepper::fullyImplicit(void)
     {
         // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx
-//        for(int vI = 0; vI < result.V.rows(); vI++) {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else

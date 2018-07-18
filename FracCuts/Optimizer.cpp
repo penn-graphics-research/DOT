@@ -951,7 +951,7 @@ namespace FracCuts {
         
 #ifndef STATIC_SOLVE
         for(int vI = 0; vI < data.V.rows(); vI++) {
-            double massI = result.massMatrix.coeffRef(vI, vI);
+            double massI = data.massMatrix.coeff(vI, vI);
 //            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
             energyVal += (data.V.row(vI) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()  - dtSq * gravity.transpose()).squaredNorm() * massI / 2.0;
         }
@@ -977,7 +977,7 @@ namespace FracCuts {
         
 #ifndef STATIC_SOLVE
         for(int vI = 0; vI < data.V.rows(); vI++) {
-            double massI = result.massMatrix.coeffRef(vI, vI);
+            double massI = data.massMatrix.coeff(vI, vI);
 //            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
             gradient.segment(vI * 2, 2) += massI * (data.V.row(vI).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2) - dtSq * gravity);
         }
@@ -986,17 +986,6 @@ namespace FracCuts {
         }
         //TODO: mass of negative space vertices
 #endif
-        
-//        if(!directionFix.empty()) {
-//            double cx = 0.0;
-//            for(const auto termI : directionFix) {
-//                gradient(termI.first) -= lambda_df * termI.second;
-//                cx += result.V(termI.first / 2, termI.first % 2) * termI.second;
-//            }
-//            gradient.conservativeResize(gradient.size() + 1);
-//            gradient.tail(1) << cx;
-//        }
-//        gradient[2] = 0.0;
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr)
     {
@@ -1031,11 +1020,11 @@ namespace FracCuts {
             
 #ifndef STATIC_SOLVE
             int curTripletSize = static_cast<int>(I_mtr.size());
-            I_mtr.conservativeResize(I_mtr.size() + result.V.rows() * 2);
-            J_mtr.conservativeResize(J_mtr.size() + result.V.rows() * 2);
-            V_mtr.conservativeResize(V_mtr.size() + result.V.rows() * 2);
+            I_mtr.conservativeResize(I_mtr.size() + data.V.rows() * 2);
+            J_mtr.conservativeResize(J_mtr.size() + data.V.rows() * 2);
+            V_mtr.conservativeResize(V_mtr.size() + data.V.rows() * 2);
             for(int vI = 0; vI < result.V.rows(); vI++) {
-                double massI = result.massMatrix.coeffRef(vI, vI);
+                double massI = data.massMatrix.coeff(vI, vI);
                 I_mtr[curTripletSize + vI * 2] = vI * 2;
                 J_mtr[curTripletSize + vI * 2] = vI * 2;
                 V_mtr[curTripletSize + vI * 2] = massI;

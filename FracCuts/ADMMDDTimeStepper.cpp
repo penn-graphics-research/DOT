@@ -1,0 +1,334 @@
+//
+//  ADMMDDTimeStepper.cpp
+//  FracCuts
+//
+//  Created by Minchen Li on 7/17/18.
+//  Copyright © 2018 Minchen Li. All rights reserved.
+//
+
+#include "ADMMDDTimeStepper.hpp"
+
+#ifdef LINSYSSOLVER_USE_CHOLMOD
+#include "CHOLMODSolver.hpp"
+#elif defined(LINSYSSOLVER_USE_PARDISO)
+#include "PardisoSolver.hpp"
+#else
+#include "EigenLibSolver.hpp"
+#endif
+
+#include <iostream>
+
+namespace FracCuts {
+    
+    ADMMDDTimeStepper::ADMMDDTimeStepper(const TriangleSoup& p_data0,
+                                         const std::vector<Energy*>& p_energyTerms,
+                                         const std::vector<double>& p_energyParams,
+                                         int p_propagateFracture,
+                                         bool p_mute,
+                                         bool p_scaffolding,
+                                         const Eigen::MatrixXd& UV_bnds,
+                                         const Eigen::MatrixXi& E,
+                                         const Eigen::VectorXi& bnd,
+                                         AnimScriptType animScriptType) :
+    Optimizer(p_data0, p_energyTerms, p_energyParams,
+              p_propagateFracture, p_mute, p_scaffolding,
+              UV_bnds, E, bnd, animScriptType)
+    {
+        // divide domain
+        assert(result.F.rows() % 2 == 0);
+        mesh_subdomain.resize(2);
+        
+        globalVIToLocal_subdomain.resize(mesh_subdomain.size());
+        weights_subdomain.resize(mesh_subdomain.size());
+        xHat_subdomain.resize(mesh_subdomain.size());
+        int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            Eigen::VectorXi triangles = Eigen::VectorXi::LinSpaced(subdomainTriAmt,
+                                                                   subdomainTriAmt * subdomainI,
+                                                                   subdomainTriAmt * (subdomainI + 1) - 1);
+            result.constructSubmesh(triangles, mesh_subdomain[subdomainI],
+                                    globalVIToLocal_subdomain[subdomainI]);
+            
+            weights_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows());
+            weights_subdomain[subdomainI].setOnes(); //TODO: initialize per-element weight
+            xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
+        }
+#ifdef USE_TBB
+        );
+#endif
+        
+        globalVIToDual_subdomain.resize(mesh_subdomain.size());
+        u_subdomain.resize(mesh_subdomain.size());
+        weightSum.resize(result.V.rows());
+        weightSum.setZero();
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            int sharedVertexAmt = 0;
+            for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
+                for(int subdomainJ = 0; subdomainJ < mesh_subdomain.size(); subdomainJ++) {
+                    auto finder = globalVIToLocal_subdomain[subdomainJ].find(mapperI.first);
+                    if(finder != globalVIToLocal_subdomain[subdomainJ].end()) {
+                        globalVIToDual_subdomain[subdomainI][mapperI.first] = sharedVertexAmt++;
+                        weightSum[mapperI.first] += weights_subdomain[subdomainI][mapperI.second];
+                        break;
+                    }
+                }
+            }
+            //TODO: can half the amount of search
+            u_subdomain[subdomainI].resize(sharedVertexAmt, 2);
+        }
+        
+        linSysSolver_subdomain.resize(mesh_subdomain.size());
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+#ifdef LINSYSSOLVER_USE_CHOLMOD
+            linSysSolver_subdomain[subdomainI] = new CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#elif defined(LINSYSSOLVER_USE_PARDISO)
+            linSysSolver_subdomain[subdomainI] = new PardisoSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#else
+            linSysSolver_subdomain[subdomainI] = new EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>();
+#endif
+        }
+    }
+    
+    ADMMDDTimeStepper::~ADMMDDTimeStepper(void)
+    {
+        for(int subdomainI = 0; subdomainI < linSysSolver_subdomain.size(); subdomainI++) {
+            delete linSysSolver_subdomain[subdomainI];
+        }
+    }
+    
+    void ADMMDDTimeStepper::precompute(void)
+    {
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            Eigen::VectorXd V;
+            Eigen::VectorXi I, J;
+            computeHessianProxy_subdomain(subdomainI, V, I, J);
+            
+            linSysSolver_subdomain[subdomainI]->set_type(1, 2);
+            linSysSolver_subdomain[subdomainI]->set_pattern(I, J, V, mesh_subdomain[subdomainI].vNeighbor,
+                                                            mesh_subdomain[subdomainI].fixedVert);
+            linSysSolver_subdomain[subdomainI]->analyze_pattern();
+        }
+#ifdef USE_TBB
+        );
+#endif
+    }
+    
+    bool ADMMDDTimeStepper::fullyImplicit(void)
+    {
+//        // TODO: try different initial guess?
+//#ifdef USE_TBB
+//        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+//#else
+//                          for(int vI = 0; vI < result.V.rows(); vI++)
+//#endif
+//                          {
+//                              if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+//                                  result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+//                              }
+//                              M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) *
+//                              result.V.row(vI).transpose();
+//                          }
+//#ifdef USE_TBB
+//                          );
+//#endif
+        
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            u_subdomain[subdomainI].setZero();
+            
+            for(const auto& mapperI : globalVIToDual_subdomain[subdomainI]) {
+                mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][mapperI.first]) = result.V.row(mapperI.first);
+            }
+            
+            for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
+                xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+        
+        // ADMM iterations
+        int ADMMIterAmt = 100;
+        for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+            file_iterStats << globalIterNum << " ";
+            
+            subdomainSolve();
+            checkRes();
+            boundaryConsensusSolve();
+            
+            computeGradient(result, scaffold, gradient);
+            double sqn_g = gradient.squaredNorm();
+            std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
+                " ||gradient||^2 = " << sqn_g << std::endl;
+            file_iterStats << sqn_g << std::endl;
+            if(sqn_g < targetGRes * 1000.0) { //!!!
+                break;
+            }
+            
+            if(ADMMIterI == ADMMIterAmt - 1) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    void ADMMDDTimeStepper::subdomainSolve(void) // local solve
+    {
+        int localMaxIter = __INT_MAX__;
+        double localTol = targetGRes / mesh_subdomain.size();
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            // primal
+            for(int j = 0; j < localMaxIter; j++) {
+                Eigen::VectorXd g;
+                computeGradient_subdomain(subdomainI, g);
+//                std::cout << "  " << triI << "-" << j << " ||g_local||^2 = "
+//                    << g.squaredNorm() << std::endl;
+                if(g.squaredNorm() < localTol) {
+                    break;
+                }
+
+                Eigen::VectorXd V;
+                Eigen::VectorXi I, J;
+                computeHessianProxy_subdomain(subdomainI, V, I, J);
+
+                // solve for search direction
+                linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
+                linSysSolver_subdomain[subdomainI]->factorize();
+                Eigen::VectorXd p, rhs = -g;
+                linSysSolver_subdomain[subdomainI]->solve(rhs, p);
+
+                // line search init
+                double alpha = 1.0;
+                energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
+                alpha *= 0.99;
+
+                // Armijo's rule:
+                const double m = p.dot(g);
+                const double c1m = 1.0e-4 * m;
+                Eigen::MatrixXd V0 = mesh_subdomain[subdomainI].V;
+                double E0;
+                computeEnergyVal_subdomain(subdomainI, E0);
+                for(int vI = 0; vI < V0.rows(); vI++) {
+                    mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2);
+                }
+                double E;
+                computeEnergyVal_subdomain(subdomainI, E);
+                while(E > E0 + alpha * c1m) {
+                    alpha /= 2.0;
+                    for(int vI = 0; vI < V0.rows(); vI++) {
+                        mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2);
+                    }
+                    computeEnergyVal_subdomain(subdomainI, E);
+                }
+            }
+
+//            dz.row(triI) = zi.transpose() - z.row(triI);
+
+            // dual
+            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+                u_subdomain[subdomainI].row(dualMapperI.second) += mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][dualMapperI.first]) - result.V.row(dualMapperI.first);
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+    }
+    void ADMMDDTimeStepper::checkRes(void)
+    {
+        //TODO
+    }
+    void ADMMDDTimeStepper::boundaryConsensusSolve(void) // global solve
+    {
+        result.V.setZero();
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
+                if(weightSum[mapperI.first] > 0.0) {
+                    result.V.row(mapperI.first) += weights_subdomain[subdomainI][mapperI.second] *
+                        (mesh_subdomain[subdomainI].V.row(mapperI.second) +
+                         u_subdomain[subdomainI].row(globalVIToDual_subdomain[subdomainI][mapperI.first]));
+                }
+                else {
+                    result.V.row(mapperI.first) = mesh_subdomain[subdomainI].V.row(mapperI.second);
+                }
+            }
+        }
+        for(int vI = 0; vI < result.V.rows(); vI++) {
+            if(weightSum[vI] > 0.0) {
+                result.V.row(vI) /= weightSum[vI];
+            }
+        }
+    }
+    
+    // subdomain energy computation
+    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, double& Ei) const
+    {
+        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], Ei);
+        Ei *= dtSq;
+        for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
+            double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
+            Ei += (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).squaredNorm() * massI / 2.0;
+        }
+        
+        // augmented Lagrangian:
+        //TODO
+    }
+    void ADMMDDTimeStepper::computeGradient_subdomain(int subdomainI, Eigen::VectorXd& g) const
+    {
+        energyTerms[0]->computeGradientBySVD(mesh_subdomain[subdomainI], g);
+        g *= dtSq;
+        for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
+            double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
+            g.segment(vI * 2, 2) += massI * (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).transpose();
+        }
+        
+        // augmented Lagrangian:
+        //TODO
+    }
+    void ADMMDDTimeStepper::computeHessianProxy_subdomain(int subdomainI, Eigen::VectorXd& V,
+                                                          Eigen::VectorXi& I, Eigen::VectorXi& J) const
+    {
+        I.resize(0);
+        J.resize(0);
+        V.resize(0);
+        energyTerms[0]->computeHessianBySVD(mesh_subdomain[subdomainI], &V, &I, &J);
+        V *= dtSq;
+        int curTripletSize = static_cast<int>(I.size());
+        I.conservativeResize(I.size() + mesh_subdomain[subdomainI].V.rows() * 2);
+        J.conservativeResize(J.size() + mesh_subdomain[subdomainI].V.rows() * 2);
+        V.conservativeResize(V.size() + mesh_subdomain[subdomainI].V.rows() * 2);
+        for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
+            double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
+            I[curTripletSize + vI * 2] = vI * 2;
+            J[curTripletSize + vI * 2] = vI * 2;
+            V[curTripletSize + vI * 2] = massI;
+            I[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+            J[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+            V[curTripletSize + vI * 2 + 1] = massI;
+        }
+        
+        // augmented Lagrangian:
+        //TODO
+    }
+    
+}

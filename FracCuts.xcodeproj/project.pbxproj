@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
+		986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */; };
 		987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 987382CF2076F49A0040BBCE /* Scaffold.cpp */; };
 		988D81A720AA7FFE0037737D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988ED1271F57211500B21181 /* OpenGL.framework */; };
 		988D81A920AA80A60037737D /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988D81A820AA80A60037737D /* IOKit.framework */; };
@@ -57,6 +58,8 @@
 		982CE6121F5DB358004176A8 /* Energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Energy.cpp; sourceTree = "<group>"; };
 		983E7DB3202240D900412128 /* Diagnostic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Diagnostic.hpp; sourceTree = "<group>"; };
 		983E7DB62022421400412128 /* MeshProcessing.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MeshProcessing.hpp; sourceTree = "<group>"; };
+		986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMDDTimeStepper.cpp; sourceTree = "<group>"; };
+		986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMDDTimeStepper.hpp; sourceTree = "<group>"; };
 		987382CB202902590040BBCE /* Types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Types.hpp; sourceTree = "<group>"; };
 		987382CD2076EE9D0040BBCE /* libtriangle.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtriangle.a; path = ../../../../usr/local/lib/libtriangle.a; sourceTree = "<group>"; };
 		987382CF2076F49A0040BBCE /* Scaffold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Scaffold.cpp; sourceTree = "<group>"; };
@@ -166,6 +169,8 @@
 				98E6E69A20E585CF00130500 /* ADMMTimeStepper.hpp */,
 				98E6E69620E2C00300130500 /* DADMMTimeStepper.cpp */,
 				98E6E69720E2C00300130500 /* DADMMTimeStepper.hpp */,
+				986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */,
+				986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */,
 				98E6E68320DB110000130500 /* AnimScripter.cpp */,
 				98E6E68420DB110000130500 /* AnimScripter.hpp */,
 				98E6E6A520F7C59700130500 /* Config.cpp */,
@@ -328,6 +333,7 @@
 				98E6E69B20E585CF00130500 /* ADMMTimeStepper.cpp in Sources */,
 				988ED1321F575C3C00B21181 /* IglUtils.cpp in Sources */,
 				982CE6131F5DB358004176A8 /* Energy.cpp in Sources */,
+				986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */,
 				988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */,
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,

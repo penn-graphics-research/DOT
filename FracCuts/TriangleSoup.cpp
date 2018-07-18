@@ -2204,6 +2204,44 @@ namespace FracCuts {
         
         save(filePath, V_mesh, F_mesh, UV_mesh, FUV_mesh);
     }
+        
+    void TriangleSoup::constructSubmesh(const Eigen::VectorXi& triangles,
+                                        TriangleSoup& submesh, std::map<int, int>& globalVIToLocal) const
+    {
+        Eigen::MatrixXi F_sub;
+        F_sub.resize(triangles.size(), 3);
+        Eigen::MatrixXd V_rest_sub, V_sub;
+        globalVIToLocal.clear();
+        for(int localTriI = 0; localTriI < triangles.size(); localTriI++) {
+            int triI = triangles[localTriI];
+            for(int vI = 0; vI < 3; vI++) {
+                int globalVI = F(triI, vI);
+                auto localVIFinder = globalVIToLocal.find(globalVI);
+                if(localVIFinder == globalVIToLocal.end()) {
+                    int localVI = static_cast<int>(V_rest_sub.rows());
+                    V_rest_sub.conservativeResize(localVI + 1, 3);
+                    V_rest_sub.row(localVI) = V_rest.row(globalVI);
+                    V_sub.conservativeResize(localVI + 1, 2);
+                    V_sub.row(localVI) = V.row(globalVI);
+                    F_sub(localTriI, vI) = localVI;
+                    globalVIToLocal[globalVI] = localVI;
+                }
+                else {
+                    F_sub(localTriI, vI) = localVIFinder->second;
+                }
+            }
+        }
+        submesh = TriangleSoup(V_rest_sub, F_sub, V_sub, Eigen::MatrixXi(), false);
+        
+        std::set<int> fixedVert_sub;
+        for(const auto& fixedVI : fixedVert) {
+            auto finder = globalVIToLocal.find(fixedVI);
+            if(finder != globalVIToLocal.end()) {
+                fixedVert_sub.insert(finder->second);
+            }
+        }
+        submesh.resetFixedVert(fixedVert_sub);
+    }
     
     bool TriangleSoup::findBoundaryEdge(int vI, const std::pair<int, int>& startEdge,
                                         std::pair<int, int>& boundaryEdge)

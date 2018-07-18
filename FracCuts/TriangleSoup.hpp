@@ -130,6 +130,9 @@ namespace FracCuts{
         
         void saveAsMesh(const std::string& filePath, bool scaleUV = false) const;
         
+        void constructSubmesh(const Eigen::VectorXi& triangles,
+                              TriangleSoup& submesh, std::map<int, int>& globalVIToLocal) const;
+        
     public: // helper function
         void computeLaplacianMtr(void);
         
