@@ -38,9 +38,11 @@ namespace FracCuts {
               p_propagateFracture, p_mute, p_scaffolding,
               UV_bnds, E, bnd, animScriptType)
     {
-        //TODO: try different partition
-        //TODO: write report
-//        1.) Use the current ADMM DD on all 4 of your stress-test examples and compare it against Newton and ADMM PD as you increase resolution (use a high poisson and Youngs) ; 2.) Try the same experiment but now with shared elements instead of shared vertices; 3) enable visualization of the inner iterations of your ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
+        //TODO: write report: change notation of dual, residual computation, initialization
+        // 1.) Use the current ADMM DD on all 4 of the stress-test examples and compare it against Newton and ADMM PD, also increase the resolution and use a high poisson and Youngs, also test different partition;
+        // 3.) enable visualization of the inner iterations of ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
+        // 2.) Try the same experiment but now with shared elements instead of shared vertices;
+        
         // divide domain
         const int partitionAmt = 4;
         assert(result.F.rows() % partitionAmt == 0);
@@ -169,7 +171,7 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        // TODO: compare different initial guess, add comments
+        // TODO: use symplectic Euler as initial guess?
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
@@ -192,28 +194,29 @@ namespace FracCuts {
         {
             u_subdomain[subdomainI].setZero();
             
-//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
-//                mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][dualMapperI.first]) = result.V.row(dualMapperIapperI.first);
-//            }
-            
+            // precompute xHat and update local vertices
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
-                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
-                   mesh_subdomain[subdomainI].fixedVert.end())
-                {
-                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
-                }
-                else {
-                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first);
-                }
+                // a more general way that also valid for other initialization:
+//                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
+//                   mesh_subdomain[subdomainI].fixedVert.end())
+//                {
+//                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+//                }
+//                else {
+//                    // scripted
+//                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
+//                }
+                mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
             }
-            mesh_subdomain[subdomainI].V = xHat_subdomain[subdomainI];
+            // a more convenient way when using xHat as initial guess
+            xHat_subdomain[subdomainI] = mesh_subdomain[subdomainI].V;
         }
 #ifdef USE_TBB
         );
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 2000, ADMMIterI = 0;
+        int ADMMIterAmt = 300, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
