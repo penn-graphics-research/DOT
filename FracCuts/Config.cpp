@@ -18,7 +18,7 @@ namespace FracCuts {
         "NH", "FCR", "SD", "ARAP"
     };
     const std::vector<std::string> Config::timeStepperTypeStrs = {
-        "Newton", "ADMM", "DADMM"
+        "Newton", "ADMM", "DADMM", "ADMMDD"
     };
     
     Config::Config(void) :

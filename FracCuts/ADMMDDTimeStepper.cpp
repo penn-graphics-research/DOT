@@ -16,6 +16,8 @@
 #include "EigenLibSolver.hpp"
 #endif
 
+#include <tbb/tbb.h>
+
 #include <iostream>
 
 namespace FracCuts {
@@ -34,6 +36,8 @@ namespace FracCuts {
               p_propagateFracture, p_mute, p_scaffolding,
               UV_bnds, E, bnd, animScriptType)
     {
+        //TODO: try different partition
+        //TODO: render partition and duplicated verts, output per timestep iteration count, check time count
         // divide domain
         assert(result.F.rows() % 2 == 0);
         mesh_subdomain.resize(2);
@@ -59,8 +63,12 @@ namespace FracCuts {
         );
 #endif
         
+        // find overlapping vertices
+        dualDim = 0;
         globalVIToDual_subdomain.resize(mesh_subdomain.size());
         u_subdomain.resize(mesh_subdomain.size());
+        du_subdomain.resize(mesh_subdomain.size());
+        dz_subdomain.resize(mesh_subdomain.size());
         weights_subdomain.resize(mesh_subdomain.size());
         weightSum.resize(result.V.rows());
         weightSum.setZero();
@@ -73,7 +81,7 @@ namespace FracCuts {
                         globalVIToDual_subdomain[subdomainI][mapperI.first] = sharedVertexAmt;
                         
                         weights_subdomain[subdomainI].conservativeResize(sharedVertexAmt + 1);
-                        double weight = 1.0; //TODO: initialize per-element weight
+                        double weight = 0.01; //TODO: initialize per-element weight
                         weights_subdomain[subdomainI][sharedVertexAmt] = weight;
                         weightSum[mapperI.first] += weight;
                         
@@ -82,9 +90,12 @@ namespace FracCuts {
                     }
                 }
             }
-            //TODO: can half the amount of search
+            dualDim += sharedVertexAmt;
             u_subdomain[subdomainI].resize(sharedVertexAmt, 2);
+            du_subdomain[subdomainI].resize(sharedVertexAmt, 2);
+            dz_subdomain[subdomainI].resize(sharedVertexAmt, 2);
         }
+        dualDim *= 2; // in 2D
         
         linSysSolver_subdomain.resize(mesh_subdomain.size());
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
@@ -129,22 +140,20 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-//        // TODO: try different initial guess?
-//#ifdef USE_TBB
-//        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-//#else
-//                          for(int vI = 0; vI < result.V.rows(); vI++)
-//#endif
-//                          {
-//                              if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-//                                  result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
-//                              }
-//                              M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) *
-//                              result.V.row(vI).transpose();
-//                          }
-//#ifdef USE_TBB
-//                          );
-//#endif
+        // TODO: compare different initial guess, add comments
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+        {
+            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
         
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
@@ -154,20 +163,28 @@ namespace FracCuts {
         {
             u_subdomain[subdomainI].setZero();
             
-            for(const auto& mapperI : globalVIToDual_subdomain[subdomainI]) {
-                mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][mapperI.first]) = result.V.row(mapperI.first);
-            }
+//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+//                mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][dualMapperI.first]) = result.V.row(dualMapperIapperI.first);
+//            }
             
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
-                xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
+                   mesh_subdomain[subdomainI].fixedVert.end())
+                {
+                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+                }
+                else {
+                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first);
+                }
             }
+            mesh_subdomain[subdomainI].V = xHat_subdomain[subdomainI];
         }
 #ifdef USE_TBB
         );
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 100;
+        int ADMMIterAmt = 2000;
         for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
@@ -180,7 +197,7 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 1000.0) { //!!!
+            if(sqn_g < targetGRes * 10.0) { //10~100!!!
                 break;
             }
             
@@ -203,6 +220,7 @@ namespace FracCuts {
 #endif
         {
             // primal
+            Eigen::MatrixXd V0_ADMM = mesh_subdomain[subdomainI].V;
             for(int j = 0; j < localMaxIter; j++) {
                 Eigen::VectorXd g;
                 computeGradient_subdomain(subdomainI, g);
@@ -211,22 +229,22 @@ namespace FracCuts {
                 if(g.squaredNorm() < localTol) {
                     break;
                 }
-
+                
                 Eigen::VectorXd V;
                 Eigen::VectorXi I, J;
                 computeHessianProxy_subdomain(subdomainI, V, I, J);
-
+                
                 // solve for search direction
                 linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
                 linSysSolver_subdomain[subdomainI]->factorize();
                 Eigen::VectorXd p, rhs = -g;
                 linSysSolver_subdomain[subdomainI]->solve(rhs, p);
-
+                
                 // line search init
                 double alpha = 1.0;
                 energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
                 alpha *= 0.99;
-
+                
                 // Armijo's rule:
                 const double m = p.dot(g);
                 const double c1m = 1.0e-4 * m;
@@ -234,24 +252,26 @@ namespace FracCuts {
                 double E0;
                 computeEnergyVal_subdomain(subdomainI, E0);
                 for(int vI = 0; vI < V0.rows(); vI++) {
-                    mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2);
+                    mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2).transpose();
                 }
                 double E;
                 computeEnergyVal_subdomain(subdomainI, E);
                 while(E > E0 + alpha * c1m) {
                     alpha /= 2.0;
                     for(int vI = 0; vI < V0.rows(); vI++) {
-                        mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2);
+                        mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2).transpose();
                     }
                     computeEnergyVal_subdomain(subdomainI, E);
                 }
             }
-
-//            dz.row(triI) = zi.transpose() - z.row(triI);
-
+            
             // dual
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
-                u_subdomain[subdomainI].row(dualMapperI.second) += mesh_subdomain[subdomainI].V.row(globalVIToLocal_subdomain[subdomainI][dualMapperI.first]) - result.V.row(dualMapperI.first);
+                int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+                dz_subdomain[subdomainI].row(dualMapperI.second) = mesh_subdomain[subdomainI].V.row(localI) - V0_ADMM.row(localI);
+                du_subdomain[subdomainI].row(dualMapperI.second) =
+                    mesh_subdomain[subdomainI].V.row(localI) - result.V.row(dualMapperI.first);
+                u_subdomain[subdomainI].row(dualMapperI.second) += du_subdomain[subdomainI].row(dualMapperI.second);
             }
         }
 #ifdef USE_TBB
@@ -260,7 +280,19 @@ namespace FracCuts {
     }
     void ADMMDDTimeStepper::checkRes(void)
     {
-        //TODO
+        double sqn_r = 0.0, sqn_s = 0.0;;
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            sqn_r += du_subdomain[subdomainI].squaredNorm();
+            
+            Eigen::MatrixXd sI = Eigen::MatrixXd::Zero(mesh_subdomain[subdomainI].V.rows(), 2);
+            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+                int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+                sI.row(localI) = weights_subdomain[subdomainI][dualMapperI.second] * dz_subdomain[subdomainI].row(dualMapperI.second);
+            }
+            sqn_s += sI.squaredNorm();
+        }
+        std::cout << "||s||^2 = " << sqn_s << ", ||r||^2 = " << sqn_r << ", ";
+        file_iterStats << sqn_s << " " << sqn_r << " ";
     }
     void ADMMDDTimeStepper::boundaryConsensusSolve(void) // global solve
     {
@@ -268,9 +300,10 @@ namespace FracCuts {
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
                 if(weightSum[mapperI.first] > 0.0) {
-                    result.V.row(mapperI.first) += weights_subdomain[subdomainI][mapperI.second] *
+                    int dualI = globalVIToDual_subdomain[subdomainI][mapperI.first];
+                    result.V.row(mapperI.first) += weights_subdomain[subdomainI][dualI] *
                         (mesh_subdomain[subdomainI].V.row(mapperI.second) +
-                         u_subdomain[subdomainI].row(globalVIToDual_subdomain[subdomainI][mapperI.first]));
+                         u_subdomain[subdomainI].row(dualI));
                 }
                 else {
                     result.V.row(mapperI.first) = mesh_subdomain[subdomainI].V.row(mapperI.second);
@@ -296,12 +329,12 @@ namespace FracCuts {
         }
         
         // augmented Lagrangian:
-        for(const auto& mapperI : globalVIToDual_subdomain[subdomainI]) {
-            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(mapperI.first);
+        for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(dualMapperI.first);
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
-            Ei += weights_subdomain[subdomainI][mapperI.second] / 2.0 *
+            Ei += weights_subdomain[subdomainI][dualMapperI.second] / 2.0 *
                 (mesh_subdomain[subdomainI].V.row(localVIFinder->second) -
-                 result.V.row(mapperI.first) + u_subdomain[subdomainI].row(mapperI.second)).squaredNorm();
+                 result.V.row(dualMapperI.first) + u_subdomain[subdomainI].row(dualMapperI.second)).squaredNorm();
         }
     }
     void ADMMDDTimeStepper::computeGradient_subdomain(int subdomainI, Eigen::VectorXd& g) const
@@ -315,12 +348,12 @@ namespace FracCuts {
         }
         
         // augmented Lagrangian:
-        for(const auto& mapperI : globalVIToDual_subdomain[subdomainI]) {
-            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(mapperI.first);
+        for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(dualMapperI.first);
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
-            g.segment(localVIFinder->second * 2, 2) += weights_subdomain[subdomainI][mapperI.second] *
+            g.segment(localVIFinder->second * 2, 2) += weights_subdomain[subdomainI][dualMapperI.second] *
                 (mesh_subdomain[subdomainI].V.row(localVIFinder->second) -
-                 result.V.row(mapperI.first) + u_subdomain[subdomainI].row(mapperI.second)).transpose();
+                 result.V.row(dualMapperI.first) + u_subdomain[subdomainI].row(dualMapperI.second)).transpose();
         }
     }
     void ADMMDDTimeStepper::computeHessianProxy_subdomain(int subdomainI, Eigen::VectorXd& V,
@@ -352,15 +385,15 @@ namespace FracCuts {
         J.conservativeResize(J.size() + globalVIToDual_subdomain[subdomainI].size() * 2);
         V.conservativeResize(V.size() + globalVIToDual_subdomain[subdomainI].size() * 2);
         int dualI = 0;
-        for(const auto& mapperI : globalVIToDual_subdomain[subdomainI]) {
-            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(mapperI.first);
+        for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+            auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(dualMapperI.first);
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
             I[curTripletSize + dualI * 2] = localVIFinder->second * 2;
             J[curTripletSize + dualI * 2] = localVIFinder->second * 2;
-            V[curTripletSize + dualI * 2] = weights_subdomain[subdomainI][mapperI.second];
+            V[curTripletSize + dualI * 2] = weights_subdomain[subdomainI][dualMapperI.second];
             I[curTripletSize + dualI * 2 + 1] = localVIFinder->second * 2 + 1;
             J[curTripletSize + dualI * 2 + 1] = localVIFinder->second * 2 + 1;
-            V[curTripletSize + dualI * 2 + 1] = weights_subdomain[subdomainI][mapperI.second];
+            V[curTripletSize + dualI * 2 + 1] = weights_subdomain[subdomainI][dualMapperI.second];
             dualI++;
         }
     }

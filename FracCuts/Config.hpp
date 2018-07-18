@@ -26,7 +26,8 @@ namespace FracCuts {
     enum TimeStepperType {
         TST_NEWTON,
         TST_ADMM,
-        TST_DADMM
+        TST_DADMM,
+        TST_ADMMDD
     };
     
     class Config

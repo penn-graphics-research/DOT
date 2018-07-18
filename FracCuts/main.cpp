@@ -2,8 +2,9 @@
 #include "IglUtils.hpp"
 #include "Config.hpp"
 #include "Optimizer.hpp"
-#include "DADMMTimeStepper.hpp"
 #include "ADMMTimeStepper.hpp"
+#include "DADMMTimeStepper.hpp"
+#include "ADMMDDTimeStepper.hpp"
 #include "SymStretchEnergy.hpp"
 #include "ARAPEnergy.hpp"
 #include "NeoHookeanEnergy.hpp"
@@ -1501,6 +1502,10 @@ int main(int argc, char *argv[])
             
         case FracCuts::TST_DADMM:
             optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
+            break;
+            
+        case FracCuts::TST_ADMMDD:
+            optimizer = new FracCuts::ADMMDDTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config.animScriptType);
             break;
     }
     optimizer->setTime(config.duration, config.dt);

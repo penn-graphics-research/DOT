@@ -19,13 +19,14 @@ namespace FracCuts {
         std::vector<TriangleSoup> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
         std::vector<std::map<int, int>> globalVIToDual_subdomain;
-        std::vector<Eigen::MatrixXd> u_subdomain;
-        std::vector<Eigen::VectorXd> weights_subdomain;
         std::vector<Eigen::MatrixXd> xHat_subdomain;
-        std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
-        //TODO: reorganize folder, cmake
-        
+        int dualDim;
+        std::vector<Eigen::MatrixXd> u_subdomain, du_subdomain, dz_subdomain;
+        std::vector<Eigen::VectorXd> weights_subdomain;
         Eigen::VectorXd weightSum;
+        std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
+        
+        //TODO: reorganize folder and cmake
         
     public:
         ADMMDDTimeStepper(const TriangleSoup& p_data0,
