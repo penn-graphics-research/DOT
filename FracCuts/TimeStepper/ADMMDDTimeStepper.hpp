@@ -28,8 +28,6 @@ namespace FracCuts {
         Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
         
-        //TODO: reorganize folder and cmake
-        
     public:
         ADMMDDTimeStepper(const TriangleSoup& p_data0,
                           const std::vector<Energy*>& p_energyTerms,

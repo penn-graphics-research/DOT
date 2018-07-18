@@ -87,6 +87,7 @@ namespace FracCuts {
         const Eigen::Vector2d gravity;
         int frameAmt;
         AnimScripter animScripter;
+        int innerIterAmt;
         
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
@@ -130,6 +131,7 @@ namespace FracCuts {
         virtual const TriangleSoup& getData_findExtrema(void) const;
         virtual int getIterNum(void) const;
         virtual int getTopoIter(void) const;
+        virtual int getInnerIterAmt(void) const;
         virtual void setRelGL2Tol(double p_relTol);
         virtual void setAllowEDecRelTol(bool p_allowEDecRelTol);
         virtual double getDt(void) const;

@@ -76,6 +76,7 @@ namespace FracCuts {
         globalIterNum = 0;
         relGL2Tol = 1.0e-10;
         topoIter = 0;
+        innerIterAmt = 0;
         
         Eigen::MatrixXd d2E_div_dF2_rest;
         energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
@@ -188,9 +189,11 @@ namespace FracCuts {
     int Optimizer::getIterNum(void) const {
         return globalIterNum;
     }
-    
     int Optimizer::getTopoIter(void) const {
         return topoIter;
+    }
+    int Optimizer::getInnerIterAmt(void) const {
+        return innerIterAmt;
     }
     
     void Optimizer::setRelGL2Tol(double p_relTol)
@@ -628,7 +631,6 @@ namespace FracCuts {
     {
         double sqn_g = __DBL_MAX__;
         computeEnergyVal(result, scaffold, lastEnergyVal);
-        int innerIterAmt = 0;
         do {
             if(solve_oneStep()) {
                 std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
@@ -641,7 +643,7 @@ namespace FracCuts {
             if(!mute) {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
             }
-        } while(sqn_g > targetGRes);
+        } while(sqn_g > targetGRes * 10.0);
         
         logFile << "Timestep" << globalIterNum << " innerIterAmt = " << innerIterAmt << std::endl;
         
@@ -939,6 +941,7 @@ namespace FracCuts {
     
     void Optimizer::computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold)
     {
+        if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
         energyTerms[0]->computeEnergyValBySVD(data, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
@@ -966,9 +969,11 @@ namespace FracCuts {
         }
         //TODO: mass of negative space vertices
 #endif
+        if(!mute) { timer_step.stop(); }
     }
     void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
+        if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeGradient(data, gradient_ET[0]);
         energyTerms[0]->computeGradientBySVD(data, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
@@ -995,6 +1000,7 @@ namespace FracCuts {
         }
         //TODO: mass of negative space vertices
 #endif
+        if(!mute) { timer_step.stop(); }
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
                                       Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V)

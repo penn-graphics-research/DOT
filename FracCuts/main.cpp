@@ -399,7 +399,7 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
     file << vertAmt_input << " " <<
         triSoup[channel_initial]->F.rows() << std::endl;
     
-    file << iterNum << " " << optimizer->getTopoIter() << " 0 0 " << lambda_init << " " << 1.0 - energyParams[0] << std::endl;
+    file << iterNum << " " << optimizer->getInnerIterAmt() << " 0 0 " << lambda_init << " " << 1.0 - energyParams[0] << std::endl;
     
     file << "0.0 0.0 " << timer.timing_total() << " " << secPast <<
         " topo" << timer.timing(0) << " desc" << timer.timing(1) << " scaf" << timer.timing(2) << " enUp" << timer.timing(3) <<
@@ -988,8 +988,10 @@ void converge_preDrawFunc(igl::opengl::glfw::Viewer& viewer)
     
     optimization_on = false;
     viewer.core.is_animating = false;
-    std::cout << "optimization converged, with " << secPast << "s." << std::endl;
-    logFile << "optimization converged, with " << secPast << "s." << std::endl;
+    std::cout << "optimization converged, with " << optimizer->getInnerIterAmt() <<
+        " inner iterations in " << secPast << "s." << std::endl;
+    logFile << "optimization converged, with " << optimizer->getInnerIterAmt() <<
+        " inner iterations in " << secPast << "s." << std::endl;
     homoTransFile.close();
     outerLoopFinished = true;
 }
@@ -1464,6 +1466,7 @@ int main(int argc, char *argv[])
     timer_step.new_activity("numericalFactorization");
     timer_step.new_activity("backSolve");
     timer_step.new_activity("lineSearch");
+    
     timer_step.new_activity("boundarySplit");
     timer_step.new_activity("interiorSplit");
     timer_step.new_activity("cornerMerge");

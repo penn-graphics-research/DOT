@@ -172,8 +172,8 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 100;
-        for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+        int ADMMIterAmt = 100, ADMMIterI = 0;
+        for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
             zuUpdate();
@@ -185,16 +185,13 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 1000.0) { //!!!
+            if(sqn_g < targetGRes * 10.0) { //!!!
                 break;
             }
-            
-            if(ADMMIterI == ADMMIterAmt - 1) {
-                return true;
-            }
         }
+        innerIterAmt += ADMMIterI;
         
-        return false;
+        return (ADMMIterI == ADMMIterAmt - 1);
     }
     
     void ADMMTimeStepper::zuUpdate(void)

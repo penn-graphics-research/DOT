@@ -125,8 +125,8 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 1000;
-        for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+        int ADMMIterAmt = 1000, ADMMIterI = 0;
+        for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
             zuUpdate();
@@ -141,13 +141,10 @@ namespace FracCuts {
             if(sqn_g < targetGRes * 1000.0) { //!!!
                 break;
             }
-            
-            if(ADMMIterI == ADMMIterAmt - 1) {
-                return true;
-            }
         }
+        innerIterAmt += ADMMIterI;
         
-        return false;
+        return (ADMMIterI == ADMMIterAmt - 1);
     }
     
     void DADMMTimeStepper::zuUpdate(void)

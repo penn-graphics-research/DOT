@@ -39,7 +39,7 @@ namespace FracCuts {
               UV_bnds, E, bnd, animScriptType)
     {
         //TODO: try different partition
-        //TODO: output per timestep iteration count, check time count, write report
+        //TODO: write report
 //        1.) Use the current ADMM DD on all 4 of your stress-test examples and compare it against Newton and ADMM PD as you increase resolution (use a high poisson and Youngs) ; 2.) Try the same experiment but now with shared elements instead of shared vertices; 3) enable visualization of the inner iterations of your ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
         // divide domain
         const int partitionAmt = 4;
@@ -213,8 +213,8 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 2000;
-        for(int ADMMIterI = 0; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
+        int ADMMIterAmt = 2000, ADMMIterI = 0;
+        for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
             subdomainSolve();
@@ -226,16 +226,13 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 10.0) { //10~100!!!
+            if(sqn_g < targetGRes * 10.0) {
                 break;
             }
-            
-            if(ADMMIterI == ADMMIterAmt - 1) {
-                return true;
-            }
         }
+        innerIterAmt += ADMMIterI;
         
-        return false;
+        return (ADMMIterI == ADMMIterAmt - 1);
     }
     
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
