@@ -16,7 +16,9 @@
 #include "EigenLibSolver.hpp"
 #endif
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 #include <iostream>
 
@@ -37,7 +39,8 @@ namespace FracCuts {
               UV_bnds, E, bnd, animScriptType)
     {
         //TODO: try different partition
-        //TODO: render duplicated verts, output per timestep iteration count, check time count, report
+        //TODO: output per timestep iteration count, check time count, write report
+//        1.) Use the current ADMM DD on all 4 of your stress-test examples and compare it against Newton and ADMM PD as you increase resolution (use a high poisson and Youngs) ; 2.) Try the same experiment but now with shared elements instead of shared vertices; 3) enable visualization of the inner iterations of your ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
         // divide domain
         const int partitionAmt = 4;
         assert(result.F.rows() % partitionAmt == 0);

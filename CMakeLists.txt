@@ -36,6 +36,7 @@ file(GLOB SRCFILES
   "FracCuts/Energy/Connectivity/*.cpp"
   "FracCuts/Utils/*.cpp"
   "FracCuts/LinSysSolver/EigenLibSolver.cpp"
+  "FracCuts/TimeStepper/*.cpp"
 )
 include_directories(
   "FracCuts"
@@ -45,6 +46,7 @@ include_directories(
   "FracCuts/Energy/Connectivity"
   "FracCuts/Utils"
   "FracCuts/LinSysSolver"
+  "FracCuts/TimeStepper"
 )
 
 

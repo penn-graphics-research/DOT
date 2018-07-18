@@ -158,11 +158,24 @@
 			children = (
 				98E6E68620DB15CC00130500 /* Energy */,
 				98E6E69C20E7E58800130500 /* LinSysSolver */,
+				986B83AA20FFDE9000AF232B /* TimeStepper */,
 				988ED12D1F5727F400B21181 /* TriangleSoup.cpp */,
 				988ED12E1F5727F400B21181 /* TriangleSoup.hpp */,
 				987382CF2076F49A0040BBCE /* Scaffold.cpp */,
 				987382D02076F49A0040BBCE /* Scaffold.hpp */,
 				980180BB1F552CDA00C64B43 /* main.cpp */,
+				98E6E68320DB110000130500 /* AnimScripter.cpp */,
+				98E6E68420DB110000130500 /* AnimScripter.hpp */,
+				98E6E6A520F7C59700130500 /* Config.cpp */,
+				98E6E6A620F7C59700130500 /* Config.hpp */,
+				98E6E68A20DB18B800130500 /* Utils */,
+			);
+			path = FracCuts;
+			sourceTree = "<group>";
+		};
+		986B83AA20FFDE9000AF232B /* TimeStepper */ = {
+			isa = PBXGroup;
+			children = (
 				988ED1331F5871F200B21181 /* Optimizer.cpp */,
 				988ED1341F5871F200B21181 /* Optimizer.hpp */,
 				98E6E69920E585CF00130500 /* ADMMTimeStepper.cpp */,
@@ -171,13 +184,8 @@
 				98E6E69720E2C00300130500 /* DADMMTimeStepper.hpp */,
 				986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */,
 				986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */,
-				98E6E68320DB110000130500 /* AnimScripter.cpp */,
-				98E6E68420DB110000130500 /* AnimScripter.hpp */,
-				98E6E6A520F7C59700130500 /* Config.cpp */,
-				98E6E6A620F7C59700130500 /* Config.hpp */,
-				98E6E68A20DB18B800130500 /* Utils */,
 			);
-			path = FracCuts;
+			path = TimeStepper;
 			sourceTree = "<group>";
 		};
 		988ED1261F57211500B21181 /* Frameworks */ = {
