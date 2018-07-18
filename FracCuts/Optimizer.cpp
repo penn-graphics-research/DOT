@@ -855,6 +855,11 @@ namespace FracCuts {
         }
         arrowVec *= igl::avg_edge_length(result.V, result.F);
     }
+            
+    void Optimizer::getFaceFieldForVis(Eigen::VectorXd& field) const
+    {
+        field = Eigen::VectorXd::Zero(result.F.rows());
+    }
     
     void Optimizer::initStepSize(const TriangleSoup& data, double& stepSize) const
     {

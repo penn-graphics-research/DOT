@@ -37,6 +37,8 @@ namespace FracCuts {
     public:
         virtual void precompute(void);
         
+        virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
+        
     protected:
         virtual bool fullyImplicit(void);
         

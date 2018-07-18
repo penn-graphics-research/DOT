@@ -132,6 +132,11 @@ namespace FracCuts {
         linSysSolver->factorize(); //TODO: error check
     }
     
+    void ADMMTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
+    {
+        field = Eigen::VectorXd::LinSpaced(result.F.rows(), 0, result.F.rows() - 1);
+    }
+    
     bool ADMMTimeStepper::fullyImplicit(void)
     {
         // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx

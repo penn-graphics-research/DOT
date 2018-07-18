@@ -121,6 +121,7 @@ namespace FracCuts {
         virtual void computeLastEnergyVal(void);
         
         virtual void getGradientVisual(Eigen::MatrixXd& arrowVec) const;
+        virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
         virtual TriangleSoup& getResult(void);
         virtual const Scaffold& getScaffold(void) const;
         virtual const TriangleSoup& getAirMesh(void) const;

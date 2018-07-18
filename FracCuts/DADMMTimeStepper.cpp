@@ -86,6 +86,11 @@ namespace FracCuts {
         }
     }
     
+    void DADMMTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
+    {
+        field = Eigen::VectorXd::LinSpaced(result.F.rows(), 0, result.F.rows() - 1);
+    }
+    
     bool DADMMTimeStepper::fullyImplicit(void)
     {
         // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx

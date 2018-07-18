@@ -16,6 +16,7 @@ namespace FracCuts {
     class ADMMDDTimeStepper : public Optimizer
     {
     protected:
+        std::vector<Eigen::VectorXi> elemList_subdomain;
         std::vector<TriangleSoup> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
         std::vector<std::map<int, int>> globalVIToDual_subdomain;
@@ -43,6 +44,8 @@ namespace FracCuts {
         
     public:
         virtual void precompute(void);
+        
+        virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
         
     protected:
         virtual bool fullyImplicit(void);

@@ -37,11 +37,13 @@ namespace FracCuts {
               UV_bnds, E, bnd, animScriptType)
     {
         //TODO: try different partition
-        //TODO: render partition and duplicated verts, output per timestep iteration count, check time count
+        //TODO: render duplicated verts, output per timestep iteration count, check time count, report
         // divide domain
-        assert(result.F.rows() % 2 == 0);
-        mesh_subdomain.resize(2);
+        const int partitionAmt = 2;
+        assert(result.F.rows() % partitionAmt == 0);
+        mesh_subdomain.resize(partitionAmt);
         
+        elemList_subdomain.resize(mesh_subdomain.size());
         globalVIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
         int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
@@ -51,10 +53,10 @@ namespace FracCuts {
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
 #endif
         {
-            Eigen::VectorXi triangles = Eigen::VectorXi::LinSpaced(subdomainTriAmt,
-                                                                   subdomainTriAmt * subdomainI,
-                                                                   subdomainTriAmt * (subdomainI + 1) - 1);
-            result.constructSubmesh(triangles, mesh_subdomain[subdomainI],
+            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(subdomainTriAmt,
+                                                                        subdomainTriAmt * subdomainI,
+                                                                        subdomainTriAmt * (subdomainI + 1) - 1);
+            result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
                                     globalVIToLocal_subdomain[subdomainI]);
             
             xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
@@ -136,6 +138,16 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+    }
+    
+    void ADMMDDTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
+    {
+        field.resize(result.F.rows());
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            for(int elemII = 0; elemII < elemList_subdomain[subdomainI].size(); elemII++) {
+                field[elemList_subdomain[subdomainI][elemII]] = subdomainI;
+            }
+        }
     }
     
     bool ADMMDDTimeStepper::fullyImplicit(void)

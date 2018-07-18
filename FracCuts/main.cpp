@@ -84,7 +84,7 @@ double texScale = 1.0;
 bool showSeam = false;
 Eigen::MatrixXd seamColor;
 bool showBoundary = false;
-int showDistortion = 1; // 0: don't show; 1: SD energy value; 2: L2 stretch value;
+int showDistortion = 2; // 0: don't show; 1: energy value; 2: other scalar field;
 bool showTexture = true; // show checkerboard
 bool isLighting = false;
 bool showFracTail = true; //!!! frac tail info not initialized correctly
@@ -108,12 +108,13 @@ void saveInfo(bool writePNG = true, bool writeGIF = true, bool writeMesh = true)
 
 void proceedOptimization(int proceedNum = 1)
 {
+    int curShowDistortion = showDistortion;
     for(int proceedI = 0; (proceedI < proceedNum) && (!converged); proceedI++) {
 //        infoName = std::to_string(iterNum);
         if((!offlineMode) && (methodType == FracCuts::MT_NOCUT)) {
             saveInfo(false, true, false); //!!! output mesh for making video, PNG output only works under online rendering mode
         }
-        showDistortion = 1;
+        showDistortion = curShowDistortion;
         std::cout << "Iteration" << iterNum << ":" << std::endl;
         converged = optimizer->solve(1);
         if(converged == 2) {
@@ -207,13 +208,14 @@ void updateViewerData_distortion(void)
 //            FracCuts::IglUtils::mapScalarToColor(l2StretchPerElem, color_distortionVis,
 //                l2StretchPerElem.minCoeff(), l2StretchPerElem.maxCoeff());
             Eigen::VectorXd faceWeight;
-            faceWeight.resize(triSoup[viewChannel]->F.rows());
-            for(int fI = 0; fI < triSoup[viewChannel]->F.rows(); fI++) {
-                const Eigen::RowVector3i& triVInd = triSoup[viewChannel]->F.row(fI);
-                faceWeight[fI] = (triSoup[viewChannel]->vertWeight[triVInd[0]] +
-                                  triSoup[viewChannel]->vertWeight[triVInd[1]] +
-                                  triSoup[viewChannel]->vertWeight[triVInd[2]]) / 3.0;
-            }
+//            faceWeight.resize(triSoup[viewChannel]->F.rows());
+//            for(int fI = 0; fI < triSoup[viewChannel]->F.rows(); fI++) {
+//                const Eigen::RowVector3i& triVInd = triSoup[viewChannel]->F.row(fI);
+//                faceWeight[fI] = (triSoup[viewChannel]->vertWeight[triVInd[0]] +
+//                                  triSoup[viewChannel]->vertWeight[triVInd[1]] +
+//                                  triSoup[viewChannel]->vertWeight[triVInd[2]]) / 3.0;
+//            }
+            optimizer->getFaceFieldForVis(faceWeight);
 //            FracCuts::IglUtils::mapScalarToColor(faceWeight, color_distortionVis,
 //                faceWeight.minCoeff(), faceWeight.maxCoeff());
             igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, faceWeight, true, color_distortionVis);
