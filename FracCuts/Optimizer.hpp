@@ -48,7 +48,6 @@ namespace FracCuts {
         Scaffold scaffold; // air meshes to enforce bijectivity
         
         // constant precondition matrix for solving the linear system for search directions
-        Eigen::SparseMatrix<double> precondMtr;
         Eigen::VectorXi I_mtr, J_mtr; // triplet representation
         Eigen::VectorXd V_mtr;
         
@@ -155,7 +154,7 @@ namespace FracCuts {
         
         virtual void computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold = false);
         virtual void computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold = false);
-        virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr);
+        virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V);
         virtual void computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
         
         virtual void initStepSize(const TriangleSoup& data, double& stepSize) const;

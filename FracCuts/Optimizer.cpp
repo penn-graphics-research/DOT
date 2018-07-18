@@ -249,7 +249,7 @@ namespace FracCuts {
     
     void Optimizer::precompute(void)
     {
-        computePrecondMtr(result, scaffold, precondMtr);
+        computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
         
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
@@ -370,7 +370,7 @@ namespace FracCuts {
         if(!mute) {
             std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
         }
-        computePrecondMtr(result, scaffold, precondMtr);
+        computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
         
         if(!mute) { timer_step.start(1); }
 //            linSysSolver->update_a(V_mtr);
@@ -437,7 +437,7 @@ namespace FracCuts {
             if(!mute) {
                 std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
             }
-            computePrecondMtr(result, scaffold, precondMtr);
+            computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
             
             if(!mute) { timer_step.start(1); }
 //                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
@@ -656,7 +656,7 @@ namespace FracCuts {
                 if(!mute) {
                     std::cout << "recompute proxy/Hessian matrix..." << std::endl;
                 }
-                computePrecondMtr(result, scaffold, precondMtr);
+                computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
             }
             
             if(!fractureInitiated) {
@@ -987,91 +987,53 @@ namespace FracCuts {
         //TODO: mass of negative space vertices
 #endif
     }
-    void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& precondMtr)
+    void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                      Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V)
     {
         if(!mute) { timer_step.start(0); }
-        if(pardisoThreadAmt) {
-            I_mtr.resize(0);
-            J_mtr.resize(0);
-            V_mtr.resize(0);
-            //!!! should consider add first and then do projected Newton if multiple energies are used
-            for(int eI = 0; eI < energyTerms.size(); eI++) {
-                Eigen::VectorXi I, J;
-                Eigen::VectorXd V;
+        I.resize(0);
+        J.resize(0);
+        V.resize(0);
+        //!!! should consider add first and then do projected Newton if multiple energies are used
+        for(int eI = 0; eI < energyTerms.size(); eI++) {
+            Eigen::VectorXi I_eI, J_eI;
+            Eigen::VectorXd V_eI;
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-                energyTerms[eI]->computeHessianBySVD(data, &V, &I, &J);
-                V *= energyParams[eI] * dtSq;
-                I_mtr.conservativeResize(I_mtr.size() + I.size());
-                I_mtr.bottomRows(I.size()) = I;
-                J_mtr.conservativeResize(J_mtr.size() + J.size());
-                J_mtr.bottomRows(J.size()) = J;
-                V_mtr.conservativeResize(V_mtr.size() + V.size());
-                V_mtr.bottomRows(V.size()) = V;
-            }
-            
-            if(scaffolding) {
-                SymStretchEnergy SD;
-                Eigen::VectorXi I, J;
-                Eigen::VectorXd V;
-                SD.computePrecondMtr(scaffoldData.airMesh, &V, &I, &J, true);
-                scaffoldData.augmentProxyMatrix(I_mtr, J_mtr, V_mtr, I, J, V, w_scaf / scaffold.airMesh.F.rows() * dtSq);
-            }
+            energyTerms[eI]->computeHessianBySVD(data, &V_eI, &I_eI, &J_eI);
+            V_eI *= energyParams[eI] * dtSq;
+            I.conservativeResize(I.size() + I_eI.size());
+            I.bottomRows(I_eI.size()) = I_eI;
+            J.conservativeResize(J.size() + J_eI.size());
+            J.bottomRows(J_eI.size()) = J_eI;
+            V.conservativeResize(V.size() + V_eI.size());
+            V.bottomRows(V_eI.size()) = V_eI;
+        }
+        
+        if(scaffolding) {
+            SymStretchEnergy SD;
+            Eigen::VectorXi I_scaf, J_scaf;
+            Eigen::VectorXd V_scaf;
+            SD.computePrecondMtr(scaffoldData.airMesh, &V_scaf, &I_scaf, &J_scaf, true);
+            scaffoldData.augmentProxyMatrix(I, J, V, I_scaf, J_scaf, V_scaf, w_scaf / scaffold.airMesh.F.rows() * dtSq);
+        }
 //            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/FracCuts/mtr", I_mtr, J_mtr, V_mtr, true);
-            
+        
 #ifndef STATIC_SOLVE
-            int curTripletSize = static_cast<int>(I_mtr.size());
-            I_mtr.conservativeResize(I_mtr.size() + data.V.rows() * 2);
-            J_mtr.conservativeResize(J_mtr.size() + data.V.rows() * 2);
-            V_mtr.conservativeResize(V_mtr.size() + data.V.rows() * 2);
-            for(int vI = 0; vI < result.V.rows(); vI++) {
-                double massI = data.massMatrix.coeff(vI, vI);
-                I_mtr[curTripletSize + vI * 2] = vI * 2;
-                J_mtr[curTripletSize + vI * 2] = vI * 2;
-                V_mtr[curTripletSize + vI * 2] = massI;
-                I_mtr[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-                J_mtr[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-                V_mtr[curTripletSize + vI * 2 + 1] = massI;
-            }
-            //TODO: mass of negative space vertices
+        int curTripletSize = static_cast<int>(I.size());
+        I.conservativeResize(I.size() + data.V.rows() * 2);
+        J.conservativeResize(J.size() + data.V.rows() * 2);
+        V.conservativeResize(V.size() + data.V.rows() * 2);
+        for(int vI = 0; vI < result.V.rows(); vI++) {
+            double massI = data.massMatrix.coeff(vI, vI);
+            I[curTripletSize + vI * 2] = vI * 2;
+            J[curTripletSize + vI * 2] = vI * 2;
+            V[curTripletSize + vI * 2] = massI;
+            I[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+            J[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
+            V[curTripletSize + vI * 2 + 1] = massI;
+        }
+        //TODO: mass of negative space vertices
 #endif
-        }
-        else {
-            //TODO: triplet representation for eigen matrices
-            //TODO: SCAFFOLDING
-            precondMtr.setZero();
-            energyTerms[0]->computePrecondMtr(data, precondMtr);
-            precondMtr *= energyParams[0];
-            for(int eI = 1; eI < energyTerms.size(); eI++) {
-                Eigen::SparseMatrix<double> precondMtrI;
-                energyTerms[eI]->computePrecondMtr(data, precondMtrI);
-                if(precondMtrI.rows() == precondMtr.rows() * 2) {
-                    precondMtrI *= energyParams[eI];
-                    for (int k = 0; k < precondMtr.outerSize(); ++k)
-                    {
-                        for (Eigen::SparseMatrix<double>::InnerIterator it(precondMtr, k); it; ++it)
-                        {
-                            precondMtrI.coeffRef(it.row() * 2, it.col() * 2) += it.value();
-                            precondMtrI.coeffRef(it.row() * 2 + 1, it.col() * 2 + 1) += it.value();
-                        }
-                    }
-                    precondMtr = precondMtrI;
-                }
-                else if(precondMtrI.rows() * 2 == precondMtr.rows()) {
-                    for (int k = 0; k < precondMtrI.outerSize(); ++k)
-                    {
-                        for (Eigen::SparseMatrix<double>::InnerIterator it(precondMtrI, k); it; ++it)
-                        {
-                            precondMtr.coeffRef(it.row() * 2, it.col() * 2) += energyParams[eI] * it.value();
-                            precondMtr.coeffRef(it.row() * 2 + 1, it.col() * 2 + 1) += energyParams[eI] * it.value();
-                        }
-                    }
-                }
-                else {
-                    assert(precondMtrI.rows() == precondMtr.rows());
-                    precondMtr += energyParams[eI] * precondMtrI;
-                }
-            }
-        }
         if(!mute) { timer_step.stop(); }
 //        Eigen::BDCSVD<Eigen::MatrixXd> svd((Eigen::MatrixXd(precondMtr)));
 //        logFile << "singular values of precondMtr_E:" << std::endl << svd.singularValues() << std::endl;
