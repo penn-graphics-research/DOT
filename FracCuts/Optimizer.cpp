@@ -860,6 +860,10 @@ namespace FracCuts {
     {
         field = Eigen::VectorXd::Zero(result.F.rows());
     }
+    void Optimizer::getSharedVerts(Eigen::VectorXi& sharedVerts) const
+    {
+        sharedVerts.resize(0);
+    }
     
     void Optimizer::initStepSize(const TriangleSoup& data, double& stepSize) const
     {

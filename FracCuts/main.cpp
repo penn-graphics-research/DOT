@@ -282,6 +282,11 @@ void updateViewerData(void)
                 viewer.data().add_points(UV_vis.row(fixedVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
             }
         }
+        Eigen::VectorXi sharedVerts;
+        optimizer->getSharedVerts(sharedVerts);
+        for(int svI = 0; svI < sharedVerts.size(); svI++) {
+            viewer.data().add_points(UV_vis.row(sharedVerts[svI]), Eigen::RowVector3d(1.0, 0.3, 0.3));
+        }
     }
     else {
         Eigen::MatrixXd V_vis = triSoup[viewChannel]->V_rest;
@@ -323,6 +328,11 @@ void updateViewerData(void)
             for(const auto& fixedVI : triSoup[viewChannel]->fixedVert) {
                 viewer.data().add_points(V_vis.row(fixedVI), Eigen::RowVector3d(0.0, 0.0, 0.0));
             }
+        }
+        Eigen::VectorXi sharedVerts;
+        optimizer->getSharedVerts(sharedVerts);
+        for(int svI = 0; svI < sharedVerts.size(); svI++) {
+            viewer.data().add_points(V_vis.row(sharedVerts[svI]), Eigen::RowVector3d(1.0, 0.3, 0.3));
         }
     }
     updateViewerData_distortion();

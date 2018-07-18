@@ -122,6 +122,7 @@ namespace FracCuts {
         
         virtual void getGradientVisual(Eigen::MatrixXd& arrowVec) const;
         virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
+        virtual void getSharedVerts(Eigen::VectorXi& sharedVerts) const;
         virtual TriangleSoup& getResult(void);
         virtual const Scaffold& getScaffold(void) const;
         virtual const TriangleSoup& getAirMesh(void) const;

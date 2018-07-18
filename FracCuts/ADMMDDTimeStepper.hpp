@@ -25,6 +25,7 @@ namespace FracCuts {
         std::vector<Eigen::MatrixXd> u_subdomain, du_subdomain, dz_subdomain;
         std::vector<Eigen::VectorXd> weights_subdomain;
         Eigen::VectorXd weightSum;
+        Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
         
         //TODO: reorganize folder and cmake
@@ -46,6 +47,7 @@ namespace FracCuts {
         virtual void precompute(void);
         
         virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
+        virtual void getSharedVerts(Eigen::VectorXi& sharedVerts) const;
         
     protected:
         virtual bool fullyImplicit(void);

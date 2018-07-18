@@ -39,7 +39,7 @@ namespace FracCuts {
         //TODO: try different partition
         //TODO: render duplicated verts, output per timestep iteration count, check time count, report
         // divide domain
-        const int partitionAmt = 2;
+        const int partitionAmt = 4;
         assert(result.F.rows() % partitionAmt == 0);
         mesh_subdomain.resize(partitionAmt);
         
@@ -78,17 +78,19 @@ namespace FracCuts {
             int sharedVertexAmt = 0;
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
                 for(int subdomainJ = 0; subdomainJ < mesh_subdomain.size(); subdomainJ++) {
-                    auto finder = globalVIToLocal_subdomain[subdomainJ].find(mapperI.first);
-                    if(finder != globalVIToLocal_subdomain[subdomainJ].end()) {
-                        globalVIToDual_subdomain[subdomainI][mapperI.first] = sharedVertexAmt;
-                        
-                        weights_subdomain[subdomainI].conservativeResize(sharedVertexAmt + 1);
-                        double weight = 0.01; //TODO: initialize per-element weight
-                        weights_subdomain[subdomainI][sharedVertexAmt] = weight;
-                        weightSum[mapperI.first] += weight;
-                        
-                        sharedVertexAmt++;
-                        break;
+                    if(subdomainJ != subdomainI) {
+                        auto finder = globalVIToLocal_subdomain[subdomainJ].find(mapperI.first);
+                        if(finder != globalVIToLocal_subdomain[subdomainJ].end()) {
+                            globalVIToDual_subdomain[subdomainI][mapperI.first] = sharedVertexAmt;
+                            
+                            weights_subdomain[subdomainI].conservativeResize(sharedVertexAmt + 1);
+                            double weight = 0.01; //TODO: initialize per-element weight
+                            weights_subdomain[subdomainI][sharedVertexAmt] = weight;
+                            weightSum[mapperI.first] += weight;
+                            
+                            sharedVertexAmt++;
+                            break;
+                        }
                     }
                 }
             }
@@ -98,6 +100,14 @@ namespace FracCuts {
             dz_subdomain[subdomainI].resize(sharedVertexAmt, 2);
         }
         dualDim *= 2; // in 2D
+        
+        sharedVerts.resize(0);
+        for(int vI = 0; vI < weightSum.size(); vI++) {
+            if(weightSum[vI] > 0.0) {
+                sharedVerts.conservativeResize(sharedVerts.size() + 1);
+                sharedVerts.tail(1) << vI;
+            }
+        }
         
         linSysSolver_subdomain.resize(mesh_subdomain.size());
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
@@ -148,6 +158,10 @@ namespace FracCuts {
                 field[elemList_subdomain[subdomainI][elemII]] = subdomainI;
             }
         }
+    }
+    void ADMMDDTimeStepper::getSharedVerts(Eigen::VectorXi& sharedVerts) const
+    {
+        sharedVerts = this->sharedVerts;
     }
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
