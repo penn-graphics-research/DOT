@@ -20,7 +20,13 @@
 #include <tbb/tbb.h>
 #endif
 
+#include <igl/writeOBJ.h>
+
+#include <sys/stat.h>
+
 #include <iostream>
+
+extern std::string outputFolderPath;
 
 namespace FracCuts {
     
@@ -169,6 +175,19 @@ namespace FracCuts {
         sharedVerts = this->sharedVerts;
     }
     
+    void ADMMDDTimeStepper::writeMeshToFile(const std::string& filePath_pre) const
+    {
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            Eigen::MatrixXd V(mesh_subdomain[subdomainI].V.rows(), 3);
+            V << mesh_subdomain[subdomainI].V, Eigen::VectorXd::Zero(V.rows());
+            igl::writeOBJ(filePath_pre + "_subdomain" + std::to_string(subdomainI) + ".obj",
+                          V, mesh_subdomain[subdomainI].F);
+        }
+        Eigen::MatrixXd V(result.V.rows(), 3);
+        V << result.V, Eigen::VectorXd::Zero(V.rows());
+        igl::writeOBJ(filePath_pre + ".obj", V, result.F);
+    }
+    
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
 #ifdef USE_TBB
@@ -213,6 +232,13 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+        int outputTimestepAmt = 3;
+        std::string curOutputFolderPath;
+        if(globalIterNum < outputTimestepAmt) {
+            curOutputFolderPath = outputFolderPath + "timestep" + std::to_string(globalIterNum);
+            mkdir(curOutputFolderPath.c_str(), 0777);
+            curOutputFolderPath += '/';
+        }
         
         // ADMM iterations
         int ADMMIterAmt = 200, ADMMIterI = 0;
@@ -230,6 +256,11 @@ namespace FracCuts {
             file_iterStats << sqn_g << std::endl;
             if(sqn_g < targetGRes * 10.0) {
                 break;
+            }
+            
+            if(globalIterNum < outputTimestepAmt) {
+                std::string filePath_pre = curOutputFolderPath + std::to_string(ADMMIterI);
+                writeMeshToFile(filePath_pre);
             }
         }
         innerIterAmt += ADMMIterI;

@@ -47,6 +47,8 @@ namespace FracCuts {
         virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
         virtual void getSharedVerts(Eigen::VectorXi& sharedVerts) const;
         
+        virtual void writeMeshToFile(const std::string& filePath_pre) const;
+        
     protected:
         virtual bool fullyImplicit(void);
         
