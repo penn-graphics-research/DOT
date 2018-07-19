@@ -38,7 +38,7 @@ namespace FracCuts {
               p_propagateFracture, p_mute, p_scaffolding,
               UV_bnds, E, bnd, animScriptType)
     {
-        //TODO: write report: change notation of dual, residual computation, initialization
+        //TODO:
         // 1.) Use the current ADMM DD on all 4 of the stress-test examples and compare it against Newton and ADMM PD, also increase the resolution and use a high poisson and Youngs, also test different partition;
         // 3.) enable visualization of the inner iterations of ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
         // 2.) Try the same experiment but now with shared elements instead of shared vertices;
@@ -171,7 +171,6 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        // TODO: use symplectic Euler as initial guess?
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
@@ -216,7 +215,7 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 300, ADMMIterI = 0;
+        int ADMMIterAmt = 200, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             

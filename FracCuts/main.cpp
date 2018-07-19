@@ -85,6 +85,7 @@ bool showSeam = false;
 Eigen::MatrixXd seamColor;
 bool showBoundary = false;
 int showDistortion = 2; // 0: don't show; 1: energy value; 2: other scalar field;
+int showDistortion_init = showDistortion;
 bool showTexture = true; // show checkerboard
 bool isLighting = false;
 bool showFracTail = true; //!!! frac tail info not initialized correctly
@@ -108,13 +109,12 @@ void saveInfo(bool writePNG = true, bool writeGIF = true, bool writeMesh = true)
 
 void proceedOptimization(int proceedNum = 1)
 {
-    int curShowDistortion = showDistortion;
     for(int proceedI = 0; (proceedI < proceedNum) && (!converged); proceedI++) {
 //        infoName = std::to_string(iterNum);
         if((!offlineMode) && (methodType == FracCuts::MT_NOCUT)) {
             saveInfo(false, true, false); //!!! output mesh for making video, PNG output only works under online rendering mode
         }
-        showDistortion = curShowDistortion;
+        showDistortion = showDistortion_init;
         std::cout << "Iteration" << iterNum << ":" << std::endl;
         converged = optimizer->solve(1);
         if(converged == 2) {
