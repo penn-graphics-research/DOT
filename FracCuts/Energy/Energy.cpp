@@ -691,15 +691,18 @@ namespace FracCuts {
             if(a > 0.0) {
                 if((b < 0.0) && (delta >= 0.0)) {
                     bound = (-b - sqrt(delta)) / 2.0 / a;
+                    assert(bound > 0.0);
                 }
             }
             else if(a < 0.0) {
                 assert(delta > 0.0);
                 bound = (-b - sqrt(delta)) / 2.0 / a;
+                assert(bound > 0.0);
             }
             else {
                 if(b < 0.0) {
                     bound = -c / b;
+                    assert(bound > 0.0);
                 }
             }
             
@@ -707,8 +710,6 @@ namespace FracCuts {
                 stepSize = bound;
             }
         }
-        
-        assert(stepSize > 0.0);
     }
     
     void Energy::initStepSize(const Eigen::VectorXd& V,
@@ -750,23 +751,24 @@ namespace FracCuts {
         if(a > 0.0) {
             if((b < 0.0) && (delta >= 0.0)) {
                 bound = (-b - sqrt(delta)) / 2.0 / a;
+                assert(bound > 0.0);
             }
         }
         else if(a < 0.0) {
             assert(delta > 0.0);
             bound = (-b - sqrt(delta)) / 2.0 / a;
+            assert(bound > 0.0);
         }
         else {
             if(b < 0.0) {
                 bound = -c / b;
+                assert(bound > 0.0);
             }
         }
         
         if(bound < stepSize) {
             stepSize = bound;
         }
-        
-        assert(stepSize > 0.0);
     }
     
     void Energy::getBulkModulus(double& bulkModulus)
