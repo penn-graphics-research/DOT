@@ -690,13 +690,22 @@ namespace FracCuts {
             double bound = stepSize;
             if(a > 0.0) {
                 if((b < 0.0) && (delta >= 0.0)) {
-                    bound = (-b - sqrt(delta)) / 2.0 / a;
+                    bound = 2.0 * c / (-b + sqrt(delta));
+                    // (same in math as (-b - sqrt(delta)) / 2.0 / a
+                    //  but smaller numerical error when b < 0.0)
                     assert(bound > 0.0);
                 }
             }
             else if(a < 0.0) {
                 assert(delta > 0.0);
-                bound = (-b - sqrt(delta)) / 2.0 / a;
+                if(b < 0.0) {
+                    bound = 2.0 * c / (-b + sqrt(delta));
+                    // (same in math as (-b - sqrt(delta)) / 2.0 / a
+                    //  but smaller numerical error when b < 0.0)
+                }
+                else {
+                    bound = (-b - sqrt(delta)) / 2.0 / a;
+                }
                 assert(bound > 0.0);
             }
             else {
@@ -750,13 +759,22 @@ namespace FracCuts {
         double bound = stepSize;
         if(a > 0.0) {
             if((b < 0.0) && (delta >= 0.0)) {
-                bound = (-b - sqrt(delta)) / 2.0 / a;
+                bound = 2.0 * c / (-b + sqrt(delta));
+                // (same in math as (-b - sqrt(delta)) / 2.0 / a
+                //  but smaller numerical error when b < 0.0)
                 assert(bound > 0.0);
             }
         }
         else if(a < 0.0) {
             assert(delta > 0.0);
-            bound = (-b - sqrt(delta)) / 2.0 / a;
+            if(b < 0.0) {
+                bound = 2.0 * c / (-b + sqrt(delta));
+                // (same in math as (-b - sqrt(delta)) / 2.0 / a
+                //  but smaller numerical error when b < 0.0)
+            }
+            else {
+                bound = (-b - sqrt(delta)) / 2.0 / a;
+            }
             assert(bound > 0.0);
         }
         else {
