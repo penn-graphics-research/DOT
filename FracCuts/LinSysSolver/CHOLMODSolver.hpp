@@ -23,16 +23,13 @@ namespace FracCuts {
     template <typename vectorTypeI, typename vectorTypeS>
     class CHOLMODSolver : public LinSysSolver<vectorTypeI, vectorTypeS>
     {
+        typedef LinSysSolver<vectorTypeI, vectorTypeS> Base;
+        
     protected:
         cholmod_common cm;
         cholmod_sparse *A;
         cholmod_factor *L;
         cholmod_dense *b;
-        
-        int numRows;
-        Eigen::VectorXi ia, ja;
-        std::vector<std::map<int, int>> IJ2aI;
-        Eigen::VectorXd a;
         
     public:
         CHOLMODSolver(void);

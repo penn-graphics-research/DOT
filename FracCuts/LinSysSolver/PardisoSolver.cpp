@@ -106,11 +106,11 @@ namespace FracCuts {
             throw std::runtime_error("Pardiso mtype not set.");
         vectorTypeS SS;
         int numel = static_cast<int>(SS_.size());
-        int ntotal = numel +numRows;
+        int ntotal = numel +Base::numRows;
         SS.resize(ntotal);
         for (int k = 0; k < numel; ++k)
             SS[k] = SS_[k];
-        for (int k = 0; k < numRows; ++k)
+        for (int k = 0; k < Base::numRows; ++k)
             SS[numel+k] = 0;
         vectorTypeS SS_true = SS;
         
@@ -123,11 +123,11 @@ namespace FracCuts {
         }
         
         
-        for (int i=0; i<a.rows(); ++i)
+        for (int i=0; i<Base::a.rows(); ++i)
         {
-            a(i) = 0;
+            Base::a(i) = 0;
             for (int j=0; j<iis[i].size(); ++j)
-                a(i) += SS_true[iis[i](j)];
+                Base::a(i) += SS_true[iis[i](j)];
         }
     }
 
@@ -181,11 +181,11 @@ namespace FracCuts {
     {
         if (mtype ==-1)
             throw std::runtime_error("Pardiso mtype not set.");
-        numRows = 0;
+        Base::numRows = 0;
         for (int i=0; i<II_.size(); ++i)
-            if (II_[i] > numRows )
-                numRows = II_[i];
-        numRows ++;
+            if (II_[i] > Base::numRows )
+                Base::numRows = II_[i];
+        Base::numRows ++;
         
         
         //make sure diagonal terms are included, even as zeros (pardiso claims this is necessary for best performance, and it also prevents it from occasionally hanging with zero diagonal elements)
@@ -193,7 +193,7 @@ namespace FracCuts {
         vectorTypeI JJ;
         vectorTypeS SS;
         int numel = II_.size();
-        int ntotal = numel +numRows;
+        int ntotal = numel +Base::numRows;
         II.resize(ntotal);
         JJ.resize(ntotal);
         SS.resize(ntotal);
@@ -203,7 +203,7 @@ namespace FracCuts {
             JJ[k] = JJ_[k];
             SS[k] = SS_[k];
         }
-        for (int k = 0; k < numRows; ++k)
+        for (int k = 0; k < Base::numRows; ++k)
         {
             II[numel+k] = k;
             JJ[numel+k] = k;
@@ -217,7 +217,7 @@ namespace FracCuts {
         if (is_symmetric && !is_upper_half)
         {
             lower_triangular_ind.resize(0);
-            lower_triangular_ind.reserve(II.size()/2 + numRows / 2 + 1);
+            lower_triangular_ind.reserve(II.size()/2 + Base::numRows / 2 + 1);
             for (int i = 0; i<II.size();++i)
                 if (II[i]<=JJ[i])
                     lower_triangular_ind.push_back(i);
@@ -271,24 +271,24 @@ namespace FracCuts {
             iis[i] = M_.block(si, 2, ei-si, 1);
         }
         
-        a.resize(numUniqueElements, 1);
+        Base::a.resize(numUniqueElements, 1);
         for (int i=0; i<numUniqueElements; ++i)
         {
-            a(i) = 0;
+            Base::a(i) = 0;
             for (int j=0; j<iis[i].size(); ++j)
-                a(i) += SS_true[iis[i](j)];
+                Base::a(i) += SS_true[iis[i](j)];
         }
         
         // now M_ and elements in sum have the row, column and indices in sum of the
         // unique non-zero elements in B1
-        ia.setZero(numRows+1,1);ia(numRows) = numUniqueElements+1;
-        ja = M.col(1).array()+1;
+        Base::ia.setZero(Base::numRows+1,1);Base::ia(Base::numRows) = numUniqueElements+1;
+        Base::ja = M.col(1).array()+1;
         currI = -1;
         for (int i=0; i<numUniqueElements; ++i)
         {
             if(currI != M(i,0))
             {
-                ia(M(i,0)) = i+1;//do not subtract 1
+                Base::ia(M(i,0)) = i+1;//do not subtract 1
                 currI = M(i,0);
             }
         }
@@ -322,62 +322,7 @@ namespace FracCuts {
                                                              const std::vector<std::set<int>>& vNeighbor,
                                                              const std::set<int>& fixedVert)
     {
-        assert(II_.size() == JJ_.size());
-        assert(II_.size() == SS_.size());
-        
-        numRows = static_cast<int>(vNeighbor.size()) * 2;
-        ia.resize(vNeighbor.size() * 2 + 1);
-        ia[0] = 1; // 1 + nnz above row i
-        ja.resize(0); // colI of each element
-        IJ2aI.resize(0); // map from matrix index to ja index
-        IJ2aI.resize(vNeighbor.size() * 2);
-        for(int rowI = 0; rowI < vNeighbor.size(); rowI++) {
-            if(fixedVert.find(rowI) == fixedVert.end()) {
-                int oldSize_ja = static_cast<int>(ja.size());
-                IJ2aI[rowI * 2][rowI * 2] = oldSize_ja;
-                IJ2aI[rowI * 2][rowI * 2 + 1] = oldSize_ja + 1;
-                ja.conservativeResize(ja.size() + 2);
-                ja.bottomRows(2) << rowI * 2 + 1, rowI * 2 + 2;
-                
-                int nnz_rowI = 1;
-                for(const auto& colI : vNeighbor[rowI]) {
-                    if(fixedVert.find(colI) == fixedVert.end()) {
-                        if(colI > rowI) {
-                            //NOTE: using Pardiso to factorize SPD matrix requires
-                            // only the lower-left part being stored
-                            // colI > rowI means upper-right, but we are preparing CSR here
-                            // in a row-major manner and Pardiso is actually column-major
-                            IJ2aI[rowI * 2][colI * 2] = static_cast<int>(ja.size());
-                            IJ2aI[rowI * 2][colI * 2 + 1] = static_cast<int>(ja.size()) + 1;
-                            ja.conservativeResize(ja.size() + 2);
-                            ja.bottomRows(2) << colI * 2 + 1, colI * 2 + 2;
-                            nnz_rowI++;
-                        }
-                    }
-                }
-
-                // another row for y,
-                // excluding the left-bottom entry on the diagonal band
-                IJ2aI[rowI * 2 + 1] = IJ2aI[rowI * 2];
-                for(auto& IJ2aI_newRow : IJ2aI[rowI * 2 + 1]) {
-                    IJ2aI_newRow.second += nnz_rowI * 2 - 1;
-                }
-                ja.conservativeResize(ja.size() + nnz_rowI * 2 - 1);
-                ja.bottomRows(nnz_rowI * 2 - 1) = ja.block(oldSize_ja + 1, 0, nnz_rowI * 2 - 1, 1);
-                
-                ia[rowI * 2 + 1] = ia[rowI * 2] + nnz_rowI * 2;
-                ia[rowI * 2 + 2] = ia[rowI * 2 + 1] + nnz_rowI * 2 - 1;
-            }
-            else {
-                int oldSize_ja = static_cast<int>(ja.size());
-                IJ2aI[rowI * 2][rowI * 2] = oldSize_ja;
-                IJ2aI[rowI * 2 + 1][rowI * 2 + 1] = oldSize_ja + 1;
-                ja.conservativeResize(oldSize_ja + 2);
-                ja.bottomRows(2) << rowI * 2 + 1, rowI * 2 + 2;
-                ia[rowI * 2 + 1] = ia[rowI * 2] + 1;
-                ia[rowI * 2 + 2] = ia[rowI * 2 + 1] + 1;
-            }
-        }
+        Base::set_pattern(II_, JJ_, SS_, vNeighbor, fixedVert);
         
         update_a(II_, JJ_, SS_);
         
@@ -402,23 +347,24 @@ namespace FracCuts {
     template <typename vectorTypeI, typename vectorTypeS>
     void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr)
     {
+        //TODO: extract
         //NOTE: using Pardiso to factorize SPD matrix requires only the lower-left part being stored
         Eigen::SparseMatrix<double> mtr_lowerLeft = mtr.triangularView<Eigen::Lower>();
         
-        numRows = static_cast<int>(mtr_lowerLeft.rows());
-        ja.resize(mtr_lowerLeft.nonZeros());
-        ia.resize(numRows + 1);
-        a.resize(mtr_lowerLeft.nonZeros());
-        memcpy(ja.data(), mtr_lowerLeft.innerIndexPtr(),
+        Base::numRows = static_cast<int>(mtr_lowerLeft.rows());
+        Base::ja.resize(mtr_lowerLeft.nonZeros());
+        Base::ia.resize(Base::numRows + 1);
+        Base::a.resize(mtr_lowerLeft.nonZeros());
+        memcpy(Base::ja.data(), mtr_lowerLeft.innerIndexPtr(),
                mtr_lowerLeft.nonZeros() * sizeof(mtr_lowerLeft.innerIndexPtr()[0]));
-        memcpy(ia.data(), mtr_lowerLeft.outerIndexPtr(),
-               (numRows + 1) * sizeof(mtr_lowerLeft.outerIndexPtr()[0]));
-        memcpy(a.data(), mtr_lowerLeft.valuePtr(),
+        memcpy(Base::ia.data(), mtr_lowerLeft.outerIndexPtr(),
+               (Base::numRows + 1) * sizeof(mtr_lowerLeft.outerIndexPtr()[0]));
+        memcpy(Base::a.data(), mtr_lowerLeft.valuePtr(),
                mtr_lowerLeft.nonZeros() * sizeof(mtr_lowerLeft.valuePtr()[0]));
         
         //NOTE: Pardiso requires the indices start from 1
-        ja.array() += 1;
-        ia.array() += 1;
+        Base::ja.array() += 1;
+        Base::ia.array() += 1;
     }
 
     template <typename vectorTypeI, typename vectorTypeS>
@@ -426,23 +372,7 @@ namespace FracCuts {
                                                           const vectorTypeI &JJ_,
                                                           const vectorTypeS &SS_)
     {
-        //TODO: fast indices!!
-        
-        assert(II_.size() == JJ_.size());
-        assert(II_.size() == SS_.size());
-        
-        a.setZero(ja.size());
-        for(int tripletI = 0; tripletI < II_.size(); tripletI++) {
-            int i = II_[tripletI], j = JJ_[tripletI];
-            if(i <= j) {
-    //        if((i <= j) && (i != 2) && (j != 2)) {
-                assert(i < IJ2aI.size());
-                const auto finder = IJ2aI[i].find(j);
-                assert(finder != IJ2aI[i].end());
-                a[finder->second] += SS_[tripletI];
-            }
-        }
-    //    a[IJ2aI[2].find(2)->second] = 1.0;
+        Base::update_a(II_, JJ_, SS_);
     }
 
     template <typename vectorTypeI, typename vectorTypeS>
@@ -470,7 +400,7 @@ namespace FracCuts {
         phase = 11;
         
         pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-                 &numRows, a.data(), ia.data(), ja.data(), &idum, &nrhs,
+                 &(Base::numRows), Base::a.data(), Base::ia.data(), Base::ja.data(), &idum, &nrhs,
                  iparm, &msglvl, &ddum, &ddum, &error, dparm);
         
         if (error != 0)
@@ -495,7 +425,7 @@ namespace FracCuts {
         //  iparm[32] = 1; /* compute determinant */
         
         pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-                 &numRows, a.data(), ia.data(), ja.data(), &idum, &nrhs,
+                 &(Base::numRows), Base::a.data(), Base::ia.data(), Base::ja.data(), &idum, &nrhs,
                  iparm, &msglvl, &ddum, &ddum, &error,  dparm);
         
         if (error != 0)
@@ -540,7 +470,7 @@ namespace FracCuts {
         }
         
     #endif
-        result.resize(numRows, 1);
+        result.resize(Base::numRows, 1);
         /* -------------------------------------------------------------------- */
         /* ..  Back substitution and iterative refinement.                      */
         /* -------------------------------------------------------------------- */
@@ -549,7 +479,7 @@ namespace FracCuts {
         iparm[7] = 1;       /* Max numbers of iterative refinement steps. */
         
         pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-                 &numRows, a.data(), ia.data(), ja.data(), &idum, &nrhs,
+                 &(Base::numRows), Base::a.data(), Base::ia.data(), Base::ja.data(), &idum, &nrhs,
                  iparm, &msglvl, rhs.data(), result.data(), &error,  dparm);
         
         if (error != 0)
@@ -576,7 +506,7 @@ namespace FracCuts {
         phase = -1;                 /* Release internal memory. */
         
         pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-                 &numRows, &ddum, ia.data(), ja.data(), &idum, &nrhs,
+                 &(Base::numRows), &ddum, Base::ia.data(), Base::ja.data(), &idum, &nrhs,
                  iparm, &msglvl, &ddum, &ddum, &error,  dparm);
     }
 

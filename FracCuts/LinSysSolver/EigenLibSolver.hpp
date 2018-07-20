@@ -21,12 +21,9 @@ namespace FracCuts {
     template <typename vectorTypeI, typename vectorTypeS>
     class EigenLibSolver : public LinSysSolver<vectorTypeI, vectorTypeS>
     {
-    protected:
-        int numRows;
-        Eigen::VectorXi ia, ja;
-        std::vector<std::map<int, int>> IJ2aI;
-        Eigen::VectorXd a;
+        typedef LinSysSolver<vectorTypeI, vectorTypeS> Base;
         
+    protected:        
         Eigen::SparseMatrix<double> coefMtr;
         Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> simplicialLDLT;
         

@@ -45,6 +45,8 @@ namespace FracCuts {
     template <typename vectorTypeI, typename vectorTypeS>
     class PardisoSolver : public LinSysSolver<vectorTypeI, vectorTypeS>
     {
+        typedef LinSysSolver<vectorTypeI, vectorTypeS> Base;
+        
     public:
         PardisoSolver() ;
         ~PardisoSolver();
@@ -81,12 +83,7 @@ namespace FracCuts {
         //elements II[i],JJ[i] for which II[i]<<JJ[i] will be kept)
         std::vector<int> lower_triangular_ind;
         
-        Eigen::VectorXi ia, ja;
         std::vector<Eigen::VectorXi> iis;
-        Eigen::VectorXd a;
-        int numRows;
-        
-        std::vector<std::map<int, int>> IJ2aI;
         
         //pardiso stuff
         /*
