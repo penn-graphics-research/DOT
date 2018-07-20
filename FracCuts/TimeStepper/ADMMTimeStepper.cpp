@@ -172,7 +172,7 @@ namespace FracCuts {
 #endif
         
         // ADMM iterations
-        int ADMMIterAmt = 200, ADMMIterI = 0;
+        int ADMMIterAmt = 300, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
@@ -185,7 +185,7 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 100.0) { //!!!
+            if(sqn_g < targetGRes * 1000.0) { //!!!
                 break;
             }
         }

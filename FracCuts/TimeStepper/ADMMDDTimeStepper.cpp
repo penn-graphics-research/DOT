@@ -44,11 +44,6 @@ namespace FracCuts {
               p_propagateFracture, p_mute, p_scaffolding,
               UV_bnds, E, bnd, animScriptType)
     {
-        //TODO:
-        // 1.) Use the current ADMM DD on all 4 of the stress-test examples and compare it against Newton and ADMM PD, also increase the resolution and use a high poisson and Youngs, also test different partition;
-        // 3.) enable visualization of the inner iterations of ADMM method per a single timestep to see the changes between the proximal step and the averaging step.
-        // 2.) Try the same experiment but now with shared elements instead of shared vertices;
-        
         // divide domain
         const int partitionAmt = 4;
         assert(result.F.rows() % partitionAmt == 0);

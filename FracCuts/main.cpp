@@ -86,6 +86,7 @@ Eigen::MatrixXd seamColor;
 bool showBoundary = false;
 int showDistortion = 2; // 0: don't show; 1: energy value; 2: other scalar field;
 int showDistortion_init = showDistortion;
+Eigen::MatrixXd faceColors_default;
 bool showTexture = true; // show checkerboard
 bool isLighting = false;
 bool showFracTail = true; //!!! frac tail info not initialized correctly
@@ -225,6 +226,12 @@ void updateViewerData_distortion(void)
         case 0: {
             color_distortionVis = Eigen::MatrixXd::Ones(triSoup[viewChannel]->F.rows(), 3);
             color_distortionVis.col(2).setZero();
+            break;
+        }
+            
+        case -1: {
+            assert(faceColors_default.rows() == triSoup[viewChannel]->F.rows());
+            color_distortionVis = faceColors_default;
             break;
         }
             

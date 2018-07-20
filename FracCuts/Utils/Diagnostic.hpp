@@ -10,6 +10,7 @@
 #define Diagnostic_hpp
 
 #include "TriangleSoup.hpp"
+#include "GIF.hpp"
 
 #include <igl/readOBJ.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -24,11 +25,19 @@ extern igl::opengl::glfw::Viewer viewer;
 extern bool viewUV;
 extern bool showTexture;
 extern int showDistortion;
+extern Eigen::MatrixXd faceColors_default;
 extern double texScale;
+extern bool showFixedVerts;
+
+extern GifWriter GIFWriter;
+extern uint32_t GIFDelay; //*10ms
+extern double GIFScale;
+
 extern std::vector<const FracCuts::TriangleSoup*> triSoup;
 extern std::vector<FracCuts::Energy*> energyTerms;
 extern std::vector<double> energyParams;
 extern FracCuts::Optimizer* optimizer;
+
 extern void updateViewerData(void);
 extern bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier);
 extern bool preDrawFunc(igl::opengl::glfw::Viewer& viewer);
@@ -631,6 +640,107 @@ namespace FracCuts{
                         }
                         
                         std::cout << "output finished" << std::endl;
+                        
+                        break;
+                    }
+                        
+                    case 9: {
+                        // visualize ADMM inner iterations
+                        if(argc < 5) {
+                            std::cout << "not enough command line arguments" << std::endl;
+                            break;
+                        }
+                        
+                        const std::string resultsFolderPath(argv[3]);
+                        FILE *dirList = fopen((resultsFolderPath + "/folderList.txt").c_str(), "r");
+                        assert(dirList);
+                        
+                        // for rendering:
+                        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+                        energyParams.emplace_back(1.0);
+                        triSoup.resize(2);
+                        viewer.core.background_color << 1.0f, 1.0f, 1.0f, 0.0f;
+                        viewer.callback_key_down = &key_down;
+                        viewer.callback_pre_draw = &preDrawFunc;
+                        viewer.callback_post_draw = &postDrawFunc;
+                        viewer.data().show_lines = true;
+                        viewer.core.orthographic = true;
+                        viewer.core.camera_zoom *= 1.5;
+                        viewer.core.animation_max_fps = 60.0;
+                        viewer.data().point_size = 16.0f;
+                        viewer.data().show_overlay = true;
+                        viewer.core.is_animating = true;
+                        viewer.launch_init(true, false);
+                        showDistortion = -1;
+                        showFixedVerts = false;
+                        showTexture = false;
+                        GIFDelay = 40;
+                        
+                        char buf[BUFSIZ];
+                        while((!feof(dirList)) && fscanf(dirList, "%s", buf)) {
+                            int timestepI = std::stoi(argv[4]);
+                            GifBegin(&GIFWriter, (resultsFolderPath + '/' + std::string(buf) + "/timestep" +
+                                                  std::to_string(timestepI) + "/" + "subdomains.gif").c_str(),
+                                     GIFScale * (viewer.core.viewport[2] - viewer.core.viewport[0]),
+                                     GIFScale * (viewer.core.viewport[3] - viewer.core.viewport[1]), GIFDelay);
+                            for(int ADMMIterI = 0; true; ADMMIterI++) {
+                                int subdomainI = 0;
+                                std::string meshPath(resultsFolderPath + '/' + std::string(buf) + "/timestep" +
+                                                     std::to_string(timestepI) + "/" +
+                                                     std::to_string(ADMMIterI) + "_subdomain0.obj");
+                                Eigen::MatrixXd V, UV, N;
+                                Eigen::MatrixXi F, FUV, FN;
+                                Eigen::MatrixXd V_, UV_;
+                                Eigen::MatrixXi F_, FUV_;
+                                Eigen::VectorXd faceLabel;
+                                while(igl::readOBJ(meshPath, V, UV, N, F, FUV, FN)) {
+                                    F.array() += V_.rows();
+                                    F_.conservativeResize(F_.rows() + F.rows(), 3);
+                                    F_.bottomRows(F.rows()) = F;
+                                    if(FUV.rows() > 0) {
+                                        FUV.array() += UV_.rows();
+                                        FUV_.conservativeResize(FUV_.rows() + FUV.rows(), 3);
+                                        FUV_.bottomRows(FUV.rows()) = FUV;
+                                    }
+                                    V_.conservativeResize(V_.rows() + V.rows(), 3);
+                                    V_.bottomRows(V.rows()) = V;
+                                    UV_.conservativeResize(UV_.rows() + V.rows(), 2);
+                                    UV_.bottomRows(V.rows()) = V.leftCols(2);
+                                    faceLabel.conservativeResize(faceLabel.rows() + F.rows());
+                                    faceLabel.bottomRows(F.rows()).array() = subdomainI;
+                                    
+                                    subdomainI++;
+                                    meshPath = resultsFolderPath + '/' + std::string(buf) +
+                                        "/timestep" + std::to_string(timestepI) + "/" +
+                                        std::to_string(ADMMIterI) + "_subdomain" +
+                                        std::to_string(subdomainI) + ".obj";
+                                }
+                                if(subdomainI == 0) {
+                                    break;
+                                }
+                                std::cout << subdomainI << " subdomain meshes loaded" << std::endl;
+                                TriangleSoup resultMesh(V_, F_, UV_, FUV_, false, 0.0);
+                                
+                                triSoup[0] = triSoup[1] = &resultMesh;
+                                if(ADMMIterI == 0) {
+                                    texScale = 10.0 / (triSoup[0]->bbox.row(1) -
+                                                       triSoup[0]->bbox.row(0)).maxCoeff();
+                                }
+                                optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, false);
+                                igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, faceLabel, true, faceColors_default);
+                                updateViewerData();
+                                viewer.launch_rendering(false);
+                                saveScreenshot(resultsFolderPath + '/' + std::string(buf) + "/timestep" +
+                                               std::to_string(timestepI) + "/" + std::to_string(ADMMIterI) +
+                                               "_subdomains.png", 0.5, true, true);
+                                
+                                std::cout << buf << " processed" << std::endl;
+                                delete optimizer;
+                            }
+                            GifEnd(&GIFWriter);
+                        }
+                        
+                        fclose(dirList);
                         
                         break;
                     }
