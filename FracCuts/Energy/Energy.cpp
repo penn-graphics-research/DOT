@@ -662,8 +662,8 @@ namespace FracCuts {
     void Energy::initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
         assert(searchDir.size() == data.V.rows() * 2);
+        assert(stepSize > 0.0);
         
-        double left = 1.0, right = 0.0;
         for(int triI = 0; triI < data.F.rows(); triI++)
         {
             const Eigen::Vector3i& triVInd = data.F.row(triI);
@@ -686,18 +686,11 @@ namespace FracCuts {
             const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
             assert(c > 0.0);
             const double delta = b * b - 4.0 * a * c;
+            
             double bound = stepSize;
             if(a > 0.0) {
-                if((b < 0.0) && (delta > 0.0)) {
-                    const double r_left = (-b - sqrt(delta)) / 2.0 / a;
-                    assert(r_left > 0.0);
-                    const double r_right = (-b + sqrt(delta)) / 2.0 / a;
-                    if(r_left < left) {
-                        left = r_left;
-                    }
-                    if(r_right > right) {
-                        right = r_right;
-                    }
+                if((b < 0.0) && (delta >= 0.0)) {
+                    bound = (-b - sqrt(delta)) / 2.0 / a;
                 }
             }
             else if(a < 0.0) {
@@ -709,14 +702,12 @@ namespace FracCuts {
                     bound = -c / b;
                 }
             }
+            
             if(bound < stepSize) {
                 stepSize = bound;
             }
         }
         
-        if((stepSize < right) && (stepSize > left)) {
-            stepSize = left;
-        }
         assert(stepSize > 0.0);
     }
     
@@ -734,8 +725,7 @@ namespace FracCuts {
                                              double& stepSize) const
     {
         assert(V.size() == searchDir.size());
-        
-        double left = 1.0, right = 0.0;
+        assert(stepSize > 0.0);
         
         const Eigen::Vector2d& U1 = V.segment(0, 2);
         const Eigen::Vector2d& U2 = V.segment(2, 2);
@@ -755,18 +745,11 @@ namespace FracCuts {
         const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
         assert(c > 0.0);
         const double delta = b * b - 4.0 * a * c;
+        
         double bound = stepSize;
         if(a > 0.0) {
-            if((b < 0.0) && (delta > 0.0)) {
-                const double r_left = (-b - sqrt(delta)) / 2.0 / a;
-                assert(r_left > 0.0);
-                const double r_right = (-b + sqrt(delta)) / 2.0 / a;
-                if(r_left < left) {
-                    left = r_left;
-                }
-                if(r_right > right) {
-                    right = r_right;
-                }
+            if((b < 0.0) && (delta >= 0.0)) {
+                bound = (-b - sqrt(delta)) / 2.0 / a;
             }
         }
         else if(a < 0.0) {
@@ -778,13 +761,11 @@ namespace FracCuts {
                 bound = -c / b;
             }
         }
+        
         if(bound < stepSize) {
             stepSize = bound;
         }
         
-        if((stepSize < right) && (stepSize > left)) {
-            stepSize = left;
-        }
         assert(stepSize > 0.0);
     }
     
