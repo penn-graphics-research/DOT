@@ -124,8 +124,13 @@ namespace FracCuts {
         virtual void solve(Eigen::VectorXd &rhs,
                            Eigen::VectorXd &result) = 0;
         
-//    public:
-//        virtual double coeffMtr(int rowI, int colI) const = 0;
+    public:
+        virtual double coeffMtr(int rowI, int colI) const {
+            assert(rowI < IJ2aI.size());
+            const auto finder = IJ2aI[rowI].find(colI);
+            assert(finder != IJ2aI[rowI].end());
+            return a[finder->second];
+        }
     };
     
 }

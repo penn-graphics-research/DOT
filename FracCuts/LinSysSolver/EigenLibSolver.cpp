@@ -25,7 +25,7 @@ namespace FracCuts {
     {
         Base::set_pattern(II, JJ, SS, vNeighbor, fixedVert);
         
-        // directly save into mtr
+        //TODO: directly save into mtr
         coefMtr.resize(Base::numRows, Base::numRows);
         coefMtr.reserve(Base::ja.size());
         Base::ia.array() -= 1.0;
