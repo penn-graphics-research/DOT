@@ -126,10 +126,20 @@ namespace FracCuts {
         
     public:
         virtual double coeffMtr(int rowI, int colI) const {
+            if(rowI > colI) {
+                // return only upper right part for symmetric matrix
+                int temp = rowI;
+                rowI = colI;
+                colI = temp;
+            }
             assert(rowI < IJ2aI.size());
             const auto finder = IJ2aI[rowI].find(colI);
-            assert(finder != IJ2aI[rowI].end());
-            return a[finder->second];
+            if(finder != IJ2aI[rowI].end()) {
+                return a[finder->second];
+            }
+            else {
+                return 0.0;
+            }
         }
     };
     

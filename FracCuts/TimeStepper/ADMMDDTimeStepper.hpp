@@ -25,6 +25,7 @@ namespace FracCuts {
         std::vector<Eigen::MatrixXd> u_subdomain, du_subdomain, dz_subdomain;
         std::vector<Eigen::MatrixXd> weights_subdomain;
         Eigen::MatrixXd weightSum;
+        std::vector<bool> isSharedVert;
         Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
         
