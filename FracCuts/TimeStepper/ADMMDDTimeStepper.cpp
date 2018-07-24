@@ -59,9 +59,11 @@ namespace FracCuts {
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
 #endif
         {
-            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(subdomainTriAmt,
-                                                                        subdomainTriAmt * subdomainI,
-                                                                        subdomainTriAmt * (subdomainI + 1) - 1);
+            int triI_begin = subdomainTriAmt * subdomainI;
+            int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
+            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
+                                                                        triI_begin,
+                                                                        triI_end);
             result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
                                     globalVIToLocal_subdomain[subdomainI]);
             
@@ -190,8 +192,6 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        initWeights();
-        
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
@@ -230,20 +230,36 @@ namespace FracCuts {
             }
             // a more convenient way when using xHat as initial guess
             xHat_subdomain[subdomainI] = mesh_subdomain[subdomainI].V;
+            
+            //TODO: dual variable initialization
+//            Eigen::VectorXd g;
+//            computeGradient(result, scaffold, g); //TODO: only need once for all subdomains
+//            Eigen::VectorXd g_subdomain;
+//            computeGradient_subdomain(subdomainI, g_subdomain);
+//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
+//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
+//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
+//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
+//                }
+//            }
         }
 #ifdef USE_TBB
         );
 #endif
-        int outputTimestepAmt = 3;
+        initWeights();
+        
+        int outputTimestepAmt = 100;
         std::string curOutputFolderPath;
-        if(globalIterNum < outputTimestepAmt) {
+        if(globalIterNum == outputTimestepAmt) {
             curOutputFolderPath = outputFolderPath + "timestep" + std::to_string(globalIterNum);
             mkdir(curOutputFolderPath.c_str(), 0777);
             curOutputFolderPath += '/';
         }
         
         // ADMM iterations
-        int ADMMIterAmt = 200, ADMMIterI = 0;
+        int ADMMIterAmt = __INT_MAX__, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
             
@@ -260,7 +276,7 @@ namespace FracCuts {
                 break;
             }
             
-            if(globalIterNum < outputTimestepAmt) {
+            if((globalIterNum == outputTimestepAmt) && (ADMMIterI < 100)) {
                 std::string filePath_pre = curOutputFolderPath + std::to_string(ADMMIterI);
                 writeMeshToFile(filePath_pre);
             }
@@ -310,7 +326,7 @@ namespace FracCuts {
             for(int j = 0; j < localMaxIter; j++) {
                 Eigen::VectorXd g;
                 computeGradient_subdomain(subdomainI, g);
-//                std::cout << "  " << triI << "-" << j << " ||g_local||^2 = "
+//                std::cout << "  " << subdomainI << "-" << j << " ||g_local||^2 = "
 //                    << g.squaredNorm() << std::endl;
                 if(g.squaredNorm() < localTol) {
                     break;
@@ -349,6 +365,7 @@ namespace FracCuts {
                     }
                     computeEnergyVal_subdomain(subdomainI, E);
                 }
+//                std::cout << "stepsize = " << alpha << std::endl;
             }
             
             // dual
