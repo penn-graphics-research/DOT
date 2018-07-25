@@ -54,7 +54,9 @@ namespace FracCuts {
         virtual bool fullyImplicit(void);
         
     protected:
+        void initPrimal(void);
         void initWeights(void);
+        
         void subdomainSolve(void); // local solve
         void checkRes(void);
         void boundaryConsensusSolve(void); // global solve

@@ -192,62 +192,7 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-#ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-        for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-        {
-            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
-            }
-        }
-#ifdef USE_TBB
-        );
-#endif
-        
-#ifdef USE_TBB
-        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
-#else
-        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
-#endif
-        {
-            u_subdomain[subdomainI].setZero();
-            
-            // precompute xHat and update local vertices
-            for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
-                // a more general way that also valid for other initialization:
-//                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
-//                   mesh_subdomain[subdomainI].fixedVert.end())
-//                {
-//                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
-//                }
-//                else {
-//                    // scripted
-//                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
-//                }
-                mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
-            }
-            // a more convenient way when using xHat as initial guess
-            xHat_subdomain[subdomainI] = mesh_subdomain[subdomainI].V;
-            
-            //TODO: dual variable initialization
-//            Eigen::VectorXd g;
-//            computeGradient(result, scaffold, g); //TODO: only need once for all subdomains
-//            Eigen::VectorXd g_subdomain;
-//            computeGradient_subdomain(subdomainI, g_subdomain);
-//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
-//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
-//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
-//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
-//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
-//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
-//                }
-//            }
-        }
-#ifdef USE_TBB
-        );
-#endif
+        initPrimal();
         initWeights();
         
         int outputTimestepAmt = 100;
@@ -286,6 +231,70 @@ namespace FracCuts {
         return (ADMMIterI == ADMMIterAmt);
     }
     
+    void ADMMDDTimeStepper::initPrimal(void)
+    {
+        // initialize primal with xHat
+        
+        // global:
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+        {
+            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+        
+        // local:
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            // precompute xHat and update local primal
+            for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
+// a more general way that also valid for other initialization:
+//                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
+//                   mesh_subdomain[subdomainI].fixedVert.end())
+//                {
+//                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+//                }
+//                else {
+//                    // scripted
+//                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
+//                }
+                mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
+            }
+            // a more convenient way when using xHat as initial guess
+            xHat_subdomain[subdomainI] = mesh_subdomain[subdomainI].V;
+            
+            // dual:
+            u_subdomain[subdomainI].setZero();
+                              
+            //TODO: dual variable initialization
+//            Eigen::VectorXd g;
+//            computeGradient(result, scaffold, g); //TODO: only need once for all subdomains
+//            Eigen::VectorXd g_subdomain;
+//            computeGradient_subdomain(subdomainI, g_subdomain);
+//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
+//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
+//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
+//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
+//                }
+//            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+    }
     void ADMMDDTimeStepper::initWeights(void)
     {
         //TODO: rest shape Hessian v.s. per time step Hessian?
@@ -298,6 +307,11 @@ namespace FracCuts {
         linSysSolver->update_a(I, J, V);
         
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            Eigen::VectorXd V;
+            Eigen::VectorXi I, J;
+            computeHessianProxy_subdomain(subdomainI, V, I, J);
+            linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
+            
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
                 int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
                 for(int dimI = 0; dimI < 2; dimI++) {
@@ -311,6 +325,7 @@ namespace FracCuts {
             }
         }
     }
+    
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
     {
         int localMaxIter = __INT_MAX__;
