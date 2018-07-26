@@ -192,7 +192,7 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        initPrimal();
+        initPrimal(4);
         initWeights();
         
         int outputTimestepAmt = 100;
@@ -231,24 +231,92 @@ namespace FracCuts {
         return (ADMMIterI == ADMMIterAmt);
     }
     
-    void ADMMDDTimeStepper::initPrimal(void)
+    void ADMMDDTimeStepper::initPrimal(int option)
     {
-        // initialize primal with xHat
-        
-        // global:
+        // global: TODO: need inversion check!
+        switch(option) {
+            case 0:
+                // already at last timestep config
+                break;
+                
+            case 1: // explicit Euler
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
-        for(int vI = 0; vI < result.V.rows(); vI++)
+                for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
-        {
-            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
-            }
-        }
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2)).transpose();
+                    }
+                }
 #ifdef USE_TBB
-        );
+                );
 #endif
+                break;
+                
+            case 2: // xHat
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+                
+            case 3: { // Symplectic Euler
+                Eigen::VectorXd f;
+                energyTerms[0]->computeGradientBySVD(result, f);
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    double mass = result.massMatrix.coeff(vI, vI);
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
+                                             dtSq * (gravity + f.segment(vI * 2, 2) / mass)).transpose();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+            }
+                
+            case 4: { // uniformly accelerated motion approximation
+                Eigen::VectorXd f;
+                energyTerms[0]->computeGradientBySVD(result, f);
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    double mass = result.massMatrix.coeff(vI, vI);
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
+                                             dtSq / 2.0 * (gravity + f.segment(vI * 2, 2) / mass)).transpose();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+            }
+                
+            default:
+                std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
+                break;
+        }
         
         // local:
 #ifdef USE_TBB
@@ -259,20 +327,17 @@ namespace FracCuts {
         {
             // precompute xHat and update local primal
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
-// a more general way that also valid for other initialization:
-//                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
-//                   mesh_subdomain[subdomainI].fixedVert.end())
-//                {
-//                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
-//                }
-//                else {
-//                    // scripted
-//                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
-//                }
+                if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
+                   mesh_subdomain[subdomainI].fixedVert.end())
+                {
+                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+                }
+                else {
+                    // scripted
+                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
+                }
                 mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
             }
-            // a more convenient way when using xHat as initial guess
-            xHat_subdomain[subdomainI] = mesh_subdomain[subdomainI].V;
             
             // dual:
             u_subdomain[subdomainI].setZero();
