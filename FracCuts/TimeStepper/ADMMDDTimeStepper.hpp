@@ -54,7 +54,7 @@ namespace FracCuts {
         virtual bool fullyImplicit(void);
         
     protected:
-        void initPrimal(int option); // 0: last timestep; 1: explicit Euler; 2: xHat; 3: Symplectic Euler; 4: uniformly accelerated motion approximation
+        void initPrimal(int option); // 0: last timestep; 1: explicit Euler; 2: xHat; 3: Symplectic Euler; 4: uniformly accelerated motion approximation; 5: Jacobi
         void initWeights(void);
         
         void subdomainSolve(void); // local solve

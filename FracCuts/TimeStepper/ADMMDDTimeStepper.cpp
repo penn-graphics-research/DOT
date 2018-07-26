@@ -161,6 +161,8 @@ namespace FracCuts {
         computePrecondMtr(result, scaffold, I, J, V);
         linSysSolver->set_type(1, 2);
         linSysSolver->set_pattern(I, J, V, result.vNeighbor, result.fixedVert);
+        
+        initWeights();
     }
     
     void ADMMDDTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
@@ -192,8 +194,7 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        initPrimal(4);
-        initWeights();
+        initPrimal(3);
         
         int outputTimestepAmt = 100;
         std::string curOutputFolderPath;
@@ -227,6 +228,8 @@ namespace FracCuts {
             }
         }
         innerIterAmt += ADMMIterI;
+        
+        initWeights();
         
         return (ADMMIterI == ADMMIterAmt);
     }
@@ -280,10 +283,10 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    double mass = result.massMatrix.coeff(vI, vI);
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        double mass = result.massMatrix.coeff(vI, vI);
                         result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
-                                             dtSq * (gravity + f.segment(vI * 2, 2) / mass)).transpose();
+                                             dtSq * (gravity - f.segment(vI * 2, 2) / mass)).transpose();
                     }
                 }
 #ifdef USE_TBB
@@ -301,15 +304,42 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    double mass = result.massMatrix.coeff(vI, vI);
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        double mass = result.massMatrix.coeff(vI, vI);
                         result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
-                                             dtSq / 2.0 * (gravity + f.segment(vI * 2, 2) / mass)).transpose();
+                                             dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass)).transpose();
                     }
                 }
 #ifdef USE_TBB
                 );
 #endif
+                break;
+            }
+                
+            case 5: { // Jacobi
+                Eigen::VectorXd g;
+                computeGradient(result, scaffold, g);
+                
+                Eigen::VectorXi I, J;
+                Eigen::VectorXd V;
+                computePrecondMtr(result, scaffold, I, J, V);
+                linSysSolver->update_a(I, J, V);
+                
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        result.V(vI, 0) += -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
+                        result.V(vI, 1) += -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                
                 break;
             }
                 
@@ -372,10 +402,10 @@ namespace FracCuts {
         linSysSolver->update_a(I, J, V);
         
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
-            Eigen::VectorXd V;
-            Eigen::VectorXi I, J;
-            computeHessianProxy_subdomain(subdomainI, V, I, J);
-            linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
+//            Eigen::VectorXd V;
+//            Eigen::VectorXi I, J;
+//            computeHessianProxy_subdomain(subdomainI, V, I, J);
+//            linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
             
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
                 int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];

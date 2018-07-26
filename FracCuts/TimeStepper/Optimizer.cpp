@@ -643,6 +643,7 @@ namespace FracCuts {
             if(!mute) {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
             }
+            file_iterStats << globalIterNum << " " << sqn_g << std::endl;
         } while(sqn_g > targetGRes * 10.0);
         
         logFile << "Timestep" << globalIterNum << " innerIterAmt = " << innerIterAmt << std::endl;
