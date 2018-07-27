@@ -195,6 +195,7 @@ namespace FracCuts {
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
         initPrimal(1);
+        initDual();
         
         int outputTimestepAmt = 100;
         std::string curOutputFolderPath;
@@ -237,7 +238,7 @@ namespace FracCuts {
     
     void ADMMDDTimeStepper::initPrimal(int option)
     {
-        // global: TODO: need inversion check!
+        // global: TODO: need inversion check! add line search?
         switch(option) {
             case 0:
                 // already at last timestep config
@@ -350,9 +351,6 @@ namespace FracCuts {
         }
         
         // local:
-        Eigen::VectorXd g;
-        computeGradient(result, scaffold, g);
-        file_iterStats << globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else
@@ -372,13 +370,27 @@ namespace FracCuts {
                 }
                 mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
             }
-            
-            // dual:
+        }
+#ifdef USE_TBB
+        );
+#endif
+    }
+    void ADMMDDTimeStepper::initDual(void)
+    {
+        Eigen::VectorXd g;
+        computeGradient(result, scaffold, g); //TODO: only need to compute for shared vertices
+        file_iterStats << globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
+        
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
             u_subdomain[subdomainI].setZero();
-
-            //TODO: try dual with consistent weights
+            
             Eigen::VectorXd g_subdomain;
-            computeGradient_subdomain(subdomainI, g_subdomain);
+            computeGradient_subdomain(subdomainI, g_subdomain); //TODO: only need to compute for shared vertices
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
                 if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
                     int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
@@ -391,13 +403,14 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+                              
     }
     void ADMMDDTimeStepper::initWeights(void)
     {
         Eigen::VectorXi I, J;
         Eigen::VectorXd V;
         computePrecondMtr(result, scaffold, I, J, V);
-        linSysSolver->update_a(I, J, V);
+        linSysSolver->update_a(I, J, V); //TODO: only need to compute for shared vertices
         
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
 //            Eigen::VectorXd V;
