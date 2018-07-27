@@ -238,7 +238,8 @@ namespace FracCuts {
     
     void ADMMDDTimeStepper::initPrimal(int option)
     {
-        // global: TODO: need inversion check! add line search?
+        // global:
+        searchDir.resize(result.V.rows() * 2);
         switch(option) {
             case 0:
                 // already at last timestep config
@@ -252,7 +253,10 @@ namespace FracCuts {
 #endif
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2)).transpose();
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -268,7 +272,10 @@ namespace FracCuts {
 #endif
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + dtSq * gravity;
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -287,8 +294,11 @@ namespace FracCuts {
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
                         double mass = result.massMatrix.coeff(vI, vI);
-                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
-                                             dtSq * (gravity - f.segment(vI * 2, 2) / mass)).transpose();
+                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
+                                                dtSq * (gravity - f.segment(vI * 2, 2) / mass));
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -308,8 +318,11 @@ namespace FracCuts {
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
                         double mass = result.massMatrix.coeff(vI, vI);
-                        result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) +
-                                             dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass)).transpose();
+                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
+                                                dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -334,8 +347,11 @@ namespace FracCuts {
 #endif
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        result.V(vI, 0) += -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
-                        result.V(vI, 1) += -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
+                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -349,6 +365,10 @@ namespace FracCuts {
                 std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
                 break;
         }
+        double stepSize = 1.0;
+        energyTerms[0]->initStepSize(result, searchDir, stepSize);
+        stepSize *= 0.99;
+        stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
         
         // local:
 #ifdef USE_TBB
@@ -421,12 +441,12 @@ namespace FracCuts {
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
                 int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
                 for(int dimI = 0; dimI < 2; dimI++) {
-                        double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + dimI,
-                                                               dualMapperI.first * 2 + dimI) -
-                                         linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + dimI,
-                                                                                      localI * 2 + dimI));
-                        weights_subdomain[subdomainI](dualMapperI.second, dimI) += offset;
-                        weightSum(dualMapperI.first, dimI) += offset;
+                    double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + dimI,
+                                                           dualMapperI.first * 2 + dimI) -
+                                     linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + dimI,
+                                                                                  localI * 2 + dimI));
+                    weights_subdomain[subdomainI](dualMapperI.second, dimI) += offset;
+                    weightSum(dualMapperI.first, dimI) += offset;
                 }
             }
         }
