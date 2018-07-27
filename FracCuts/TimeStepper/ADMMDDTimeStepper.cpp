@@ -194,7 +194,7 @@ namespace FracCuts {
     
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
-        initPrimal(3);
+        initPrimal(1);
         
         int outputTimestepAmt = 100;
         std::string curOutputFolderPath;
@@ -205,6 +205,7 @@ namespace FracCuts {
         }
         
         // ADMM iterations
+        //TODO: adaptive tolerances
         int ADMMIterAmt = __INT_MAX__, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
             file_iterStats << globalIterNum << " ";
@@ -349,6 +350,9 @@ namespace FracCuts {
         }
         
         // local:
+        Eigen::VectorXd g;
+        computeGradient(result, scaffold, g);
+        file_iterStats << globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else
@@ -371,20 +375,18 @@ namespace FracCuts {
             
             // dual:
             u_subdomain[subdomainI].setZero();
-                              
-            //TODO: dual variable initialization
-//            Eigen::VectorXd g;
-//            computeGradient(result, scaffold, g); //TODO: only need once for all subdomains
-//            Eigen::VectorXd g_subdomain;
-//            computeGradient_subdomain(subdomainI, g_subdomain);
-//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
-//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
-//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
-//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
-//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
-//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
-//                }
-//            }
+
+            //TODO: try dual with consistent weights
+            Eigen::VectorXd g_subdomain;
+            computeGradient_subdomain(subdomainI, g_subdomain);
+            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
+                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
+                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
+                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
+                }
+            }
         }
 #ifdef USE_TBB
         );
@@ -392,10 +394,6 @@ namespace FracCuts {
     }
     void ADMMDDTimeStepper::initWeights(void)
     {
-        //TODO: rest shape Hessian v.s. per time step Hessian?
-        //TODO: write into report: spd will decrease the speed
-        //TODO: initial guess of primal and dual variables?
-        
         Eigen::VectorXi I, J;
         Eigen::VectorXd V;
         computePrecondMtr(result, scaffold, I, J, V);
@@ -419,12 +417,38 @@ namespace FracCuts {
                 }
             }
         }
+
+//        // dual:
+//        Eigen::VectorXd g;
+//        computeGradient(result, scaffold, g);
+//#ifdef USE_TBB
+//        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+//#else
+//        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+//#endif
+//        {
+//            u_subdomain[subdomainI].setZero();
+//
+//            Eigen::VectorXd g_subdomain;
+//            computeGradient_subdomain(subdomainI, g_subdomain);
+//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
+//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
+//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
+//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
+//                }
+//            }
+//        }
+//#ifdef USE_TBB
+//        );
+//#endif
     }
     
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / mesh_subdomain.size();
+        double localTol = targetGRes / mesh_subdomain.size(); //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else

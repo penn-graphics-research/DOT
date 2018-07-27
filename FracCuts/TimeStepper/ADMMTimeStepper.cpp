@@ -197,7 +197,7 @@ namespace FracCuts {
     void ADMMTimeStepper::zuUpdate(void)
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / result.F.rows();
+        double localTol = targetGRes / result.F.rows(); //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
 #else
