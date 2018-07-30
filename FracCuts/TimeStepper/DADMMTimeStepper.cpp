@@ -93,7 +93,10 @@ namespace FracCuts {
     
     bool DADMMTimeStepper::fullyImplicit(void)
     {
-        // initialize x with xHat, M_mult_xHat, u with 0, and D_mult_x and z with Dx
+        // initialize x with xHat
+        initX(2);
+        
+        // initialize M_mult_xHat
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
@@ -101,9 +104,13 @@ namespace FracCuts {
 #endif
         {
             if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                result.V.row(vI) += (dt * velocity.segment(vI * 2, 2) + dtSq * gravity).transpose();
+                M_mult_xHat.segment(vI * 2, 2) = (result.massMatrix.coeffRef(vI, vI) *
+                                                  (resultV_n.row(vI).transpose() + dt * velocity.segment(vI * 2, 2) + dtSq * gravity));
             }
-            M_mult_xHat.segment(vI * 2, 2) = result.massMatrix.coeffRef(vI, vI) * result.V.row(vI).transpose();
+            else {
+                M_mult_xHat.segment(vI * 2, 2) = (result.massMatrix.coeffRef(vI, vI) *
+                                                  resultV_n.row(vI).transpose());
+            }
         }
 #ifdef USE_TBB
         );
@@ -138,7 +145,7 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 1000.0) { //!!!
+            if(sqn_g < targetGRes) {
                 break;
             }
         }
@@ -150,7 +157,7 @@ namespace FracCuts {
     void DADMMTimeStepper::zuUpdate(void)
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / result.F.rows();
+        double localTol = targetGRes / result.F.rows() / 1000.0;
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
 #else

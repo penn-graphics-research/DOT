@@ -143,6 +143,7 @@ namespace FracCuts {
         virtual void clearGradFileOutputBuffer(void);
         
     protected: // helper functions
+        virtual void initX(int option);
         virtual bool fullyImplicit(void);
         
         // solve for new configuration in the next iteration

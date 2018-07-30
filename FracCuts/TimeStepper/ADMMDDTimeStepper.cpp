@@ -220,7 +220,7 @@ namespace FracCuts {
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
             file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes * 10.0) {
+            if(sqn_g < targetGRes) {
                 break;
             }
             
@@ -239,136 +239,7 @@ namespace FracCuts {
     void ADMMDDTimeStepper::initPrimal(int option)
     {
         // global:
-        searchDir.resize(result.V.rows() * 2);
-        switch(option) {
-            case 0:
-                // already at last timestep config
-                break;
-                
-            case 1: // explicit Euler
-#ifdef USE_TBB
-                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-                for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-                {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
-                    }
-                }
-#ifdef USE_TBB
-                );
-#endif
-                break;
-                
-            case 2: // xHat
-#ifdef USE_TBB
-                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-                for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-                {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + dtSq * gravity;
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
-                    }
-                }
-#ifdef USE_TBB
-                );
-#endif
-                break;
-                
-            case 3: { // Symplectic Euler
-                Eigen::VectorXd f;
-                energyTerms[0]->computeGradientBySVD(result, f);
-#ifdef USE_TBB
-                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-                for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-                {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        double mass = result.massMatrix.coeff(vI, vI);
-                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
-                                                dtSq * (gravity - f.segment(vI * 2, 2) / mass));
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
-                    }
-                }
-#ifdef USE_TBB
-                );
-#endif
-                break;
-            }
-                
-            case 4: { // uniformly accelerated motion approximation
-                Eigen::VectorXd f;
-                energyTerms[0]->computeGradientBySVD(result, f);
-#ifdef USE_TBB
-                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-                for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-                {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        double mass = result.massMatrix.coeff(vI, vI);
-                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
-                                                dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
-                    }
-                }
-#ifdef USE_TBB
-                );
-#endif
-                break;
-            }
-                
-            case 5: { // Jacobi
-                Eigen::VectorXd g;
-                computeGradient(result, scaffold, g);
-                
-                Eigen::VectorXi I, J;
-                Eigen::VectorXd V;
-                computePrecondMtr(result, scaffold, I, J, V);
-                linSysSolver->update_a(I, J, V);
-                
-#ifdef USE_TBB
-                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
-#else
-                for(int vI = 0; vI < result.V.rows(); vI++)
-#endif
-                {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
-                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
-                    }
-                }
-#ifdef USE_TBB
-                );
-#endif
-                
-                break;
-            }
-                
-            default:
-                std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
-                break;
-        }
-        double stepSize = 1.0;
-        energyTerms[0]->initStepSize(result, searchDir, stepSize);
-        stepSize *= 0.99;
-        stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
+        initX(option);
         
         // local:
 #ifdef USE_TBB
@@ -481,7 +352,7 @@ namespace FracCuts {
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / mesh_subdomain.size(); //TODO: needs to be more adaptive to global tol
+        double localTol = targetGRes / mesh_subdomain.size() / 10.0; //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else

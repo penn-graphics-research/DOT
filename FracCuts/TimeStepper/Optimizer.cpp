@@ -24,7 +24,9 @@
 #include <igl/avg_edge_length.h>
 #include <igl/edge_lengths.h>
 
-//#include <omp.h>
+#ifdef USE_TBB
+    #include <tbb/tbb.h>
+#endif
 
 #include <fstream>
 #include <iostream>
@@ -74,7 +76,7 @@ namespace FracCuts {
         }
         
         globalIterNum = 0;
-        relGL2Tol = 1.0e-10;
+        relGL2Tol = 1.0e-2;
         topoIter = 0;
         innerIterAmt = 0;
         
@@ -627,8 +629,144 @@ namespace FracCuts {
         return changed;
     }
     
+    void Optimizer::initX(int option)
+    {
+        // global:
+        searchDir.resize(result.V.rows() * 2);
+        switch(option) {
+            case 0:
+                // already at last timestep config
+                break;
+                
+            case 1: // explicit Euler
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+                
+            case 2: // xHat
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + dtSq * gravity;
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+                
+            case 3: { // Symplectic Euler
+                Eigen::VectorXd f;
+                energyTerms[0]->computeGradientBySVD(result, f);
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        double mass = result.massMatrix.coeff(vI, vI);
+                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
+                                                        dtSq * (gravity - f.segment(vI * 2, 2) / mass));
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+            }
+                
+            case 4: { // uniformly accelerated motion approximation
+                Eigen::VectorXd f;
+                energyTerms[0]->computeGradientBySVD(result, f);
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        double mass = result.massMatrix.coeff(vI, vI);
+                            searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
+                                                        dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                break;
+            }
+                
+            case 5: { // Jacobi
+                Eigen::VectorXd g;
+                computeGradient(result, scaffold, g);
+                
+                Eigen::VectorXi I, J;
+                Eigen::VectorXd V;
+                computePrecondMtr(result, scaffold, I, J, V);
+                linSysSolver->update_a(I, J, V);
+                
+#ifdef USE_TBB
+                tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+                for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+                {
+                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
+                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                    }
+                    else {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                }
+#ifdef USE_TBB
+                );
+#endif
+                
+                break;
+            }
+                
+            default:
+                std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
+                break;
+        }
+        double stepSize = 1.0;
+        energyTerms[0]->initStepSize(result, searchDir, stepSize);
+        stepSize *= 0.99;
+        stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
+    }
     bool Optimizer::fullyImplicit(void)
     {
+        initX(1);
+        
         double sqn_g = __DBL_MAX__;
         computeEnergyVal(result, scaffold, lastEnergyVal);
         do {
@@ -841,7 +979,16 @@ namespace FracCuts {
 //        targetGRes = energyParamSum * (data0.V_rest.rows() - data0.fixedVert.size()) * relGL2Tol * data0.avgEdgeLen * data0.avgEdgeLen;
 //        targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
 //        targetGRes *= data0.surfaceArea * data0.surfaceArea;
-        targetGRes = relGL2Tol * sqnorm_H_rest * sqnorm_l * (data0.V_rest.rows() - data0.fixedVert.size()) / data0.V_rest.rows() * energyParamSum * energyParamSum;
+//        targetGRes = relGL2Tol * sqnorm_H_rest * sqnorm_l * (data0.V_rest.rows() - data0.fixedVert.size()) / data0.V_rest.rows() * energyParamSum * energyParamSum;
+        double m_sqn = 0.0;
+        for(int vI = 0; vI < data0.V_rest.rows(); vI++) {
+            if(data0.fixedVert.find(vI) == data0.fixedVert.end()) {
+                double m = data0.massMatrix.coeff(vI, vI);
+                m_sqn += m * m;
+            }
+        }
+        assert(energyParamSum == 1.0);
+        targetGRes = relGL2Tol * m_sqn * gravity.squaredNorm();
 #ifndef STATIC_SOLVE
         targetGRes *= dtSq * dtSq;
 #endif
