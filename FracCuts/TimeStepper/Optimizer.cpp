@@ -758,10 +758,11 @@ namespace FracCuts {
                 std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
                 break;
         }
+        
         double stepSize = 1.0;
         energyTerms[0]->initStepSize(result, searchDir, stepSize);
         if(stepSize < 1.0) {
-            stepSize *= 0.99;
+            stepSize *= 0.5;
         }
         stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
     }
