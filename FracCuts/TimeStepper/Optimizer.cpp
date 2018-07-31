@@ -636,7 +636,7 @@ namespace FracCuts {
         switch(option) {
             case 0:
                 // already at last timestep config
-                break;
+                return;
                 
             case 1: // explicit Euler
 #ifdef USE_TBB
@@ -711,7 +711,7 @@ namespace FracCuts {
                 {
                     if(result.fixedVert.find(vI) == result.fixedVert.end()) {
                         double mass = result.massMatrix.coeff(vI, vI);
-                            searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
+                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
                                                         dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
                     }
                     else {
@@ -760,12 +760,14 @@ namespace FracCuts {
         }
         double stepSize = 1.0;
         energyTerms[0]->initStepSize(result, searchDir, stepSize);
-        stepSize *= 0.99;
+        if(stepSize < 1.0) {
+            stepSize *= 0.99;
+        }
         stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
     }
     bool Optimizer::fullyImplicit(void)
     {
-        initX(1);
+        initX(0);
         
         double sqn_g = __DBL_MAX__;
         computeEnergyVal(result, scaffold, lastEnergyVal);
@@ -782,7 +784,7 @@ namespace FracCuts {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
             }
             file_iterStats << globalIterNum << " " << sqn_g << std::endl;
-        } while(sqn_g > targetGRes * 10.0);
+        } while(sqn_g > targetGRes);
         
         logFile << "Timestep" << globalIterNum << " innerIterAmt = " << innerIterAmt << std::endl;
         

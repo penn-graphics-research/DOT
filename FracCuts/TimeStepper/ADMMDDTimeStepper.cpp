@@ -303,6 +303,7 @@ namespace FracCuts {
         computePrecondMtr(result, scaffold, I, J, V);
         linSysSolver->update_a(I, J, V); //TODO: only need to compute for shared vertices
         
+        double multiplier = 1.0;
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
 //            Eigen::VectorXd V;
 //            Eigen::VectorXi I, J;
@@ -316,8 +317,10 @@ namespace FracCuts {
                                                            dualMapperI.first * 2 + dimI) -
                                      linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + dimI,
                                                                                   localI * 2 + dimI));
+                    weightSum(dualMapperI.first, dimI) -= weights_subdomain[subdomainI](dualMapperI.second, dimI);
                     weights_subdomain[subdomainI](dualMapperI.second, dimI) += offset;
-                    weightSum(dualMapperI.first, dimI) += offset;
+                    weights_subdomain[subdomainI](dualMapperI.second, dimI) *= multiplier;
+                    weightSum(dualMapperI.first, dimI) += weights_subdomain[subdomainI](dualMapperI.second, dimI);
                 }
             }
         }
@@ -352,7 +355,7 @@ namespace FracCuts {
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / mesh_subdomain.size() / 10.0; //TODO: needs to be more adaptive to global tol
+        double localTol = targetGRes / mesh_subdomain.size() / 100.0; //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else
