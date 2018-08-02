@@ -1315,7 +1315,7 @@ int main(int argc, char *argv[])
     else if(suffix == ".primitive") {
         loadSucceed = !config.loadFromFile(meshFilePath);
         double spacing = config.size / std::sqrt(config.resolution / 2.0);
-        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_SQUARE, config.size, spacing, false);
+        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_GRID, config.size, spacing, false);
         V = primitive.V_rest;
         UV = primitive.V;
         F = primitive.F;

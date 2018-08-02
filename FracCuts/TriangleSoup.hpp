@@ -20,6 +20,7 @@ namespace FracCuts{
     
     enum Primitive
     {
+        P_GRID,
         P_SQUARE,
         P_CYLINDER
     };

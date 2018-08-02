@@ -46,7 +46,6 @@ namespace FracCuts {
     {
         // divide domain
         const int partitionAmt = 4;
-        assert(result.F.rows() % partitionAmt == 0);
         mesh_subdomain.resize(partitionAmt);
         
         elemList_subdomain.resize(mesh_subdomain.size());
@@ -61,6 +60,9 @@ namespace FracCuts {
         {
             int triI_begin = subdomainTriAmt * subdomainI;
             int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
+            if(subdomainI + 1 == mesh_subdomain.size()) {
+                triI_end = result.F.rows() - 1;
+            }
             elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
                                                                         triI_begin,
                                                                         triI_end);
@@ -195,6 +197,7 @@ namespace FracCuts {
     bool ADMMDDTimeStepper::fullyImplicit(void)
     {
         initPrimal(1);
+//        writeMeshToFile(outputFolderPath + "init");
         initDual();
         
         int outputTimestepAmt = 100;
@@ -324,32 +327,6 @@ namespace FracCuts {
                 }
             }
         }
-
-//        // dual:
-//        Eigen::VectorXd g;
-//        computeGradient(result, scaffold, g);
-//#ifdef USE_TBB
-//        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
-//#else
-//        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
-//#endif
-//        {
-//            u_subdomain[subdomainI].setZero();
-//
-//            Eigen::VectorXd g_subdomain;
-//            computeGradient_subdomain(subdomainI, g_subdomain);
-//            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
-//                if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
-//                    int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
-//                    u_subdomain[subdomainI].row(dualMapperI.second) = (g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2)).transpose();
-//                    u_subdomain[subdomainI](dualMapperI.second, 0) /= weights_subdomain[subdomainI](dualMapperI.second, 0);
-//                    u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
-//                }
-//            }
-//        }
-//#ifdef USE_TBB
-//        );
-//#endif
     }
     
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve

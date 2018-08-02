@@ -225,6 +225,7 @@ namespace FracCuts {
         this->dt = dt;
         dtSq = dt * dt;
         frameAmt = duration / dt;
+        updateTargetGRes();
     }
     
 //    void Optimizer::fixDirection(void)
@@ -758,6 +759,21 @@ namespace FracCuts {
                 std::cout << "unkown primal initialization type, use last timestep instead" << std::endl;
                 break;
         }
+        
+//        Eigen::MatrixXd V0 = result.V;
+//        double E0;
+//        computeEnergyVal(result, scaffold, E0);
+//        double stepSize = 1.0;
+//        energyTerms[0]->initStepSize(result, searchDir, stepSize);
+//
+//        double E;
+//        stepForward(V0, Eigen::MatrixXd(), result, scaffold, stepSize);
+//        computeEnergyVal(result, scaffold, E);
+//        while(E > E0) {
+//            stepSize /= 2.0;
+//            stepForward(V0, Eigen::MatrixXd(), result, scaffold, stepSize);
+//            computeEnergyVal(result, scaffold, E);
+//        }
         
         double stepSize = 1.0;
         energyTerms[0]->initStepSize(result, searchDir, stepSize);

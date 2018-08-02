@@ -12,6 +12,7 @@
 #include "Optimizer.hpp"
 #include "Timer.hpp"
 
+#include <igl/triangle/triangulate.h>
 #include <igl/cotmatrix.h>
 #include <igl/avg_edge_length.h>
 #include <igl/writeOBJ.h>
@@ -280,7 +281,7 @@ namespace FracCuts {
     {
         switch(primitive)
         {
-            case P_SQUARE: {
+            case P_GRID: {
                 assert(size >= spacing);
                 int gridSize = static_cast<int>(size / spacing) + 1;
                 spacing = size / (gridSize - 1);
@@ -316,6 +317,69 @@ namespace FracCuts {
                             rowI * gridSize + colI, rowI * gridSize + colI + 1, (rowI + 1) * gridSize + colI + 1);
                     }
                 }
+                break;
+            }
+                
+            case P_SQUARE: {
+                assert(size >= spacing);
+                int gridSize = static_cast<int>(size / spacing) + 1;
+                spacing = size / (gridSize - 1);
+                
+                Eigen::MatrixXd UV_bnds(gridSize * 4 - 4, 2);
+                borderVerts_primitive.resize(2);
+                int vI = 0;
+                for(int rowI = 0; rowI < gridSize; rowI++)
+                {
+                    for(int colI = 0; colI < gridSize; colI++)
+                    {
+                        if((colI > 0) && (colI < gridSize - 1) &&
+                           (rowI > 0) && (rowI < gridSize - 1))
+                        {
+                            continue;
+                        }
+                        
+                        UV_bnds.row(vI) = spacing * Eigen::Vector2d(colI, rowI);
+                        
+                        if(colI == 0) {
+                            borderVerts_primitive[0].emplace_back(vI);
+                        }
+                        else if(colI == gridSize - 1) {
+                            borderVerts_primitive[1].emplace_back(vI);
+                        }
+                        
+                        vI++;
+                    }
+                }
+                
+                Eigen::MatrixXi E(gridSize * 4 - 4, 2);
+                for(int colI = 0; colI + 1 < gridSize; colI++) {
+                    E.row(colI) << colI, colI + 1;
+                }
+                for(int rowI = 0; rowI + 1 < gridSize; rowI++) {
+                    E.row(gridSize - 1 + rowI) <<
+                        borderVerts_primitive[1][rowI],
+                        borderVerts_primitive[1][rowI + 1];
+                }
+                for(int colI = 0; colI + 1 < gridSize; colI++) {
+                    E.row(gridSize * 2 - 2 + colI) << UV_bnds.rows() - 1 - colI, UV_bnds.rows() - 2 - colI;
+                }
+                for(int rowI = 0; rowI + 1 < gridSize; rowI++) {
+                    E.row(gridSize * 3 - 3 + rowI) <<
+                        borderVerts_primitive[0][gridSize - 1 - rowI],
+                        borderVerts_primitive[0][gridSize - 2 - rowI];
+                }
+                
+                std::string flag("qQa" + std::to_string(spacing * spacing * std::sqrt(3) / 4.0));
+                // "q" for high quality mesh generation
+                // "Q" for quiet mode (no output)
+                // "a" for area upper bound
+                
+                igl::triangle::triangulate(UV_bnds, E, Eigen::MatrixXd(), flag, V, F);
+                
+                V_rest.resize(V.rows(), 3);
+                V_rest.leftCols(2) = V;
+                V_rest.rightCols(1).setZero();
+                
                 break;
             }
                 
