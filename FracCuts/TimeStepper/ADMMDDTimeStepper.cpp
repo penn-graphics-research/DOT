@@ -16,6 +16,10 @@
 #include "EigenLibSolver.hpp"
 #endif
 
+#ifdef USE_METIS
+#include "METIS.hpp"
+#endif
+
 #ifdef USE_TBB
 #include <tbb/tbb.h>
 #endif
@@ -51,13 +55,22 @@ namespace FracCuts {
         elemList_subdomain.resize(mesh_subdomain.size());
         globalVIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
-        int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
+        
+#ifdef USE_METIS
+        METIS partitions(result);
+        partitions.partMesh(partitionAmt);
+#endif
+        
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
 #endif
         {
+#ifdef USE_METIS
+            partitions.getElementList(subdomainI, elemList_subdomain[subdomainI]);
+#else
+            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
             int triI_begin = subdomainTriAmt * subdomainI;
             int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
             if(subdomainI + 1 == mesh_subdomain.size()) {
@@ -66,6 +79,7 @@ namespace FracCuts {
             elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
                                                                         triI_begin,
                                                                         triI_end);
+#endif
             result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
                                     globalVIToLocal_subdomain[subdomainI]);
             

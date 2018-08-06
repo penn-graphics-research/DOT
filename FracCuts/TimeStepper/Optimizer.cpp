@@ -774,6 +774,7 @@ namespace FracCuts {
 //            stepForward(V0, Eigen::MatrixXd(), result, scaffold, stepSize);
 //            computeEnergyVal(result, scaffold, E);
 //        }
+//        std::cout << "primal init step size = " << stepSize << std::endl;
         
         double stepSize = 1.0;
         energyTerms[0]->initStepSize(result, searchDir, stepSize);

@@ -24,6 +24,8 @@
 		988ED12F1F5727F400B21181 /* TriangleSoup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 988ED12D1F5727F400B21181 /* TriangleSoup.cpp */; };
 		988ED1321F575C3C00B21181 /* IglUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 988ED1301F575C3C00B21181 /* IglUtils.cpp */; };
 		988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 988ED1331F5871F200B21181 /* Optimizer.cpp */; };
+		9894E5E12114F4E100FB0F46 /* METIS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9894E5DF2114F4E100FB0F46 /* METIS.cpp */; };
+		9894E5E32118BFC300FB0F46 /* libmetis.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 9894E5E22118BFC300FB0F46 /* libmetis.dylib */; };
 		98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98A5A3291F5F5BB900584EFD /* ARAPEnergy.cpp */; };
 		98C2D8F41F6348820048B18A /* SeparationEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98C2D8F21F6348820048B18A /* SeparationEnergy.cpp */; };
 		98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98CE476D1F71E66300627725 /* PardisoSolver.cpp */; };
@@ -79,6 +81,10 @@
 		988ED1331F5871F200B21181 /* Optimizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Optimizer.cpp; sourceTree = "<group>"; };
 		988ED1341F5871F200B21181 /* Optimizer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Optimizer.hpp; sourceTree = "<group>"; };
 		988ED1371F58721B00B21181 /* Energy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Energy.hpp; sourceTree = "<group>"; };
+		9894E5DD2113B7EC00FB0F46 /* libmetis.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmetis.a; path = ../../../../usr/local/lib/libmetis.a; sourceTree = "<group>"; };
+		9894E5DF2114F4E100FB0F46 /* METIS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = METIS.cpp; sourceTree = "<group>"; };
+		9894E5E02114F4E100FB0F46 /* METIS.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = METIS.hpp; sourceTree = "<group>"; };
+		9894E5E22118BFC300FB0F46 /* libmetis.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libmetis.dylib; path = ../../../../usr/local/lib/libmetis.dylib; sourceTree = "<group>"; };
 		98A5A3291F5F5BB900584EFD /* ARAPEnergy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ARAPEnergy.cpp; sourceTree = "<group>"; };
 		98A5A32A1F5F5BB900584EFD /* ARAPEnergy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ARAPEnergy.hpp; sourceTree = "<group>"; };
 		98B57EA0207C748600F238C0 /* Timer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Timer.hpp; sourceTree = "<group>"; };
@@ -119,6 +125,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9894E5E32118BFC300FB0F46 /* libmetis.dylib in Frameworks */,
 				98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */,
 				988D81BF20AA99120037737D /* libglfw3.a in Frameworks */,
 				988D81BD20AA99060037737D /* libtriangle.a in Frameworks */,
@@ -191,6 +198,8 @@
 		988ED1261F57211500B21181 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9894E5E22118BFC300FB0F46 /* libmetis.dylib */,
+				9894E5DD2113B7EC00FB0F46 /* libmetis.a */,
 				98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */,
 				988D81BE20AA99120037737D /* libglfw3.a */,
 				988D81BA20AA98ED0037737D /* libigl_stb_image.dylib */,
@@ -259,6 +268,8 @@
 				98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */,
 				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
 				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
+				9894E5DF2114F4E100FB0F46 /* METIS.cpp */,
+				9894E5E02114F4E100FB0F46 /* METIS.hpp */,
 				98B57EA0207C748600F238C0 /* Timer.hpp */,
 				98FD37F51F98806B00C83AAC /* GIF.hpp */,
 				983E7DB3202240D900412128 /* Diagnostic.hpp */,
@@ -355,6 +366,7 @@
 				98E6E69820E2C00300130500 /* DADMMTimeStepper.cpp in Sources */,
 				988ED12F1F5727F400B21181 /* TriangleSoup.cpp in Sources */,
 				980180BC1F552CDA00C64B43 /* main.cpp in Sources */,
+				9894E5E12114F4E100FB0F46 /* METIS.cpp in Sources */,
 				98E6E68520DB110000130500 /* AnimScripter.cpp in Sources */,
 				987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */,
 				98D3E7D51F75AEC6000DA61D /* CohesiveEnergy.cpp in Sources */,
