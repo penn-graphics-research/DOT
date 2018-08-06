@@ -85,7 +85,7 @@ namespace FracCuts{
                      const Eigen::MatrixXd& UV_mesh, const Eigen::MatrixXi& FUV_mesh = Eigen::MatrixXi(),
                      bool separateTri = true, double p_initSeamLen = 0.0, double p_areaThres_AM = 0.0);
         
-        TriangleSoup(Primitive primitive, double size = 1.0, double spacing = 0.1, bool separateTri = true);
+        TriangleSoup(Primitive primitive, double size = 1.0, int elemAmt = 1000, bool separateTri = true);
         
     public: // API
         void computeFeatures(bool multiComp = false, bool resetFixedV = false);

@@ -1314,12 +1314,13 @@ int main(int argc, char *argv[])
     }
     else if(suffix == ".primitive") {
         loadSucceed = !config.loadFromFile(meshFilePath);
-        double spacing = config.size / std::sqrt(config.resolution / 2.0);
-        FracCuts::TriangleSoup primitive(FracCuts::Primitive::P_GRID, config.size, spacing, false);
-        V = primitive.V_rest;
-        UV = primitive.V;
-        F = primitive.F;
-        borderVerts_primitive = primitive.borderVerts_primitive;
+        if(loadSucceed) {
+            FracCuts::TriangleSoup primitive(config.shapeType, config.size, config.resolution, false);
+            V = primitive.V_rest;
+            UV = primitive.V;
+            F = primitive.F;
+            borderVerts_primitive = primitive.borderVerts_primitive;
+        }
     }
     else {
         std::cout << "unkown mesh file format!" << std::endl;

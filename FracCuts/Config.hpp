@@ -35,6 +35,7 @@ namespace FracCuts {
     public:
         EnergyType energyType;
         TimeStepperType timeStepperType;
+        Primitive shapeType;
         int resolution;
         double size;
         double duration, dt;
@@ -44,6 +45,7 @@ namespace FracCuts {
     public:
         static const std::vector<std::string> energyTypeStrs;
         static const std::vector<std::string> timeStepperTypeStrs;
+        static const std::vector<std::string> shapeTypeStrs;
         
     public:
         Config(void);
@@ -57,6 +59,8 @@ namespace FracCuts {
         static std::string getStrByEnergyType(EnergyType energyType);
         static TimeStepperType getTimeStepperTypeByStr(const std::string& str);
         static std::string getStrByTimeStepperType(TimeStepperType timeStepperType);
+        static Primitive getShapeTypeByStr(const std::string& str);
+        static std::string getStrByShapeType(Primitive shapeType);
     };
     
 }

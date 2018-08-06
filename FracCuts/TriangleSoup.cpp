@@ -277,11 +277,12 @@ namespace FracCuts {
         }
     }
     
-    TriangleSoup::TriangleSoup(Primitive primitive, double size, double spacing, bool separateTri)
+    TriangleSoup::TriangleSoup(Primitive primitive, double size, int elemAmt, bool separateTri)
     {
         switch(primitive)
         {
             case P_GRID: {
+                double spacing = size / std::sqrt(elemAmt / 2.0);
                 assert(size >= spacing);
                 int gridSize = static_cast<int>(size / spacing) + 1;
                 spacing = size / (gridSize - 1);
@@ -321,6 +322,7 @@ namespace FracCuts {
             }
                 
             case P_SQUARE: {
+                double spacing = size / std::sqrt(elemAmt / 2.0);
                 assert(size >= spacing);
                 int gridSize = static_cast<int>(size / spacing) + 1;
                 spacing = size / (gridSize - 1);
@@ -369,7 +371,7 @@ namespace FracCuts {
                         borderVerts_primitive[0][gridSize - 2 - rowI];
                 }
                 
-                std::string flag("qQa" + std::to_string(spacing * spacing * std::sqrt(3) / 4.0));
+                std::string flag("qQa" + std::to_string(size * size / elemAmt * 1.1));
                 // "q" for high quality mesh generation
                 // "Q" for quiet mode (no output)
                 // "a" for area upper bound

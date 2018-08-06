@@ -20,9 +20,12 @@ namespace FracCuts {
     const std::vector<std::string> Config::timeStepperTypeStrs = {
         "Newton", "ADMM", "DADMM", "ADMMDD"
     };
+    const std::vector<std::string> Config::shapeTypeStrs = {
+        "grid", "square", "cylinder"
+    };
     
     Config::Config(void) :
-    resolution(100), size(1.0), duration(10.0), dt(0.025), YM(100.0), PR(0.4)
+    resolution(100), size(1.0), duration(10.0), dt(0.025), YM(100.0), PR(0.4), shapeType(P_GRID)
     {}
     
     int Config::loadFromFile(const std::string& filePath)
@@ -61,6 +64,11 @@ namespace FracCuts {
                     ss >> type;
                     animScriptType = AnimScripter::getAnimScriptTypeByStr(type);
                 }
+                else if(token == "shape") {
+                    std::string type;
+                    ss >> type;
+                    shapeType = getShapeTypeByStr(type);
+                }
             }
             
             file.close();
@@ -74,7 +82,8 @@ namespace FracCuts {
     
     void Config::appendInfoStr(std::string& inputStr) const
     {
-        inputStr += (AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
+        inputStr += (getStrByShapeType(shapeType) + "_" +
+                     AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
                      getStrByEnergyType(energyType) + "_" +
                      IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR)) + "_" +
                      getStrByTimeStepperType(timeStepperType) + "_" +
@@ -110,6 +119,21 @@ namespace FracCuts {
     {
         assert(timeStepperType < timeStepperTypeStrs.size());
         return timeStepperTypeStrs[timeStepperType];
+    }
+    Primitive Config::getShapeTypeByStr(const std::string& str)
+    {
+        for(int i = 0; i < shapeTypeStrs.size(); i++) {
+            if(str == shapeTypeStrs[i]) {
+                return Primitive(i);
+            }
+        }
+        std::cout << "use default shape: grid" << std::endl;
+        return P_GRID;
+    }
+    std::string Config::getStrByShapeType(Primitive shapeType)
+    {
+        assert(shapeType < shapeTypeStrs.size());
+        return shapeTypeStrs[shapeType];
     }
     
 }
