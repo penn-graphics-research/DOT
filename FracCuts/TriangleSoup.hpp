@@ -22,6 +22,7 @@ namespace FracCuts{
     {
         P_GRID,
         P_SQUARE,
+        P_SPIKES,
         P_CYLINDER
     };
     class Scaffold;

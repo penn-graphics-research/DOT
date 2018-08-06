@@ -54,12 +54,13 @@ namespace FracCuts {
         // init other parameters
         epart.resize(ne);
         npart.resize(nn);
-        std::vector<idx_t> ewgt(ne, 1); // element weights
+        std::vector<idx_t> ewgt(ne, 1); // element weights, computational cost
         std::vector<real_t> tpwgts(nparts, 1.0 / nparts); // part weights
         idx_t objval;
         
         int status = METIS_PartMeshDual(&ne, &nn, eptr.data(), eind.data(),
-                                        ewgt.data(), NULL, &params.ncommon, &params.nparts,
+                                        ewgt.data(), NULL, // communication cost
+                                        &params.ncommon, &params.nparts,
                                         tpwgts.data(), options, &objval, epart.data(), npart.data());
         
         switch(status) {

@@ -279,6 +279,9 @@ namespace FracCuts {
     
     TriangleSoup::TriangleSoup(Primitive primitive, double size, int elemAmt, bool separateTri)
     {
+        assert(size > 0.0);
+        assert(elemAmt > 0);
+        
         switch(primitive)
         {
             case P_GRID: {
@@ -382,6 +385,45 @@ namespace FracCuts {
                 V_rest.leftCols(2) = V;
                 V_rest.rightCols(1).setZero();
                 
+                break;
+            }
+                
+            case P_SPIKES: {
+                Eigen::MatrixXd UV_bnds(7, 2);
+                UV_bnds <<
+                    0.0, 0.0,
+                    1.0, 0.0,
+                    0.8, 0.7,
+                    1.0, 1.0,
+                    0.7, 0.9,
+                    0.0, 1.0,
+                    0.25, 0.4;
+                UV_bnds *= size;
+                
+                borderVerts_primitive.resize(2);
+                borderVerts_primitive[0].emplace_back(0);
+                borderVerts_primitive[0].emplace_back(6);
+                borderVerts_primitive[0].emplace_back(5);
+                borderVerts_primitive[1].emplace_back(1);
+                borderVerts_primitive[1].emplace_back(2);
+                borderVerts_primitive[1].emplace_back(3);
+                
+                Eigen::MatrixXi E(UV_bnds.rows(), 2);
+                for(int i = 0; i < E.rows(); i++) {
+                    E.row(i) << i, i + 1;
+                }
+                E(E.rows() - 1, 1) = 0;
+                
+                std::string flag("qQa" + std::to_string(size * size * 0.725 / elemAmt * 1.1));
+                // "q" for high quality mesh generation
+                // "Q" for quiet mode (no output)
+                // "a" for area upper bound
+                
+                igl::triangle::triangulate(UV_bnds, E, Eigen::MatrixXd(), flag, V, F);
+                
+                V_rest.resize(V.rows(), 3);
+                V_rest.leftCols(2) = V;
+                V_rest.rightCols(1).setZero();
                 break;
             }
                 
