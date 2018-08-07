@@ -50,6 +50,7 @@ namespace FracCuts {
         
     public:
         void setAnimScriptType(AnimScriptType p_animScriptType);
+        //TODO: set velocity according to shape size
         
     public:
         static AnimScriptType getAnimScriptTypeByStr(const std::string& str);

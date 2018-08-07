@@ -21,7 +21,7 @@ namespace FracCuts {
         "Newton", "ADMM", "DADMM", "ADMMDD"
     };
     const std::vector<std::string> Config::shapeTypeStrs = {
-        "grid", "square", "spikes", "cylinder"
+        "grid", "square", "spikes", "Sharkey", "cylinder"
     };
     
     Config::Config(void) :
