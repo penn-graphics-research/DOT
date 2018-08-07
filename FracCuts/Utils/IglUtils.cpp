@@ -829,4 +829,20 @@ namespace FracCuts {
             }
         }
     }
+    
+    void IglUtils::sampleSegment(const Eigen::RowVectorXd& vs,
+                                 const Eigen::RowVectorXd& ve,
+                                 double spacing,
+                                 Eigen::MatrixXd& inBetween)
+    {
+        Eigen::RowVectorXd stepVec = (ve - vs);
+        int segAmt = stepVec.norm() / spacing + 1;
+        assert(segAmt > 1);
+        stepVec /= segAmt;
+        inBetween.resize(segAmt - 1, vs.size());
+        for(int i = 0; i < segAmt - 1; i++) {
+            inBetween.row(i) = vs + (i + 1) * stepVec;
+        }
+    }
+    
 }

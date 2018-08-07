@@ -389,8 +389,8 @@ namespace FracCuts {
             }
                 
             case P_SPIKES: {
-                Eigen::MatrixXd UV_bnds(7, 2);
-                UV_bnds <<
+                Eigen::MatrixXd UV_bnds_temp(7, 2);
+                UV_bnds_temp <<
                     0.0, 0.0,
                     1.0, 0.0,
                     0.8, 0.7,
@@ -398,15 +398,54 @@ namespace FracCuts {
                     0.7, 0.9,
                     0.0, 1.0,
                     0.25, 0.4;
-                UV_bnds *= size;
+                UV_bnds_temp *= size;
+                
+                double spacing = std::sqrt(size * size * 0.725 / elemAmt * 4.0 / std::sqrt(3.0));
+                Eigen::MatrixXd inBetween1, inBetween2, inBetween5, inBetween6;
+                IglUtils::sampleSegment(UV_bnds_temp.row(1), UV_bnds_temp.row(2), spacing, inBetween1);
+                IglUtils::sampleSegment(UV_bnds_temp.row(2), UV_bnds_temp.row(3), spacing, inBetween2);
+                IglUtils::sampleSegment(UV_bnds_temp.row(5), UV_bnds_temp.row(6), spacing, inBetween5);
+                IglUtils::sampleSegment(UV_bnds_temp.row(6), UV_bnds_temp.row(0), spacing, inBetween6);
+                
+                Eigen::MatrixXd UV_bnds(UV_bnds_temp.rows() + inBetween1.rows() + inBetween2.rows() +
+                                        inBetween5.rows() + inBetween6.rows(), 2);
+                UV_bnds <<
+                    UV_bnds_temp.row(0),
+                    UV_bnds_temp.row(1),
+                    inBetween1,
+                    UV_bnds_temp.row(2),
+                    inBetween2,
+                    UV_bnds_temp.row(3),
+                    UV_bnds_temp.row(4),
+                    UV_bnds_temp.row(5),
+                    inBetween5,
+                    UV_bnds_temp.row(6),
+                    inBetween6;
                 
                 borderVerts_primitive.resize(2);
+                
                 borderVerts_primitive[0].emplace_back(0);
-                borderVerts_primitive[0].emplace_back(6);
-                borderVerts_primitive[0].emplace_back(5);
+                for(int i = 0; i < inBetween6.rows(); i++) {
+                    borderVerts_primitive[0].emplace_back(6 + inBetween1.rows() + inBetween2.rows() +
+                                                          inBetween5.rows() + inBetween6.rows() - i);
+                }
+                borderVerts_primitive[0].emplace_back(6 + inBetween1.rows() + inBetween2.rows() +
+                                                      inBetween5.rows());
+                for(int i = 0; i < inBetween5.rows(); i++) {
+                    borderVerts_primitive[0].emplace_back(6 + inBetween1.rows() + inBetween2.rows() +
+                                                          inBetween5.rows() - 1 - i);
+                }
+                borderVerts_primitive[0].emplace_back(5 + inBetween1.rows() + inBetween2.rows());
+                
                 borderVerts_primitive[1].emplace_back(1);
-                borderVerts_primitive[1].emplace_back(2);
-                borderVerts_primitive[1].emplace_back(3);
+                for(int i = 0; i < inBetween1.rows(); i++) {
+                    borderVerts_primitive[1].emplace_back(1 + 1 + i);
+                }
+                borderVerts_primitive[1].emplace_back(2 + inBetween1.rows());
+                for(int i = 0; i < inBetween2.rows(); i++) {
+                    borderVerts_primitive[1].emplace_back(2 + inBetween1.rows() + 1 + i);
+                }
+                borderVerts_primitive[1].emplace_back(3 + inBetween1.rows() + inBetween2.rows());
                 
                 Eigen::MatrixXi E(UV_bnds.rows(), 2);
                 for(int i = 0; i < E.rows(); i++) {

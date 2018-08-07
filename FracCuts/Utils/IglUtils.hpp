@@ -128,6 +128,11 @@ namespace FracCuts {
         static void compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                              Eigen::MatrixXd& dU_div_dF,
                                              Eigen::MatrixXd& dV_div_dF);
+        
+        static void sampleSegment(const Eigen::RowVectorXd& vs,
+                                  const Eigen::RowVectorXd& ve,
+                                  double spacing,
+                                  Eigen::MatrixXd& inBetween);
     };
     
 }
