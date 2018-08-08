@@ -23,7 +23,10 @@ namespace FracCuts {
     {
         typedef LinSysSolver<vectorTypeI, vectorTypeS> Base;
         
-    protected:        
+    protected:
+        bool useDense;
+        Eigen::MatrixXd coefMtr_dense;
+        Eigen::LDLT<Eigen::MatrixXd> LDLT;
         Eigen::SparseMatrix<double> coefMtr;
         Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> simplicialLDLT;
         
@@ -47,6 +50,8 @@ namespace FracCuts {
         
         void solve(Eigen::VectorXd &rhs,
                    Eigen::VectorXd &result);
+        
+        double coeffMtr(int rowI, int colI) const;
     };
     
 }

@@ -14,6 +14,8 @@ namespace FracCuts {
     void EigenLibSolver<vectorTypeI, vectorTypeS>::set_type(int threadAmt, int _mtype, bool is_upper_half)
     {
         //TODO: support more matrix types, currently only SPD
+        useDense = false;
+        //TODO: move to base class and support for CHOLMOD
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
@@ -23,22 +25,33 @@ namespace FracCuts {
                                                                const std::vector<std::set<int>>& vNeighbor,
                                                                const std::set<int>& fixedVert)
     {
-        Base::set_pattern(II, JJ, SS, vNeighbor, fixedVert);
-        
-        //TODO: directly save into mtr
-        coefMtr.resize(Base::numRows, Base::numRows);
-        coefMtr.reserve(Base::ja.size());
-        Base::ia.array() -= 1.0;
-        Base::ja.array() -= 1.0;
-        memcpy(coefMtr.innerIndexPtr(), Base::ja.data(), Base::ja.size() * sizeof(Base::ja[0]));
-        memcpy(coefMtr.outerIndexPtr(), Base::ia.data(), Base::ia.size() * sizeof(Base::ia[0]));
+        if(useDense) {
+            Base::numRows = static_cast<int>(vNeighbor.size()) * 2;
+            coefMtr_dense.resize(Base::numRows, Base::numRows);
+        }
+        else {
+            Base::set_pattern(II, JJ, SS, vNeighbor, fixedVert);
+            
+            //TODO: directly save into mtr
+            coefMtr.resize(Base::numRows, Base::numRows);
+            coefMtr.reserve(Base::ja.size());
+            Base::ia.array() -= 1.0;
+            Base::ja.array() -= 1.0;
+            memcpy(coefMtr.innerIndexPtr(), Base::ja.data(), Base::ja.size() * sizeof(Base::ja[0]));
+            memcpy(coefMtr.outerIndexPtr(), Base::ia.data(), Base::ia.size() * sizeof(Base::ia[0]));
+        }
         
         update_a(II, JJ, SS);
     }
     template <typename vectorTypeI, typename vectorTypeS>
     void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr) //NOTE: mtr must be SPD
     {
-        coefMtr = mtr;
+        if(useDense) {
+            coefMtr_dense = Eigen::MatrixXd(mtr);
+        }
+        else {
+            coefMtr = mtr;
+        }
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
@@ -46,24 +59,41 @@ namespace FracCuts {
                                                             const vectorTypeI &JJ,
                                                             const vectorTypeS &SS)
     {
-        Base::update_a(II, JJ, SS);
-        
-        //TODO: directly save into coefMtr
-        memcpy(coefMtr.valuePtr(), Base::a.data(), Base::a.size() * sizeof(Base::a[0]));
+        if(useDense) {
+            coefMtr_dense.setZero();
+            for(int i = 0; i < II.size(); i++) {
+                coefMtr_dense(II[i], JJ[i]) += SS[i];
+            }
+        }
+        else {
+            Base::update_a(II, JJ, SS);
+            
+            //TODO: directly save into coefMtr
+            memcpy(coefMtr.valuePtr(), Base::a.data(), Base::a.size() * sizeof(Base::a[0]));
+        }
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
     void EigenLibSolver<vectorTypeI, vectorTypeS>::analyze_pattern(void)
     {
-        simplicialLDLT.analyzePattern(coefMtr);
-        assert(simplicialLDLT.info() == Eigen::Success);
+        if(!useDense) {
+            simplicialLDLT.analyzePattern(coefMtr);
+            assert(simplicialLDLT.info() == Eigen::Success);
+        }
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
     bool EigenLibSolver<vectorTypeI, vectorTypeS>::factorize(void)
     {
-        simplicialLDLT.factorize(coefMtr);
-        bool succeeded = (simplicialLDLT.info() == Eigen::Success);
+        bool succeeded = false;
+        if(useDense) {
+            LDLT.compute(coefMtr_dense);
+            succeeded = (LDLT.info() == Eigen::Success);
+        }
+        else {
+            simplicialLDLT.factorize(coefMtr);
+            succeeded = (simplicialLDLT.info() == Eigen::Success);
+        }
         assert(succeeded);
         return succeeded;
     }
@@ -72,8 +102,24 @@ namespace FracCuts {
     void EigenLibSolver<vectorTypeI, vectorTypeS>::solve(Eigen::VectorXd &rhs,
                                                          Eigen::VectorXd &result)
     {
-        result = simplicialLDLT.solve(rhs);
-        assert(simplicialLDLT.info() == Eigen::Success);
+        if(useDense) {
+            result = LDLT.solve(rhs);
+            assert(LDLT.info() == Eigen::Success);
+        }
+        else {
+            result = simplicialLDLT.solve(rhs);
+            assert(simplicialLDLT.info() == Eigen::Success);
+        }
+    }
+    
+    template <typename vectorTypeI, typename vectorTypeS>
+    double EigenLibSolver<vectorTypeI, vectorTypeS>::coeffMtr(int rowI, int colI) const {
+        if(useDense) {
+            return coefMtr_dense(rowI, colI);
+        }
+        else {
+            return Base::coeffMtr(rowI, colI);
+        }
     }
     
     template class EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>;
