@@ -266,7 +266,7 @@ namespace FracCuts {
                 writeMeshToFile(filePath_pre);
             }
         }
-        innerIterAmt += ADMMIterI;
+        innerIterAmt += ADMMIterI + 1;
         
         initWeights();
         

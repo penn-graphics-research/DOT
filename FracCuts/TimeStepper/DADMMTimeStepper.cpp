@@ -149,7 +149,7 @@ namespace FracCuts {
                 break;
             }
         }
-        innerIterAmt += ADMMIterI;
+        innerIterAmt += ADMMIterI + 1;
         
         return (ADMMIterI == ADMMIterAmt);
     }
