@@ -70,15 +70,35 @@ namespace FracCuts {
 #ifdef USE_METIS
             partitions.getElementList(subdomainI, elemList_subdomain[subdomainI]);
 #else
-            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
-            int triI_begin = subdomainTriAmt * subdomainI;
-            int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
-            if(subdomainI + 1 == mesh_subdomain.size()) {
-                triI_end = result.F.rows() - 1;
+            // partition according to face index
+//            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
+//            int triI_begin = subdomainTriAmt * subdomainI;
+//            int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
+//            if(subdomainI + 1 == mesh_subdomain.size()) {
+//                triI_end = result.F.rows() - 1;
+//            }
+//            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
+//                                                                        triI_begin,
+//                                                                        triI_end);
+            // grid test only:
+            int partitionWidth = std::sqrt(partitionAmt);
+            assert(partitionWidth * partitionWidth == partitionAmt);
+            int gridWidth = sqrt(result.F.rows() / 2);
+            assert(gridWidth * gridWidth == result.F.rows() / 2);
+            assert(gridWidth % partitionWidth == 0);
+            int innerWidth = gridWidth / partitionWidth;
+            int rowI = subdomainI / partitionWidth;
+            int colI = subdomainI % partitionWidth;
+            assert(result.F.rows() % partitionWidth == 0);
+            int triI_head = rowI * (result.F.rows() / partitionWidth) + colI * innerWidth * 2;
+            for(int innerRowI = 0; innerRowI < innerWidth; innerRowI++) {
+                for(int innerColI = 0; innerColI < innerWidth * 2; innerColI++) {
+                    int oldSize = elemList_subdomain[subdomainI].size();
+                    elemList_subdomain[subdomainI].conservativeResize(oldSize + 1);
+                    elemList_subdomain[subdomainI][oldSize] =
+                        triI_head + innerRowI * gridWidth * 2 + innerColI;
+                }
             }
-            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
-                                                                        triI_begin,
-                                                                        triI_end);
 #endif
             result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
                                     globalVIToLocal_subdomain[subdomainI]);
