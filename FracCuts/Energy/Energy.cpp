@@ -227,7 +227,7 @@ namespace FracCuts {
             
             compute_E(svd.singularValues(), energyValPerElem[triI]);
             if(!uniformWeight) {
-                energyValPerElem[triI] *= data.triArea[triI];
+                energyValPerElem[triI] *= data.triWeight[triI] * data.triArea[triI];
             }
         }
 #ifdef USE_TBB
@@ -271,7 +271,7 @@ namespace FracCuts {
             Eigen::VectorXd dE_div_dsigma;
             compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
             
-            const double w = data.triArea[triI];
+            const double w = data.triWeight[triI] * data.triArea[triI];
             for(int triVI = 0; triVI < 3; triVI++) {
                 gradient.segment(triVInd[triVI] * 2, 2) += w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
             }
@@ -345,7 +345,7 @@ namespace FracCuts {
             }
             
             // add up left term and right term
-            const double w = data.triArea[triI];
+            const double w = data.triWeight[triI] * data.triArea[triI];
             triHessians[triI] = w * (d2E_div_dx2_left + d2E_div_dx2_right);
             
             if(projectSPD) {
@@ -401,7 +401,7 @@ namespace FracCuts {
         
         compute_E(svd.singularValues(), energyVal);
         if(!uniformWeight) {
-            energyVal *= data.triArea[triI];
+            energyVal *= data.triWeight[triI] * data.triArea[triI];
         }
     }
     void Energy::computeGradientBySVD(const TriangleSoup& data, int triI,
@@ -432,7 +432,7 @@ namespace FracCuts {
         compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
         
         gradient.resize(6);
-        const double w = data.triArea[triI];
+        const double w = data.triWeight[triI] * data.triArea[triI];
         for(int triVI = 0; triVI < 3; triVI++) {
             gradient.segment(triVI * 2, 2) = w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
         }
@@ -491,7 +491,7 @@ namespace FracCuts {
         }
         
         // add up left term and right term
-        const double w = data.triArea[triI];
+        const double w = data.triWeight[triI] * data.triArea[triI];
         hessian = w * (d2E_div_dx2_left + d2E_div_dx2_right);
         
         if(projectSPD) {
@@ -510,7 +510,7 @@ namespace FracCuts {
         
         compute_E(svd.singularValues(), energyVal);
         if(!uniformWeight) {
-            energyVal *= data.triArea[triI];
+            energyVal *= data.triWeight[triI] * data.triArea[triI];
         }
     }
     void Energy::computeGradientBySVD_F(const TriangleSoup& data, int triI,
@@ -533,7 +533,7 @@ namespace FracCuts {
             gradient += dsigma_div_dF_vec.transpose() * dE_div_dsigma[dimI];
         }
         
-        const double w = data.triArea[triI];
+        const double w = data.triWeight[triI] * data.triArea[triI];
         gradient *= w;
     }
     void Energy::computeHessianBySVD_F(const TriangleSoup& data, int triI,
@@ -581,7 +581,7 @@ namespace FracCuts {
         }
         
         // add up left term and right term
-        const double w = data.triArea[triI];
+        const double w = data.triWeight[triI] * data.triArea[triI];
         hessian = w * (d2E_div_dF2_left + d2E_div_dF2_right);
         
         if(projectSPD) {

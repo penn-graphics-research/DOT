@@ -79,7 +79,7 @@ namespace FracCuts {
             const double sigmaProd = svd.singularValues().prod();
             const double log_sigmaProd = std::log(sigmaProd);
             
-            const double w = data.triArea[triI];
+            const double w = data.triWeight[triI] * data.triArea[triI];
             const double energyVal = w * (u / 2.0 * (sigma2Sum - svd.singularValues().size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd);
             err += energyVal;
         }

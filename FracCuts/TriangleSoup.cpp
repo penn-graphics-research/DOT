@@ -207,6 +207,7 @@ namespace FracCuts {
         
         computeFeatures(false, true);
         
+        triWeight = Eigen::VectorXd::Ones(F.rows());
         vertWeight = Eigen::VectorXd::Ones(V.rows());
         //TEST: compute gaussian curvature for regional seam placement
 //        vertWeight = Eigen::VectorXd::Ones(V.rows()) * 2.0 * M_PI;
@@ -543,6 +544,9 @@ namespace FracCuts {
             computeFeatures(false, true);
         }
         initSeamLen = 0.0;
+        
+        triWeight = Eigen::VectorXd::Ones(F.rows());
+        vertWeight = Eigen::VectorXd::Ones(V.rows());
     }
     
     void TriangleSoup::computeLaplacianMtr(void)

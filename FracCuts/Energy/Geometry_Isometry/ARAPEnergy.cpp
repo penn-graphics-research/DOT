@@ -44,6 +44,7 @@ namespace FracCuts {
             //TODO: change to AutoFlipSVD
             Eigen::JacobiSVD<Eigen::Matrix2d> svd(triMtrU * triMtrX.inverse(), Eigen::ComputeFullU | Eigen::ComputeFullV);
             const double w = x[1][0] * x[2][1] / 2.0;
+            //!!! currently does not support triangle weight
             if(triMtrU.determinant() < 0.0) {
                 energyValPerElem[triI] = w * ((svd.singularValues()[0] - 1.0) * (svd.singularValues()[0] - 1.0) +
                                               (-svd.singularValues()[1] - 1.0) * (-svd.singularValues()[1] - 1.0));
@@ -102,6 +103,7 @@ namespace FracCuts {
                 int vI_pre = (vI + 2) % 3;
                 const Eigen::Vector2d vec = cotVals(triI, vI_pre) * ((targetRotMtr * (x[vI] - x[vI_post])) -
                     (u[vI] - u[vI_post])); // this makes the solve to give search direction rather than new configuration as in [Liu et al. 2008]
+                //!!! currently does not support triangle weight
                 gradient.block(triVInd[vI] * 2, 0, 2, 1) -= vec;
                 gradient.block(triVInd[vI_post] * 2, 0, 2, 1) += vec;
             }
@@ -116,6 +118,7 @@ namespace FracCuts {
     void ARAPEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         precondMtr = data.LaplacianMtr;
+        //!!! currently does not support triangle weight
     }
     
     void ARAPEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const

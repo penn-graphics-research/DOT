@@ -65,6 +65,7 @@ namespace FracCuts{
         Eigen::Matrix<double, 2, 3> bbox;
 //        Eigen::MatrixXd cotVals; // cotangent values of rest triangle corners
         Eigen::VectorXd vertWeight; // for regional seam placement
+        Eigen::VectorXd triWeight; // for weighted stencil
         std::vector<std::vector<int>> borderVerts_primitive;
         
         // indices for fast access

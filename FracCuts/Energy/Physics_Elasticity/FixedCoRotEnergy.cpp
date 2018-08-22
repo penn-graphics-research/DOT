@@ -94,7 +94,7 @@ namespace FracCuts {
             const double sigmam12Sum = (svd.singularValues() - Eigen::Vector2d::Ones()).squaredNorm();
             const double sigmaProdm1 = svd.singularValues().prod() - 1.0;
             
-            const double w = data.triArea[triI];
+            const double w = data.triWeight[triI] * data.triArea[triI];
             const double energyVal = w * (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
             err += energyVal;
         }
