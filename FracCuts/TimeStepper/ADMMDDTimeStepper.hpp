@@ -19,6 +19,7 @@ namespace FracCuts {
         std::vector<Eigen::VectorXi> elemList_subdomain;
         std::vector<TriangleSoup> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
+        std::vector<std::map<int, int>> globalTriIToLocal_subdomain;
         std::vector<std::map<int, int>> globalVIToDual_subdomain;
         std::vector<Eigen::MatrixXd> xHat_subdomain;
         int dualDim;

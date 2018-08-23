@@ -11,6 +11,8 @@
 
 #include <Eigen/Eigen>
 
+#include <igl/massmatrix.h>
+
 #include <set>
 #include <array>
 
@@ -91,6 +93,7 @@ namespace FracCuts{
         TriangleSoup(Primitive primitive, double size = 1.0, int elemAmt = 1000, bool separateTri = true);
         
     public: // API
+        void computeMassMatrix(const igl::MassMatrixType type = igl::MASSMATRIX_TYPE_VORONOI);
         void computeFeatures(bool multiComp = false, bool resetFixedV = false);
         void updateFeatures(void);
         void resetFixedVert(const std::set<int>& p_fixedVert);
@@ -135,7 +138,9 @@ namespace FracCuts{
         void saveAsMesh(const std::string& filePath, bool scaleUV = false) const;
         
         void constructSubmesh(const Eigen::VectorXi& triangles,
-                              TriangleSoup& submesh, std::map<int, int>& globalVIToLocal) const;
+                              TriangleSoup& submesh,
+                              std::map<int, int>& globalVIToLocal,
+                              std::map<int, int>& globalTriIToLocal) const;
         
     public: // helper function
         void computeLaplacianMtr(void);

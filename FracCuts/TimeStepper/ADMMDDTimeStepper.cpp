@@ -54,6 +54,7 @@ namespace FracCuts {
         
         elemList_subdomain.resize(mesh_subdomain.size());
         globalVIToLocal_subdomain.resize(mesh_subdomain.size());
+        globalTriIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
         
 #ifdef USE_METIS
@@ -71,37 +72,38 @@ namespace FracCuts {
             partitions.getElementList(subdomainI, elemList_subdomain[subdomainI]);
 #else
             // partition according to face index
-//            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
-//            int triI_begin = subdomainTriAmt * subdomainI;
-//            int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
-//            if(subdomainI + 1 == mesh_subdomain.size()) {
-//                triI_end = result.F.rows() - 1;
-//            }
-//            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
-//                                                                        triI_begin,
-//                                                                        triI_end);
-            // grid test only:
-            int partitionWidth = std::sqrt(partitionAmt);
-            assert(partitionWidth * partitionWidth == partitionAmt);
-            int gridWidth = sqrt(result.F.rows() / 2);
-            assert(gridWidth * gridWidth == result.F.rows() / 2);
-            assert(gridWidth % partitionWidth == 0);
-            int innerWidth = gridWidth / partitionWidth;
-            int rowI = subdomainI / partitionWidth;
-            int colI = subdomainI % partitionWidth;
-            assert(result.F.rows() % partitionWidth == 0);
-            int triI_head = rowI * (result.F.rows() / partitionWidth) + colI * innerWidth * 2;
-            for(int innerRowI = 0; innerRowI < innerWidth; innerRowI++) {
-                for(int innerColI = 0; innerColI < innerWidth * 2; innerColI++) {
-                    int oldSize = elemList_subdomain[subdomainI].size();
-                    elemList_subdomain[subdomainI].conservativeResize(oldSize + 1);
-                    elemList_subdomain[subdomainI][oldSize] =
-                        triI_head + innerRowI * gridWidth * 2 + innerColI;
-                }
+            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
+            int triI_begin = subdomainTriAmt * subdomainI;
+            int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
+            if(subdomainI + 1 == mesh_subdomain.size()) {
+                triI_end = result.F.rows() - 1;
             }
+            elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
+                                                                        triI_begin,
+                                                                        triI_end);
+//            // grid test only:
+//            int partitionWidth = std::sqrt(partitionAmt);
+//            assert(partitionWidth * partitionWidth == partitionAmt);
+//            int gridWidth = sqrt(result.F.rows() / 2);
+//            assert(gridWidth * gridWidth == result.F.rows() / 2);
+//            assert(gridWidth % partitionWidth == 0);
+//            int innerWidth = gridWidth / partitionWidth;
+//            int rowI = subdomainI / partitionWidth;
+//            int colI = subdomainI % partitionWidth;
+//            assert(result.F.rows() % partitionWidth == 0);
+//            int triI_head = rowI * (result.F.rows() / partitionWidth) + colI * innerWidth * 2;
+//            for(int innerRowI = 0; innerRowI < innerWidth; innerRowI++) {
+//                for(int innerColI = 0; innerColI < innerWidth * 2; innerColI++) {
+//                    int oldSize = elemList_subdomain[subdomainI].size();
+//                    elemList_subdomain[subdomainI].conservativeResize(oldSize + 1);
+//                    elemList_subdomain[subdomainI][oldSize] =
+//                        triI_head + innerRowI * gridWidth * 2 + innerColI;
+//                }
+//            }
 #endif
             result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
-                                    globalVIToLocal_subdomain[subdomainI]);
+                                    globalVIToLocal_subdomain[subdomainI],
+                                    globalTriIToLocal_subdomain[subdomainI]);
             
             xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
         }
@@ -150,6 +152,46 @@ namespace FracCuts {
                 sharedVerts.tail(1) << vI;
             }
         }
+        
+        // find shared elements
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < result.F.rows(); triI++)
+#endif
+        {
+            std::vector<std::map<int, int>::iterator> mapper(mesh_subdomain.size());
+            double weight = 0.0;
+            for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+                mapper[subdomainI] = globalTriIToLocal_subdomain[subdomainI].find(triI);
+                if(mapper[subdomainI] != globalTriIToLocal_subdomain[subdomainI].end()) {
+                    weight += 1.0;
+                }
+            }
+            if(weight > 1.0) {
+                weight = 1.0 / weight;
+                for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+                    if(mapper[subdomainI] != globalTriIToLocal_subdomain[subdomainI].end()) {
+                        mesh_subdomain[subdomainI].triWeight[mapper[subdomainI]->second] = weight;
+                    }
+                }
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+        
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
+#else
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++)
+#endif
+        {
+            mesh_subdomain[subdomainI].computeMassMatrix();
+        }
+#ifdef USE_TBB
+        );
+#endif
         
         linSysSolver_subdomain.resize(mesh_subdomain.size());
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
