@@ -8,6 +8,7 @@
 
 #include "Energy.hpp"
 #include "IglUtils.hpp"
+#include "Timer.hpp"
 
 #include <igl/avg_edge_length.h>
 
@@ -19,6 +20,7 @@
 #include <iostream>
 
 extern std::ofstream logFile;
+extern Timer timer_temp;
 
 namespace FracCuts {
     
@@ -223,12 +225,16 @@ namespace FracCuts {
             (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = X0.inverse(); //TODO: this only need to be computed once
             
+            timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
+            timer_temp.stop();
             
+            timer_temp.start(1);
             compute_E(svd.singularValues(), energyValPerElem[triI]);
             if(!uniformWeight) {
                 energyValPerElem[triI] *= data.triWeight[triI] * data.triArea[triI];
             }
+            timer_temp.stop();
         }
 #ifdef USE_TBB
         );
@@ -263,8 +269,11 @@ namespace FracCuts {
             (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = X0.inverse(); //TODO: this only need to be computed once
             
+            timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+            timer_temp.stop();
             
+            timer_temp.start(1);
             Eigen::MatrixXd dsigma_div_dx;
             IglUtils::compute_dsigma_div_dx(svd, A, dsigma_div_dx);
             
@@ -275,6 +284,7 @@ namespace FracCuts {
             for(int triVI = 0; triVI < 3; triVI++) {
                 gradient.segment(triVInd[triVI] * 2, 2) += w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
             }
+            timer_temp.stop();
         }
         
         for(const auto fixedVI : data.fixedVert) {
@@ -311,8 +321,11 @@ namespace FracCuts {
             (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = X0.inverse(); //TODO: this only need to be computed once
             
+            timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+            timer_temp.stop();
             
+            timer_temp.start(1);
             // right term:
             Eigen::VectorXd dE_div_dsigma;
             compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
@@ -347,9 +360,12 @@ namespace FracCuts {
             // add up left term and right term
             const double w = data.triWeight[triI] * data.triArea[triI];
             triHessians[triI] = w * (d2E_div_dx2_left + d2E_div_dx2_right);
+            timer_temp.stop();
             
             if(projectSPD) {
+                timer_temp.start(2);
                 IglUtils::makePD(triHessians[triI]);
+                timer_temp.stop();
             }
             
             Eigen::VectorXi& vInd = vInds[triI];
@@ -363,6 +379,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+        timer_temp.start(3);
         for(int triI = 0; triI < data.F.rows(); triI++) {
             IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], 2, V, I, J);
         }
@@ -375,6 +392,7 @@ namespace FracCuts {
         }
         IglUtils::addDiagonalToMatrix(Eigen::VectorXd::Ones(data.fixedVert.size() * 2),
                                       fixedVertInd, 2, V, I, J);
+        timer_temp.stop();
     }
     
     void Energy::computeEnergyValBySVD(const TriangleSoup& data, int triI,

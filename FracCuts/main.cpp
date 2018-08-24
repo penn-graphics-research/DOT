@@ -94,7 +94,7 @@ bool showFixedVerts = true; //TODO: add key control
 float fracTailSize = 20.0f;
 double secPast = 0.0;
 time_t lastStart_world;
-Timer timer, timer_step;
+Timer timer, timer_step, timer_temp;
 bool offlineMode = false;
 bool autoSwitch = false;
 bool saveInfo_postDraw = false;
@@ -412,7 +412,8 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
         " topo" << timer.timing(0) << " desc" << timer.timing(1) << " scaf" << timer.timing(2) << " enUp" << timer.timing(3) <<
         " mtrComp" << timer_step.timing(0) << " mtrAssem" << timer_step.timing(1) << " symFac" << timer_step.timing(2) <<
         " numFac" << timer_step.timing(3) << " backSolve" << timer_step.timing(4) << " lineSearch" << timer_step.timing(5) <<
-        " bSplit" << timer_step.timing(6) << " iSplit" << timer_step.timing(7) << " cMerge" << timer_step.timing(8) << std::endl;
+        " bSplit" << timer_step.timing(6) << " iSplit" << timer_step.timing(7) << " cMerge" << timer_step.timing(8) <<
+        " SVD" << timer_temp.timing(0) << " derivComp" << timer_temp.timing(1) << " SPD" << timer_temp.timing(2) << " blk2Mtr" << timer_temp.timing(3) << std::endl;
     
     double seamLen;
     if(energyParams[0] == 1.0) {
@@ -1478,6 +1479,11 @@ int main(int argc, char *argv[])
     timer_step.new_activity("boundarySplit");
     timer_step.new_activity("interiorSplit");
     timer_step.new_activity("cornerMerge");
+    
+    timer_temp.new_activity("SVD");
+    timer_temp.new_activity("derivComp");
+    timer_temp.new_activity("SPD");
+    timer_temp.new_activity("blk2Mtr");
     
     // * Our approach
 //    texScale = 10.0 / (triSoup[0]->bbox.row(1) - triSoup[0]->bbox.row(0)).maxCoeff();
