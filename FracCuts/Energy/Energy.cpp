@@ -211,19 +211,10 @@ namespace FracCuts {
         {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, Xt, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            Eigen::Matrix2d Xt, A;
             Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = X0.inverse(); //TODO: this only need to be computed once
+                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            A = data.restTriInv[triI]; //TODO: this only need to be computed once
             
             timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
@@ -255,19 +246,10 @@ namespace FracCuts {
         for(int triI = 0; triI < data.F.rows(); triI++) {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, Xt, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            Eigen::Matrix2d Xt, A;
             Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = X0.inverse(); //TODO: this only need to be computed once
+                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            A = data.restTriInv[triI]; //TODO: this only need to be computed once
             
             timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
@@ -307,19 +289,10 @@ namespace FracCuts {
         {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, Xt, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            Eigen::Matrix2d Xt, A;
             Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-            (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = X0.inverse(); //TODO: this only need to be computed once
+                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            A = data.restTriInv[triI]; //TODO: this only need to be computed once
             
             timer_temp.start(0);
             AutoFlipSVD<Eigen::MatrixXd> svd(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
