@@ -24,11 +24,9 @@ namespace FracCuts {
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
                                              Eigen::MatrixXd& d2E_div_dsigma2) const;
-        
-        virtual void computeGradientByPK(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
-        virtual void computeHessianByPK(const TriangleSoup& data, Eigen::VectorXd* V,
-                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
-                                        bool projectSPD = true) const;
+        virtual void compute_dE_div_dF(const Eigen::MatrixXd& F,
+                                       const AutoFlipSVD<Eigen::MatrixXd>& svd,
+                                       Eigen::MatrixXd& dE_div_dF) const;
         
         virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
         

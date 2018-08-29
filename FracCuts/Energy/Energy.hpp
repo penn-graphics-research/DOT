@@ -10,6 +10,7 @@
 #define Energy_hpp
 
 #include "TriangleSoup.hpp"
+#include "AutoFlipSVD.hpp"
 
 namespace FracCuts {
     
@@ -91,6 +92,9 @@ namespace FracCuts {
                                            Eigen::VectorXd& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
                                              Eigen::MatrixXd& d2E_div_dsigma2) const;
+        virtual void compute_dE_div_dF(const Eigen::MatrixXd& F,
+                                       const AutoFlipSVD<Eigen::MatrixXd>& svd,
+                                       Eigen::MatrixXd& dE_div_dF) const;
         
         virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
         
