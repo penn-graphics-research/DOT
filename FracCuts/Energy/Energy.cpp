@@ -395,6 +395,17 @@ namespace FracCuts {
         timer_temp.stop();
     }
     
+    void Energy::computeGradientByPK(const TriangleSoup& data, Eigen::VectorXd& gradient) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    void Energy::computeHessianByPK(const TriangleSoup& data, Eigen::VectorXd* V,
+                                    Eigen::VectorXi* I, Eigen::VectorXi* J,
+                                    bool projectSPD) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    
     void Energy::computeEnergyValBySVD(const TriangleSoup& data, int triI,
                                        const Eigen::VectorXd& x,
                                        double& energyVal,

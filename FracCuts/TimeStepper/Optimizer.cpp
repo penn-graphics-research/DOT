@@ -1012,6 +1012,7 @@ namespace FracCuts {
 #ifndef STATIC_SOLVE
         targetGRes *= dtSq * dtSq;
 #endif
+        targetGRes = 1.0e-10;
     }
     
     void Optimizer::getGradientVisual(Eigen::MatrixXd& arrowVec) const
@@ -1143,11 +1144,11 @@ namespace FracCuts {
     {
         if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeGradient(data, gradient_ET[0]);
-        energyTerms[0]->computeGradientBySVD(data, gradient_ET[0]);
+        energyTerms[0]->computeGradientByPK(data, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
 //            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
-            energyTerms[eI]->computeGradientBySVD(data, gradient_ET[eI]);
+            energyTerms[eI]->computeGradientByPK(data, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
@@ -1182,7 +1183,7 @@ namespace FracCuts {
             Eigen::VectorXi I_eI, J_eI;
             Eigen::VectorXd V_eI;
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-            energyTerms[eI]->computeHessianBySVD(data, &V_eI, &I_eI, &J_eI);
+            energyTerms[eI]->computeHessianByPK(data, &V_eI, &I_eI, &J_eI);
             V_eI *= energyParams[eI] * dtSq;
             I.conservativeResize(I.size() + I_eI.size());
             I.bottomRows(I_eI.size()) = I_eI;

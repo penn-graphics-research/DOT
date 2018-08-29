@@ -56,6 +56,11 @@ namespace FracCuts {
                                          Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                          bool projectSPD = true) const;
         
+        virtual void computeGradientByPK(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
+        virtual void computeHessianByPK(const TriangleSoup& data, Eigen::VectorXd* V,
+                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
+                                        bool projectSPD = true) const;
+        
         virtual void computeEnergyValBySVD(const TriangleSoup& data, int triI,
                                            const Eigen::VectorXd& x,
                                            double& energyVal,
