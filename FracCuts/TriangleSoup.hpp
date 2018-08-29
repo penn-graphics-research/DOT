@@ -69,6 +69,7 @@ namespace FracCuts{
         Eigen::VectorXd vertWeight; // for regional seam placement
         Eigen::VectorXd triWeight; // for weighted stencil
         std::vector<std::vector<int>> borderVerts_primitive;
+        std::vector<Eigen::MatrixXd> restTriInv;
         
         // indices for fast access
         std::map<std::pair<int, int>, int> edge2Tri;

@@ -748,6 +748,7 @@ namespace FracCuts {
         
 //        igl::cotmatrix_entries(V_rest, F, cotVals);
         
+        restTriInv.resize(F.rows());
         triNormal.resize(F.rows(), 3);
         triArea.resize(F.rows());
         surfaceArea = 0.0;
@@ -765,6 +766,14 @@ namespace FracCuts {
             const Eigen::Vector3d& P1 = V_rest.row(triVInd[0]);
             const Eigen::Vector3d& P2 = V_rest.row(triVInd[1]);
             const Eigen::Vector3d& P3 = V_rest.row(triVInd[2]);
+            
+            Eigen::Vector3d x0_3D[3] = { P1, P2, P3 };
+            Eigen::Vector2d x0[3];
+            IglUtils::mapTriangleTo2D(x0_3D, x0);
+            Eigen::Matrix2d X0;
+            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            restTriInv[triI] = X0.inverse();
+            //TODO: support areaThres_AM
             
             const Eigen::Vector3d P2m1 = P2 - P1;
             const Eigen::Vector3d P3m1 = P3 - P1;
@@ -896,6 +905,8 @@ namespace FracCuts {
     
     void TriangleSoup::updateFeatures(void)
     {
+        // assumption: triangle shapes stay the same
+        
         const int nCE = static_cast<int>(boundaryEdge.size());
         boundaryEdge.conservativeResize(cohE.rows());
         edgeLen.conservativeResize(cohE.rows());
