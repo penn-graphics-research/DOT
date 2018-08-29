@@ -50,6 +50,16 @@ namespace FracCuts {
             }
         }
     }
+    void NeoHookeanEnergy::compute_dE_div_dF(const Eigen::MatrixXd& F,
+                                             const AutoFlipSVD<Eigen::MatrixXd>& svd,
+                                             Eigen::MatrixXd& dE_div_dF) const
+    {
+        const double J = svd.singularValues().prod();
+        Eigen::Matrix2d FInvT = svd.matrixU() *
+            Eigen::DiagonalMatrix<double, 2>(1.0 / svd.singularValues()[0], 1.0 / svd.singularValues()[1]) *
+            svd.matrixV().transpose();
+        dE_div_dF = u * (F - FInvT) + lambda * std::log(J) * FInvT;
+    }
     
     void NeoHookeanEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
     {
