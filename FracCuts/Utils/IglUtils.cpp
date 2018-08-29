@@ -742,16 +742,11 @@ namespace FracCuts {
     {
         dsigma_div_dx.resize(6, 2);
         
-        const double mA11mA21 = -A(0, 0) - A(1, 0);
-        const double mA12mA22 = -A(0, 1) - A(1, 1);
         for(int dimI = 0; dimI < 2; dimI++) {
-            Eigen::Matrix2d dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
-            dsigma_div_dx(0, dimI) = dsigma_div_dF(0, 0) * mA11mA21 + dsigma_div_dF(0, 1) * mA12mA22;
-            dsigma_div_dx(1, dimI) = dsigma_div_dF(1, 0) * mA11mA21 + dsigma_div_dF(1, 1) * mA12mA22;
-            dsigma_div_dx(2, dimI) = dsigma_div_dF(0, 0) * A(0, 0) + dsigma_div_dF(0, 1) * A(0, 1);
-            dsigma_div_dx(3, dimI) = dsigma_div_dF(1, 0) * A(0, 0) + dsigma_div_dF(1, 1) * A(0, 1);
-            dsigma_div_dx(4, dimI) = dsigma_div_dF(0, 0) * A(1, 0) + dsigma_div_dF(0, 1) * A(1, 1);
-            dsigma_div_dx(5, dimI) = dsigma_div_dF(1, 0) * A(1, 0) + dsigma_div_dF(1, 1) * A(1, 1);
+            Eigen::MatrixXd dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            Eigen::VectorXd result;
+            IglUtils::dF_div_dx_mult(dsigma_div_dF, A, result);
+            dsigma_div_dx.col(dimI) = result;
         }
     }
     
@@ -807,8 +802,22 @@ namespace FracCuts {
         Eigen::MatrixXd d2sigma_div_dF2;
         compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
         
-        //TODO: write into function, also replace gradient computation, PRECOMPUTE!
         Eigen::MatrixXd dF_div_dx;
+        compute_dF_div_dx(A, dF_div_dx);
+        
+        d2sigma_div_dx2.resize(6, 12);
+        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
+            for(int xI = 0; xI < 3; xI++) {
+                for(int xJ = 0; xJ < 3; xJ++) {
+                    d2sigma_div_dx2.block(xJ * 2, sigmaI * 6 + xI * 2, 2, 2) = dF_div_dx.block(xJ * 2, 0, 2, 4) * d2sigma_div_dF2.block(0, 4 * sigmaI, 4, 4) * dF_div_dx.block(xI * 2, 0, 2, 4).transpose();
+                }
+            }
+        }
+    }
+    
+    void IglUtils::compute_dF_div_dx(const Eigen::MatrixXd& A,
+                                     Eigen::MatrixXd& dF_div_dx)
+    {
         dF_div_dx.resize(6, 4);
         const double mA11mA21 = -A(0, 0) - A(1, 0);
         const double mA12mA22 = -A(0, 1) - A(1, 1);
@@ -819,15 +828,48 @@ namespace FracCuts {
             0.0, 0.0, A(0, 0), A(0, 1),
             A(1, 0), A(1, 1), 0.0, 0.0,
             0.0, 0.0, A(1, 0), A(1, 1);
+    }
+    void IglUtils::dF_div_dx_mult(const Eigen::MatrixXd& right,
+                                  const Eigen::MatrixXd& A,
+                                  Eigen::MatrixXd& result)
+    {
         
-        d2sigma_div_dx2.resize(6, 12);
-        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
-            for(int xI = 0; xI < 3; xI++) {
-                for(int xJ = 0; xJ < 3; xJ++) {
-                    d2sigma_div_dx2.block(xJ * 2, sigmaI * 6 + xI * 2, 2, 2) = dF_div_dx.block(xJ * 2, 0, 2, 4) * d2sigma_div_dF2.block(0, 4 * sigmaI, 4, 4) * dF_div_dx.block(xI * 2, 0, 2, 4).transpose();
-                }
-            }
+        assert(right.rows() == 4);
+        assert(right.cols() > 0);
+        
+        result.resize(6, right.cols());
+        
+        const double mA11mA21 = -A(0, 0) - A(1, 0);
+        const double mA12mA22 = -A(0, 1) - A(1, 1);
+
+        for(int colI = 0; colI < right.cols(); colI++) {
+            result.col(colI) <<
+                right(0, colI) * mA11mA21 + right(1, colI) * mA12mA22,
+                right(2, colI) * mA11mA21 + right(3, colI) * mA12mA22,
+                right(0, colI) * A(0, 0) + right(1, colI) * A(0, 1),
+                right(2, colI) * A(0, 0) + right(3, colI) * A(0, 1),
+                right(0, colI) * A(1, 0) + right(1, colI) * A(1, 1),
+                right(2, colI) * A(1, 0) + right(3, colI) * A(1, 1);
         }
+        
+    }
+    void IglUtils::dF_div_dx_mult(const Eigen::MatrixXd& right,
+                                  const Eigen::MatrixXd& A,
+                                  Eigen::VectorXd& result)
+    {
+        assert((right.rows() == 2) && (right.cols() == 2));
+        
+        const double mA11mA21 = -A(0, 0) - A(1, 0);
+        const double mA12mA22 = -A(0, 1) - A(1, 1);
+        
+        result.resize(6);
+        result <<
+            right(0, 0) * mA11mA21 + right(0, 1) * mA12mA22,
+            right(1, 0) * mA11mA21 + right(1, 1) * mA12mA22,
+            right(0, 0) * A(0, 0) + right(0, 1) * A(0, 1),
+            right(1, 0) * A(0, 0) + right(1, 1) * A(0, 1),
+            right(0, 0) * A(1, 0) + right(0, 1) * A(1, 1),
+            right(1, 0) * A(1, 0) + right(1, 1) * A(1, 1);
     }
     
     void IglUtils::sampleSegment(const Eigen::RowVectorXd& vs,

@@ -106,14 +106,13 @@ namespace FracCuts {
                 svd.matrixV().transpose();
             Eigen::Matrix2d P = w * (2 * u * (F - svd.matrixU() * svd.matrixV().transpose()) +
                                      lambda * (J - 1) * JFInvT);
-            const double mA11mA21 = -A(0, 0) - A(1, 0);
-            const double mA12mA22 = -A(0, 1) - A(1, 1);
-            gradient[triVInd[0] * 2] += P(0, 0) * mA11mA21 + P(0, 1) * mA12mA22;
-            gradient[triVInd[0] * 2 + 1] += P(1, 0) * mA11mA21 + P(1, 1) * mA12mA22;
-            gradient[triVInd[1] * 2] += P(0, 0) * A(0, 0) + P(0, 1) * A(0, 1);
-            gradient[triVInd[1] * 2 + 1] += P(1, 0) * A(0, 0) + P(1, 1) * A(0, 1);
-            gradient[triVInd[2] * 2] += P(0, 0) * A(1, 0) + P(0, 1) * A(1, 1);
-            gradient[triVInd[2] * 2 + 1] += P(1, 0) * A(1, 0) + P(1, 1) * A(1, 1);
+            
+            Eigen::VectorXd gradient_cont;
+            IglUtils::dF_div_dx_mult(P, A, gradient_cont);
+            
+            gradient.segment(triVInd[0] * 2, 2) += gradient_cont.segment(0, 2);
+            gradient.segment(triVInd[1] * 2, 2) += gradient_cont.segment(2, 2);
+            gradient.segment(triVInd[2] * 2, 2) += gradient_cont.segment(4, 2);
             //TODO: funtionalize it
             timer_temp.stop();
         }
@@ -127,7 +126,7 @@ namespace FracCuts {
                                               Eigen::VectorXi* I, Eigen::VectorXi* J,
                                               bool projectSPD) const
     {
-        std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
+        std::vector<Eigen::MatrixXd> triHessians(data.F.rows());
         std::vector<Eigen::VectorXi> vInds(data.F.rows());
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
@@ -167,7 +166,6 @@ namespace FracCuts {
                 timer_temp.stop();
                 timer_temp.start(1);
             }
-            //TODO: explore symmetry
             
             // compute B
             Eigen::Matrix2d B01;
@@ -216,42 +214,44 @@ namespace FracCuts {
                         int _2r = r * 2;
                         for(int s = 0; s < 2; s++) {
                             int rs = _2r + s;
-                            dP_div_dF(ij, rs) =
-                            (M(0, 0) * U(i, 0) * U(r, 0) * V(s, 0) * V(j, 0) +
-                             M(0, 3) * U(i, 0) * U(r, 1) * V(s, 1) * V(j, 0) +
-                             M(1, 1) * U(i, 0) * U(r, 0) * V(s, 1) * V(j, 1) +
-                             M(1, 2) * U(i, 0) * U(r, 1) * V(s, 0) * V(j, 1) +
-                             M(2, 1) * U(i, 1) * U(r, 0) * V(s, 1) * V(j, 0) +
-                             M(2, 2) * U(i, 1) * U(r, 1) * V(s, 0) * V(j, 0) +
-                             M(3, 0) * U(i, 1) * U(r, 0) * V(s, 0) * V(j, 1) +
-                             M(3, 3) * U(i, 1) * U(r, 1) * V(s, 1) * V(j, 1));
+                            if(ij < rs) {
+                                // upper right
+                                dP_div_dF(ij, rs) = dP_div_dF(rs, ij) =
+                                (M(0, 0) * U(i, 0) * U(r, 0) * V(s, 0) * V(j, 0) +
+                                 M(0, 3) * U(i, 0) * U(r, 1) * V(s, 1) * V(j, 0) +
+                                 M(1, 1) * U(i, 0) * U(r, 0) * V(s, 1) * V(j, 1) +
+                                 M(1, 2) * U(i, 0) * U(r, 1) * V(s, 0) * V(j, 1) +
+                                 M(2, 1) * U(i, 1) * U(r, 0) * V(s, 1) * V(j, 0) +
+                                 M(2, 2) * U(i, 1) * U(r, 1) * V(s, 0) * V(j, 0) +
+                                 M(3, 0) * U(i, 1) * U(r, 0) * V(s, 0) * V(j, 1) +
+                                 M(3, 3) * U(i, 1) * U(r, 1) * V(s, 1) * V(j, 1));
+                            }
+                            else if(ij == rs) {
+                                // diagonal
+                                dP_div_dF(ij, rs) =
+                                (M(0, 0) * U(i, 0) * U(r, 0) * V(s, 0) * V(j, 0) +
+                                 M(0, 3) * U(i, 0) * U(r, 1) * V(s, 1) * V(j, 0) +
+                                 M(1, 1) * U(i, 0) * U(r, 0) * V(s, 1) * V(j, 1) +
+                                 M(1, 2) * U(i, 0) * U(r, 1) * V(s, 0) * V(j, 1) +
+                                 M(2, 1) * U(i, 1) * U(r, 0) * V(s, 1) * V(j, 0) +
+                                 M(2, 2) * U(i, 1) * U(r, 1) * V(s, 0) * V(j, 0) +
+                                 M(3, 0) * U(i, 1) * U(r, 0) * V(s, 0) * V(j, 1) +
+                                 M(3, 3) * U(i, 1) * U(r, 1) * V(s, 1) * V(j, 1));
+                            }
+                            else {
+                                // bottom left, same as upper right
+                                continue;
+                            }
                         }
                     }
                 }
             }
-            
-            // compute dF_div_dx
-            Eigen::MatrixXd dF_div_dx(6, 4);
-            const double mA11mA21 = -A(0, 0) - A(1, 0);
-            const double mA12mA22 = -A(0, 1) - A(1, 1);
-            dF_div_dx <<
-            mA11mA21, mA12mA22, 0.0, 0.0,
-            0.0, 0.0, mA11mA21, mA12mA22,
-            A(0, 0), A(0, 1), 0.0, 0.0,
-            0.0, 0.0, A(0, 0), A(0, 1),
-            A(1, 0), A(1, 1), 0.0, 0.0,
-            0.0, 0.0, A(1, 0), A(1, 1);
-            //TODO: functionalize to avoid multiplying zero
-            
+   
             const double w = data.triWeight[triI] * data.triArea[triI];
-            triHessians[triI] = w * (dF_div_dx * (dP_div_dF * dF_div_dx.transpose()));
+            Eigen::MatrixXd wdP_div_dx;
+            IglUtils::dF_div_dx_mult(w * dP_div_dF.transpose(), A, wdP_div_dx);
+            IglUtils::dF_div_dx_mult(wdP_div_dx.transpose(), A, triHessians[triI]);
             timer_temp.stop();
-            
-//            if(projectSPD) {
-//                timer_temp.start(2);
-//                IglUtils::makePD(triHessians[triI]);
-//                timer_temp.stop();
-//            }
             
             Eigen::VectorXi& vInd = vInds[triI];
             vInd = triVInd;

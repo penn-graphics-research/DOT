@@ -129,6 +129,15 @@ namespace FracCuts {
                                              Eigen::MatrixXd& dU_div_dF,
                                              Eigen::MatrixXd& dV_div_dF);
         
+        static void compute_dF_div_dx(const Eigen::MatrixXd& A,
+                                      Eigen::MatrixXd& dF_div_dx);
+        static void dF_div_dx_mult(const Eigen::MatrixXd& right,
+                                   const Eigen::MatrixXd& A,
+                                   Eigen::MatrixXd& result);
+        static void dF_div_dx_mult(const Eigen::MatrixXd& right,
+                                   const Eigen::MatrixXd& A,
+                                   Eigen::VectorXd& result);
+        
         static void sampleSegment(const Eigen::RowVectorXd& vs,
                                   const Eigen::RowVectorXd& ve,
                                   double spacing,
