@@ -82,6 +82,45 @@ namespace FracCuts {
             }
             symMtr = eigenSolver.eigenvectors() * D * eigenSolver.eigenvectors().transpose();
         }
+        template<typename Scalar, int size>
+        static void makePD2d(Eigen::Matrix<Scalar, size, size>& symMtr)
+        {
+            // based on http://www.math.harvard.edu/archive/21b_fall_04/exhibits/2dmatrices/
+            
+            if(size == Eigen::Dynamic) {
+                assert(symMtr.rows() == 2);
+            }
+            else {
+                assert(size == 2);
+            }
+            
+            const double a = symMtr(0, 0);
+            const double b = (symMtr(0, 1) + symMtr(1, 0)) / 2.0;
+            const double d = symMtr(1, 1);
+            
+            double b2 = b * b;
+            const double D = a * d - b2;
+            const double T = a + d;
+            const double L2 = T / 2.0 - std::sqrt(T * T / 4.0 - D);
+            if(L2 < 0.0) {
+                const double L1 = T / 2.0 + std::sqrt(T * T / 4.0 - D);
+                if(L1 < 0.0) {
+                    symMtr.setZero();
+                }
+                else {
+                    if(b2 == 0.0) {
+                        symMtr << L1, 0.0, 0.0 ,0.0;
+                    }
+                    else {
+                        const double L1md = L1 - d;
+                        const double L1md_div_L1 = L1md / L1;
+                        symMtr(0, 0) = L1md_div_L1 * L1md;
+                        symMtr(0, 1) = symMtr(1, 0) = b * L1md_div_L1;
+                        symMtr(1, 1) = b2 / L1;
+                    }
+                }
+            }
+        }
         
         static void writeSparseMatrixToFile(const std::string& filePath, const Eigen::SparseMatrix<double>& mtr, bool MATLAB = false);
         static void writeSparseMatrixToFile(const std::string& filePath, const Eigen::VectorXi& I, const Eigen::VectorXi& J,

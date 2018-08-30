@@ -445,8 +445,9 @@ namespace FracCuts {
         assert(tripletInd == V->size());
     }
     
-    void IglUtils::writeSparseMatrixToFile(const std::string& filePath, const Eigen::VectorXi& I, const Eigen::VectorXi& J,
-                                        const Eigen::VectorXd& V, bool MATLAB)
+    void IglUtils::writeSparseMatrixToFile(const std::string& filePath,
+                                           const Eigen::VectorXi& I, const Eigen::VectorXi& J,
+                                           const Eigen::VectorXd& V, bool MATLAB)
     {
         assert(I.size() == J.size());
         assert(V.size() == I.size());

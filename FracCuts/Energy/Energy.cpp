@@ -438,7 +438,7 @@ namespace FracCuts {
             if(projectSPD) {
                 timer_temp.stop();
                 timer_temp.start(2);
-                IglUtils::makePD(d2E_div_dsigma2);
+                IglUtils::makePD2d(d2E_div_dsigma2);
                 timer_temp.stop();
                 timer_temp.start(1);
             }
@@ -464,7 +464,7 @@ namespace FracCuts {
             if(projectSPD) {
                 timer_temp.stop();
                 timer_temp.start(2);
-                IglUtils::makePD(B01);
+                IglUtils::makePD2d(B01);
                 timer_temp.stop();
                 timer_temp.start(1);
             }
