@@ -10,7 +10,12 @@
 #define Energy_hpp
 
 #include "TriangleSoup.hpp"
+
+#ifdef USE_CLOSEDFORMSVD2D
+#include "ClosedFormSVD2d.hpp"
+#else
 #include "AutoFlipSVD.hpp"
+#endif
 
 namespace FracCuts {
     

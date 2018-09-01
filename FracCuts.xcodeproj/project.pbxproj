@@ -117,6 +117,7 @@
 		98E6E6A320E8046700130500 /* EigenLibSolver.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = EigenLibSolver.hpp; sourceTree = "<group>"; };
 		98E6E6A520F7C59700130500 /* Config.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Config.cpp; sourceTree = "<group>"; };
 		98E6E6A620F7C59700130500 /* Config.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Config.hpp; sourceTree = "<group>"; };
+		98EDD784213991A90065B715 /* ClosedFormSVD2d.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ClosedFormSVD2d.hpp; sourceTree = "<group>"; };
 		98FD37F51F98806B00C83AAC /* GIF.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = GIF.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -266,6 +267,7 @@
 			children = (
 				987382CB202902590040BBCE /* Types.hpp */,
 				98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */,
+				98EDD784213991A90065B715 /* ClosedFormSVD2d.hpp */,
 				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
 				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
 				9894E5DF2114F4E100FB0F46 /* METIS.cpp */,

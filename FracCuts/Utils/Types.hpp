@@ -16,6 +16,10 @@
 
 //#define USE_TBB
 
+//#define USE_METIS
+
+#define USE_CLOSEDFORMSVD2D
+
 namespace FracCuts {
     enum MethodType {
         MT_OURS,

@@ -9,8 +9,13 @@
 #ifndef IglUtils_hpp
 #define IglUtils_hpp
 
-#include "AutoFlipSVD.hpp"
 #include "TriangleSoup.hpp"
+
+#ifdef USE_CLOSEDFORMSVD2D
+#include "ClosedFormSVD2d.hpp"
+#else
+#include "AutoFlipSVD.hpp"
+#endif
 
 #include <Eigen/Eigen>
 
@@ -104,7 +109,7 @@ namespace FracCuts {
             const double L2 = T / 2.0 - std::sqrt(T * T / 4.0 - D);
             if(L2 < 0.0) {
                 const double L1 = T / 2.0 + std::sqrt(T * T / 4.0 - D);
-                if(L1 < 0.0) {
+                if(L1 <= 0.0) {
                     symMtr.setZero();
                 }
                 else {
