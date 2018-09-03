@@ -56,6 +56,7 @@ namespace FracCuts {
         globalVIToLocal_subdomain.resize(mesh_subdomain.size());
         globalTriIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
+        svd_subdomain.resize(mesh_subdomain.size());
         
 #ifdef USE_METIS
         METIS partitions(result);
@@ -106,6 +107,7 @@ namespace FracCuts {
                                     globalTriIToLocal_subdomain[subdomainI]);
             
             xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
+            svd_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].F.rows());
         }
 #ifdef USE_TBB
         );
@@ -236,7 +238,7 @@ namespace FracCuts {
         // for weights computation
         Eigen::VectorXi I, J;
         Eigen::VectorXd V;
-        computePrecondMtr(result, scaffold, I, J, V);
+        computePrecondMtr(result, scaffold, true, I, J, V);
         linSysSolver->set_type(1, 2);
         linSysSolver->set_pattern(I, J, V, result.vNeighbor, result.fixedVert);
         
@@ -294,7 +296,7 @@ namespace FracCuts {
             checkRes();
             boundaryConsensusSolve();
             
-            computeGradient(result, scaffold, gradient);
+            computeGradient(result, scaffold, true, gradient);
             double sqn_g = gradient.squaredNorm();
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
@@ -348,7 +350,7 @@ namespace FracCuts {
     void ADMMDDTimeStepper::initDual(void)
     {
         Eigen::VectorXd g;
-        computeGradient(result, scaffold, g); //TODO: only need to compute for shared vertices
+        computeGradient(result, scaffold, true, g); //TODO: only need to compute for shared vertices
         file_iterStats << globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
         
 #ifdef USE_TBB
@@ -379,7 +381,7 @@ namespace FracCuts {
     {
         Eigen::VectorXi I, J;
         Eigen::VectorXd V;
-        computePrecondMtr(result, scaffold, I, J, V);
+        computePrecondMtr(result, scaffold, true, I, J, V);
         linSysSolver->update_a(I, J, V); //TODO: only need to compute for shared vertices
         
         double multiplier = 1.0;
@@ -515,10 +517,11 @@ namespace FracCuts {
     }
     
     // subdomain energy computation
-    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, double& Ei) const
+    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, double& Ei)
     {
         // incremental potential:
-        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], Ei);
+        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], true,
+                                              svd_subdomain[subdomainI], Ei);
         Ei *= dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);

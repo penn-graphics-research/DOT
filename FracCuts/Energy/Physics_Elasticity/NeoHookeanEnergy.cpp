@@ -13,7 +13,8 @@ namespace FracCuts {
     
     void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        Energy::getEnergyValPerElemBySVD(data, energyValPerElem, uniformWeight);
+        std::vector<AutoFlipSVD<Eigen::MatrixXd>> svd(data.F.rows());
+        Energy::getEnergyValPerElemBySVD(data, true, svd, energyValPerElem, uniformWeight);
     }
     
     void NeoHookeanEnergy::compute_E(const Eigen::VectorXd& singularValues,

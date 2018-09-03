@@ -129,6 +129,7 @@ namespace FracCuts {
         setAnimScriptType(animScriptType);
         
         result = data0;
+        svd.resize(result.F.rows());
         animScripter.initAnimScript(result);
         resultV_n = result.V;
         if(scaffolding) {
@@ -142,7 +143,7 @@ namespace FracCuts {
         data_findExtrema = data0;
         updateTargetGRes();
         velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
-        computeEnergyVal(result, scaffold, lastEnergyVal);
+        computeEnergyVal(result, scaffold, true, lastEnergyVal);
         if(!mute) {
             writeEnergyValToFile(true);
             std::cout << "E_initial = " << lastEnergyVal << std::endl;
@@ -165,7 +166,7 @@ namespace FracCuts {
     
     void Optimizer::computeLastEnergyVal(void)
     {
-        computeEnergyVal(result, scaffold, lastEnergyVal);
+        computeEnergyVal(result, scaffold, true, lastEnergyVal);
     }
     
     TriangleSoup& Optimizer::getResult(void) {
@@ -255,7 +256,7 @@ namespace FracCuts {
     
     void Optimizer::precompute(void)
     {
-        computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
+        computePrecondMtr(result, scaffold, true, I_mtr, J_mtr, V_mtr);
         
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
@@ -288,7 +289,7 @@ namespace FracCuts {
             animScripter.stepAnimScript(result, dt);
 #endif
             if(!mute) { timer.start(1); }
-            computeGradient(result, scaffold, gradient);
+            computeGradient(result, scaffold, true, gradient);
             const double sqn_g = gradient.squaredNorm();
             if(!mute) {
                 std::cout << "||gradient||^2 = " << sqn_g << ", targetGRes = " << targetGRes << std::endl;
@@ -376,7 +377,7 @@ namespace FracCuts {
         if(!mute) {
             std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
         }
-        computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
+        computePrecondMtr(result, scaffold, true, I_mtr, J_mtr, V_mtr);
         
         if(!mute) { timer_step.start(1); }
 //            linSysSolver->update_a(V_mtr);
@@ -427,12 +428,12 @@ namespace FracCuts {
         
         if(updateEVal) {
             // compute energy and output
-            computeEnergyVal(result, scaffold, lastEnergyVal);
+            computeEnergyVal(result, scaffold, true, lastEnergyVal);
         }
         
         if(updateGradient) {
             // compute gradient and output
-            computeGradient(result, scaffold, gradient);
+            computeGradient(result, scaffold, false, gradient);
             if(gradient.squaredNorm() < targetGRes) {
                 logFile << "||g||^2 = " << gradient.squaredNorm() << " after fracture initiation!" << std::endl;
             }
@@ -443,7 +444,7 @@ namespace FracCuts {
             if(!mute) {
                 std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
             }
-            computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
+            computePrecondMtr(result, scaffold, false, I_mtr, J_mtr, V_mtr);
             
             if(!mute) { timer_step.start(1); }
 //                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
@@ -727,11 +728,11 @@ namespace FracCuts {
                 
             case 5: { // Jacobi
                 Eigen::VectorXd g;
-                computeGradient(result, scaffold, g);
+                computeGradient(result, scaffold, true, g);
                 
                 Eigen::VectorXi I, J;
                 Eigen::VectorXd V;
-                computePrecondMtr(result, scaffold, I, J, V);
+                computePrecondMtr(result, scaffold, false, I, J, V);
                 linSysSolver->update_a(I, J, V);
                 
 #ifdef USE_TBB
@@ -788,7 +789,7 @@ namespace FracCuts {
         initX(0);
         
         double sqn_g = __DBL_MAX__;
-        computeEnergyVal(result, scaffold, lastEnergyVal);
+        computeEnergyVal(result, scaffold, false, lastEnergyVal);
         do {
             if(solve_oneStep()) {
                 std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
@@ -796,7 +797,7 @@ namespace FracCuts {
                 return true;
             }
             innerIterAmt++;
-            computeGradient(result, scaffold, gradient);
+            computeGradient(result, scaffold, false, gradient);
             sqn_g = gradient.squaredNorm();
             if(!mute) {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
@@ -817,7 +818,7 @@ namespace FracCuts {
                 if(!mute) {
                     std::cout << "recompute proxy/Hessian matrix..." << std::endl;
                 }
-                computePrecondMtr(result, scaffold, I_mtr, J_mtr, V_mtr);
+                computePrecondMtr(result, scaffold, false, I_mtr, J_mtr, V_mtr);
             }
             
             if(!fractureInitiated) {
@@ -898,13 +899,13 @@ namespace FracCuts {
         if(scaffolding) {
 //            Scaffold tempp = scaffold;
             scaffoldV0 = scaffold.airMesh.V;
-            computeEnergyVal(result, scaffold, lastEnergyVal); // this update is necessary since scaffold changes
+            computeEnergyVal(result, scaffold, true, lastEnergyVal); // this update is necessary since scaffold changes
             lastEnergyVal_scaffold = energyVal_scaffold;
         }
         stepForward(resultV0, scaffoldV0, result, scaffold, stepSize);
         double testingE;
 //        Eigen::VectorXd testingG;
-        computeEnergyVal(result, scaffold, testingE);
+        computeEnergyVal(result, scaffold, true, testingE);
 //        computeGradient(testingData, testingG);
 #define ARMIJO_RULE
 #ifdef ARMIJO_RULE
@@ -924,7 +925,7 @@ namespace FracCuts {
             }
             
             stepForward(resultV0, scaffoldV0, result, scaffold, stepSize);
-            computeEnergyVal(result, scaffold, testingE);
+            computeEnergyVal(result, scaffold, true, testingE);
 //            computeGradient(testingData, testingG);
         }
 #endif
@@ -1108,15 +1109,16 @@ namespace FracCuts {
         buffer_gradientPerIter.clear();
     }
     
-    void Optimizer::computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold)
+    void Optimizer::computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                     bool redoSVD, double& energyVal, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
-        energyTerms[0]->computeEnergyValBySVD(data, energyVal_ET[0]);
+        energyTerms[0]->computeEnergyValBySVD(data, redoSVD, svd, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
 //            energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
-            energyTerms[eI]->computeEnergyValBySVD(data, energyVal_ET[eI]);
+            energyTerms[eI]->computeEnergyValBySVD(data, redoSVD, svd, energyVal_ET[eI]);
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         
@@ -1140,15 +1142,16 @@ namespace FracCuts {
 #endif
         if(!mute) { timer_step.stop(); }
     }
-    void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold)
+    void Optimizer::computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                    bool redoSVD, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeGradient(data, gradient_ET[0]);
-        energyTerms[0]->computeGradientByPK(data, gradient_ET[0]);
+        energyTerms[0]->computeGradientByPK(data, redoSVD, svd, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
 //            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
-            energyTerms[eI]->computeGradientByPK(data, gradient_ET[eI]);
+            energyTerms[eI]->computeGradientByPK(data, redoSVD, svd, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
@@ -1172,7 +1175,8 @@ namespace FracCuts {
         if(!mute) { timer_step.stop(); }
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
-                                      Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V)
+                                      bool redoSVD, Eigen::VectorXi& I, Eigen::VectorXi& J,
+                                      Eigen::VectorXd& V)
     {
         if(!mute) { timer_step.start(0); }
         I.resize(0);
@@ -1183,7 +1187,7 @@ namespace FracCuts {
             Eigen::VectorXi I_eI, J_eI;
             Eigen::VectorXd V_eI;
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-            energyTerms[eI]->computeHessianByPK(data, &V_eI, &I_eI, &J_eI);
+            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd, &V_eI, &I_eI, &J_eI);
             V_eI *= energyParams[eI] * dtSq;
             I.conservativeResize(I.size() + I_eI.size());
             I.bottomRows(I_eI.size()) = I_eI;

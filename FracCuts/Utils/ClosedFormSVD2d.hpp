@@ -3,6 +3,7 @@
 //  FracCuts
 //
 //  Created by Minchen Li on 8/31/18.
+//  based on https://www.researchgate.net/publication/263580188_Closed_Form_SVD_Solutions_for_2_x_2_Matrices_-_Rev_2
 //  Copyright © 2018 Minchen Li. All rights reserved.
 //
 
@@ -21,6 +22,7 @@ namespace FracCuts {
         typedef Eigen::JacobiSVD<MatrixType> Base;
         
     public:
+        AutoFlipSVD(void) {}
         AutoFlipSVD(const MatrixType& mtr, unsigned int computationOptions = 0) :
             Base(2, 2, computationOptions)
         {
@@ -183,6 +185,63 @@ namespace FracCuts {
             }
             
             return *this;
+        }
+        AutoFlipSVD& compute(const MatrixType& mtr, unsigned int computationOptions) {
+            if(MatrixType::RowsAtCompileTime == Eigen::Dynamic) {
+                assert(mtr.rows() == 2);
+            }
+            else {
+                assert(MatrixType::RowsAtCompileTime == 2);
+            }
+            
+            if(MatrixType::ColsAtCompileTime == Eigen::Dynamic) {
+                assert(mtr.cols() == 2);
+            }
+            else {
+                assert(MatrixType::ColsAtCompileTime == 2);
+            }
+            
+            allocate(computationOptions);
+            Base::m_isInitialized = true;
+            
+            compute(mtr);
+            
+            return *this;
+        }
+        
+    protected:
+        void allocate(unsigned int computationOptions)
+        {
+            if (Base::m_isAllocated &&
+                2 == Base::m_rows &&
+                2 == Base::m_cols &&
+                computationOptions == Base::m_computationOptions)
+            {
+                return;
+            }
+            
+            Base::m_rows = 2;
+            Base::m_cols = 2;
+            Base::m_isInitialized = false;
+            Base::m_isAllocated = true;
+            Base::m_computationOptions = computationOptions;
+            Base::m_computeFullU = (computationOptions & Eigen::ComputeFullU) != 0;
+            Base::m_computeThinU = (computationOptions & Eigen::ComputeThinU) != 0;
+            Base::m_computeFullV = (computationOptions & Eigen::ComputeFullV) != 0;
+            Base::m_computeThinV = (computationOptions & Eigen::ComputeThinV) != 0;
+            eigen_assert(!(Base::m_computeFullU && Base::m_computeThinU) &&
+                         "JacobiSVD: you can't ask for both full and thin U");
+            eigen_assert(!(Base::m_computeFullV && Base::m_computeThinV) &&
+                         "JacobiSVD: you can't ask for both full and thin V");
+            eigen_assert(EIGEN_IMPLIES(Base::m_computeThinU || Base::m_computeThinV,
+                                       MatrixType::ColsAtCompileTime==Eigen::Dynamic) &&
+                         "JacobiSVD: thin U and V are only available when your matrix has a dynamic number of columns.");
+            
+            Base::m_diagSize = 2;
+            Base::m_singularValues.resize(2);
+            Base::m_matrixU.resize(2, 2);
+            Base::m_matrixV.resize(2, 2);
+            Base::m_workMatrix.resize(2, 2);
         }
         
     public:

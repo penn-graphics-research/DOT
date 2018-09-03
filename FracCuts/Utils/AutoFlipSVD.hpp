@@ -25,11 +25,24 @@ namespace FracCuts {
         MatrixType matrixU_flipped, matrixV_flipped;
         
     public:
+        AutoFlipSVD(void) {}
         AutoFlipSVD(const MatrixType& mtr, unsigned int computationOptions = 0) :
             Eigen::JacobiSVD<MatrixType>(mtr, computationOptions)
         {
+            flip(mtr, computationOptions);
+        }
+        
+    public:
+        AutoFlipSVD& compute(const MatrixType& mtr, unsigned int computationOptions) {
+            flipped_U = false, flipped_V = false, flipped_sigma = false;
+            Eigen::JacobiSVD<MatrixType>::compute(mtr, computationOptions);
+            flip(mtr, computationOptions);
+            return *this;
+        }
+        
+    protected:
+        void flip(const MatrixType& mtr, unsigned int computationOptions) {
             //!!! this flip algorithm is only valid in 2D
-            
             bool fullUComputed = (computationOptions & Eigen::ComputeFullU);
             bool fullVComputed = (computationOptions & Eigen::ComputeFullV);
             if(fullUComputed && fullVComputed) {

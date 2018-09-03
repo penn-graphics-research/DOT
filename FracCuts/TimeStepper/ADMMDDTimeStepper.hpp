@@ -29,6 +29,7 @@ namespace FracCuts {
         std::vector<bool> isSharedVert;
         Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
+        std::vector<std::vector<AutoFlipSVD<Eigen::MatrixXd>>> svd_subdomain;
         
     public:
         ADMMDDTimeStepper(const TriangleSoup& p_data0,
@@ -64,7 +65,8 @@ namespace FracCuts {
         void boundaryConsensusSolve(void); // global solve
         
         // subdomain energy computation
-        void computeEnergyVal_subdomain(int subdomainI, double& Ei) const;
+        //TODO: use PK, less SVD
+        void computeEnergyVal_subdomain(int subdomainI, double& Ei);
         void computeGradient_subdomain(int subdomainI, Eigen::VectorXd& g) const;
         void computeHessianProxy_subdomain(int subdomainI, Eigen::VectorXd& V,
                                            Eigen::VectorXi& I, Eigen::VectorXi& J) const;

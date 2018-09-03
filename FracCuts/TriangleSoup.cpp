@@ -3076,7 +3076,7 @@ namespace FracCuts {
         optimizer.solve(maxIter); //do not output, the other part
         //            std::cout << "local opt " << optimizer.getIterNum() << " iters" << std::endl;
         double curE;
-        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), curE, true);
+        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), true, curE, true);
         const double eDec = (initE - curE) * localMesh.surfaceArea / surfaceArea; //!!! this should be written in a more general way, cause this way it only works for E_SD
         
         // get new vertex positions
@@ -3199,7 +3199,7 @@ namespace FracCuts {
         optimizer.solve(maxIter); //do not output, the other part
         //            std::cout << "local opt " << optimizer.getIterNum() << " iters" << std::endl;
         double curE;
-        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), curE, true);
+        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), true, curE, true);
         const double eDec = (initE - curE) * localMesh.surfaceArea / surfaceArea; //!!! this should be written in a more general way, cause this way it only works for E_SD
         
         // get new vertex positions
@@ -3478,7 +3478,7 @@ namespace FracCuts {
 //        optimizer.scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test" + std::to_string(splitPath[0]) + "-" + std::to_string(splitPath[1]) + "_optimized_AM.obj");
         
         double curE;
-        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), curE, true);
+        optimizer.computeEnergyVal(optimizer.getResult(), optimizer.getScaffold(), true, curE, true);
         const double eDec = (initE - curE) * localMesh.surfaceArea / surfaceArea; //!!! this should be written in a more general way, cause this way it only works for E_SD
         
         // get new vertex positions

@@ -88,6 +88,7 @@ namespace FracCuts {
         int frameAmt;
         AnimScripter animScripter;
         int innerIterAmt;
+        std::vector<AutoFlipSVD<Eigen::MatrixXd>> svd;
         
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
@@ -157,9 +158,14 @@ namespace FracCuts {
         
         virtual void updateTargetGRes(void);
         
-        virtual void computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData, double& energyVal, bool excludeScaffold = false);
-        virtual void computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXd& gradient, bool excludeScaffold = false);
-        virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V);
+        virtual void computeEnergyVal(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                      bool redoSVD, double& energyVal, bool excludeScaffold = false);
+        virtual void computeGradient(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                     bool redoSVD, Eigen::VectorXd& gradient,
+                                     bool excludeScaffold = false);
+        virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
+                                       bool redoSVD, Eigen::VectorXi& I, Eigen::VectorXi& J,
+                                       Eigen::VectorXd& V);
         virtual void computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
         
         virtual void initStepSize(const TriangleSoup& data, double& stepSize) const;

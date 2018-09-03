@@ -140,7 +140,7 @@ namespace FracCuts {
             checkRes();
             xUpdate();
             
-            computeGradient(result, scaffold, gradient);
+            computeGradient(result, scaffold, true, gradient);
             double sqn_g = gradient.squaredNorm();
             std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;

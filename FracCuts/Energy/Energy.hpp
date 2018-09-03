@@ -53,17 +53,24 @@ namespace FracCuts {
         virtual void checkGradient(const TriangleSoup& data) const; // check with finite difference method, according to energyVal
         virtual void checkHessian(const TriangleSoup& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
-        virtual void getEnergyValPerElemBySVD(const TriangleSoup& data,
+        virtual void getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
+                                              std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
                                               Eigen::VectorXd& energyValPerElem,
                                               bool uniformWeight = false) const;
-        virtual void computeEnergyValBySVD(const TriangleSoup& data, double& energyVal) const;
+        virtual void computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
+                                           std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                           double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
                                          Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                          bool projectSPD = true) const;
         
-        virtual void computeGradientByPK(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
-        virtual void computeHessianByPK(const TriangleSoup& data, Eigen::VectorXd* V,
+        virtual void computeGradientByPK(const TriangleSoup& data, bool redoSVD,
+                                         std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                         Eigen::VectorXd& gradient) const;
+        virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
+                                        std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                        Eigen::VectorXd* V,
                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                         bool projectSPD = true) const;
         

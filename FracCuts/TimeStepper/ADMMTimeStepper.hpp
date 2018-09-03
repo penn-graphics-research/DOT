@@ -54,6 +54,7 @@ namespace FracCuts {
         void compute_Di_mult_xi(int elemI);
         
         // local energy computation
+        //TODO: use PK, less SVD
         void computeEnergyVal_zUpdate(int triI,
                                       const Eigen::RowVectorXd& zi,
                                       double& Ei) const;
