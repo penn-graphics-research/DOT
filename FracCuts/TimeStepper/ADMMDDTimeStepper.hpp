@@ -66,10 +66,10 @@ namespace FracCuts {
         
         // subdomain energy computation
         //TODO: use PK, less SVD
-        void computeEnergyVal_subdomain(int subdomainI, double& Ei);
-        void computeGradient_subdomain(int subdomainI, Eigen::VectorXd& g) const;
-        void computeHessianProxy_subdomain(int subdomainI, Eigen::VectorXd& V,
-                                           Eigen::VectorXi& I, Eigen::VectorXi& J) const;
+        void computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei);
+        void computeGradient_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& g);
+        void computeHessianProxy_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& V,
+                                           Eigen::VectorXi& I, Eigen::VectorXi& J);
     };
 }
 

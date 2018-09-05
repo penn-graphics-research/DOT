@@ -224,7 +224,7 @@ namespace FracCuts {
         {
             Eigen::VectorXd V;
             Eigen::VectorXi I, J;
-            computeHessianProxy_subdomain(subdomainI, V, I, J);
+            computeHessianProxy_subdomain(subdomainI, true, V, I, J);
             
             linSysSolver_subdomain[subdomainI]->set_type(1, 2);
             linSysSolver_subdomain[subdomainI]->set_pattern(I, J, V, mesh_subdomain[subdomainI].vNeighbor,
@@ -362,7 +362,7 @@ namespace FracCuts {
             u_subdomain[subdomainI].setZero();
             
             Eigen::VectorXd g_subdomain;
-            computeGradient_subdomain(subdomainI, g_subdomain); //TODO: only need to compute for shared vertices
+            computeGradient_subdomain(subdomainI, true, g_subdomain); //TODO: only need to compute for shared vertices
             for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
                 if(result.fixedVert.find(dualMapperI.first) == result.fixedVert.end()) {
                     int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
@@ -421,7 +421,7 @@ namespace FracCuts {
             Eigen::MatrixXd V0_ADMM = mesh_subdomain[subdomainI].V;
             for(int j = 0; j < localMaxIter; j++) {
                 Eigen::VectorXd g;
-                computeGradient_subdomain(subdomainI, g);
+                computeGradient_subdomain(subdomainI, false, g); // i = 0 also no redoSVD because of dual init
 //                std::cout << "  " << subdomainI << "-" << j << " ||g_local||^2 = "
 //                    << g.squaredNorm() << std::endl;
                 if(g.squaredNorm() < localTol) {
@@ -430,7 +430,7 @@ namespace FracCuts {
                 
                 Eigen::VectorXd V;
                 Eigen::VectorXi I, J;
-                computeHessianProxy_subdomain(subdomainI, V, I, J);
+                computeHessianProxy_subdomain(subdomainI, false, V, I, J);
                 
                 // solve for search direction
                 linSysSolver_subdomain[subdomainI]->update_a(I, J, V);
@@ -448,18 +448,18 @@ namespace FracCuts {
                 const double c1m = 1.0e-4 * m;
                 Eigen::MatrixXd V0 = mesh_subdomain[subdomainI].V;
                 double E0;
-                computeEnergyVal_subdomain(subdomainI, E0);
+                computeEnergyVal_subdomain(subdomainI, false, E0);
                 for(int vI = 0; vI < V0.rows(); vI++) {
                     mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2).transpose();
                 }
                 double E;
-                computeEnergyVal_subdomain(subdomainI, E);
+                computeEnergyVal_subdomain(subdomainI, true, E);
                 while(E > E0 + alpha * c1m) {
                     alpha /= 2.0;
                     for(int vI = 0; vI < V0.rows(); vI++) {
                         mesh_subdomain[subdomainI].V.row(vI) = V0.row(vI) + alpha * p.segment(vI * 2, 2).transpose();
                     }
-                    computeEnergyVal_subdomain(subdomainI, E);
+                    computeEnergyVal_subdomain(subdomainI, true, E);
                 }
 //                std::cout << "stepsize = " << alpha << std::endl;
             }
@@ -517,10 +517,10 @@ namespace FracCuts {
     }
     
     // subdomain energy computation
-    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, double& Ei)
+    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei)
     {
         // incremental potential:
-        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], true,
+        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
                                               svd_subdomain[subdomainI], Ei);
         Ei *= dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
@@ -538,10 +538,13 @@ namespace FracCuts {
             Ei += weights_subdomain[subdomainI].row(dualMapperI.second).cwiseProduct(vec).dot(vec) / 2.0;
         }
     }
-    void ADMMDDTimeStepper::computeGradient_subdomain(int subdomainI, Eigen::VectorXd& g) const
+    void ADMMDDTimeStepper::computeGradient_subdomain(int subdomainI,
+                                                      bool redoSVD,
+                                                      Eigen::VectorXd& g)
     {
         // incremental potential:
-        energyTerms[0]->computeGradientBySVD(mesh_subdomain[subdomainI], g);
+        energyTerms[0]->computeGradientByPK(mesh_subdomain[subdomainI], redoSVD,
+                                            svd_subdomain[subdomainI], g);
         g *= dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -559,14 +562,18 @@ namespace FracCuts {
                 weights_subdomain[subdomainI].row(dualMapperI.second).cwiseProduct(vec).transpose();
         }
     }
-    void ADMMDDTimeStepper::computeHessianProxy_subdomain(int subdomainI, Eigen::VectorXd& V,
-                                                          Eigen::VectorXi& I, Eigen::VectorXi& J) const
+    void ADMMDDTimeStepper::computeHessianProxy_subdomain(int subdomainI,
+                                                          bool redoSVD,
+                                                          Eigen::VectorXd& V,
+                                                          Eigen::VectorXi& I,
+                                                          Eigen::VectorXi& J)
     {
         // incremental potential:
         I.resize(0);
         J.resize(0);
         V.resize(0);
-        energyTerms[0]->computeHessianBySVD(mesh_subdomain[subdomainI], &V, &I, &J);
+        energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
+                                           svd_subdomain[subdomainI], &V, &I, &J);
         V *= dtSq;
         int curTripletSize = static_cast<int>(I.size());
         I.conservativeResize(I.size() + mesh_subdomain[subdomainI].V.rows() * 2);

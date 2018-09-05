@@ -556,6 +556,7 @@ namespace FracCuts {
         timer_temp.start(3);
         for(int triI = 0; triI < data.F.rows(); triI++) {
             IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], 2, V, I, J);
+            //!!! the index can be cached if matrix structure doesn't change
         }
         
         Eigen::VectorXi fixedVertInd;
@@ -566,6 +567,7 @@ namespace FracCuts {
         }
         IglUtils::addDiagonalToMatrix(Eigen::VectorXd::Ones(data.fixedVert.size() * 2),
                                       fixedVertInd, 2, V, I, J);
+        //!!! the index can be cached if matrix structure doesn't change
         timer_temp.stop();
     }
     

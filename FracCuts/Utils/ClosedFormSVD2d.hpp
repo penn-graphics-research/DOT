@@ -55,7 +55,7 @@ namespace FracCuts {
             const double c = A(0, 1);
             const double d = A(1, 1);
             
-            const double eps = 1.0e-8;
+            const double eps = 1.0e-10;
             if((std::abs(a - d) < eps) && (std::abs(b + c) < eps)) {
                 // avoid dividing by 0 in general formula
                 const double aa = (a + d) / 2.0;
@@ -64,7 +64,8 @@ namespace FracCuts {
                 Base::m_singularValues.array() = lambda;
                 
                 if(computeU) {
-                    if(std::abs(lambda) < eps) {
+//                    if(std::abs(lambda) < eps) {
+                    if(lambda == 0.0) {
                         // avoid dividing by 0
                         Base::m_matrixU.setIdentity();
                     }
