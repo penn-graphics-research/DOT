@@ -70,7 +70,7 @@ namespace FracCuts {
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                         std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
-                                        Eigen::VectorXd* V,
+                                        double coef, Eigen::VectorXd* V,
                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                         bool projectSPD = true) const;
         

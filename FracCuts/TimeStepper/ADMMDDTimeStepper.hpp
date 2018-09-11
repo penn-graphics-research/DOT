@@ -65,7 +65,6 @@ namespace FracCuts {
         void boundaryConsensusSolve(void); // global solve
         
         // subdomain energy computation
-        //TODO: use PK, less SVD
         void computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei);
         void computeGradient_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& g);
         void computeHessianProxy_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& V,

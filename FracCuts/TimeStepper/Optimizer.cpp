@@ -1179,22 +1179,14 @@ namespace FracCuts {
                                       Eigen::VectorXd& V)
     {
         if(!mute) { timer_step.start(0); }
-        I.resize(0);
-        J.resize(0);
-        V.resize(0);
+        I.conservativeResize(0);
+        J.conservativeResize(0);
+        V.conservativeResize(0);
         //!!! should consider add first and then do projected Newton if multiple energies are used
         for(int eI = 0; eI < energyTerms.size(); eI++) {
-            Eigen::VectorXi I_eI, J_eI;
-            Eigen::VectorXd V_eI;
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd, &V_eI, &I_eI, &J_eI);
-            V_eI *= energyParams[eI] * dtSq;
-            I.conservativeResize(I.size() + I_eI.size());
-            I.bottomRows(I_eI.size()) = I_eI;
-            J.conservativeResize(J.size() + J_eI.size());
-            J.bottomRows(J_eI.size()) = J_eI;
-            V.conservativeResize(V.size() + V_eI.size());
-            V.bottomRows(V_eI.size()) = V_eI;
+            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd,
+                                                energyParams[eI] * dtSq, &V, &I, &J);
         }
         
         if(scaffolding) {
@@ -1213,12 +1205,14 @@ namespace FracCuts {
         V.conservativeResize(V.size() + data.V.rows() * 2);
         for(int vI = 0; vI < result.V.rows(); vI++) {
             double massI = data.massMatrix.coeff(vI, vI);
-            I[curTripletSize + vI * 2] = vI * 2;
-            J[curTripletSize + vI * 2] = vI * 2;
-            V[curTripletSize + vI * 2] = massI;
-            I[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-            J[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-            V[curTripletSize + vI * 2 + 1] = massI;
+            int ind0 = vI * 2;
+            int ind1 = ind0 + 1;
+            I[curTripletSize + ind0] = ind0;
+            J[curTripletSize + ind0] = ind0;
+            V[curTripletSize + ind0] = massI;
+            I[curTripletSize + ind1] = ind1;
+            J[curTripletSize + ind1] = ind1;
+            V[curTripletSize + ind1] = massI;
         }
         //TODO: mass of negative space vertices
 #endif

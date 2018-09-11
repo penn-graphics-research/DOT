@@ -573,20 +573,21 @@ namespace FracCuts {
         J.resize(0);
         V.resize(0);
         energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
-                                           svd_subdomain[subdomainI], &V, &I, &J);
-        V *= dtSq;
+                                           svd_subdomain[subdomainI], dtSq, &V, &I, &J);
         int curTripletSize = static_cast<int>(I.size());
         I.conservativeResize(I.size() + mesh_subdomain[subdomainI].V.rows() * 2);
         J.conservativeResize(J.size() + mesh_subdomain[subdomainI].V.rows() * 2);
         V.conservativeResize(V.size() + mesh_subdomain[subdomainI].V.rows() * 2);
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
-            I[curTripletSize + vI * 2] = vI * 2;
-            J[curTripletSize + vI * 2] = vI * 2;
-            V[curTripletSize + vI * 2] = massI;
-            I[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-            J[curTripletSize + vI * 2 + 1] = vI * 2 + 1;
-            V[curTripletSize + vI * 2 + 1] = massI;
+            int ind0 = vI * 2;
+            int ind1 = ind0 + 1;
+            I[curTripletSize + ind0] = ind0;
+            J[curTripletSize + ind0] = ind0;
+            V[curTripletSize + ind0] = massI;
+            I[curTripletSize + ind1] = ind1;
+            J[curTripletSize + ind1] = ind1;
+            V[curTripletSize + ind1] = massI;
         }
         
         // augmented Lagrangian:
@@ -598,12 +599,16 @@ namespace FracCuts {
         for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
             auto localVIFinder = globalVIToLocal_subdomain[subdomainI].find(dualMapperI.first);
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
-            I[curTripletSize + dualI * 2] = localVIFinder->second * 2;
-            J[curTripletSize + dualI * 2] = localVIFinder->second * 2;
-            V[curTripletSize + dualI * 2] = weights_subdomain[subdomainI](dualMapperI.second, 0);
-            I[curTripletSize + dualI * 2 + 1] = localVIFinder->second * 2 + 1;
-            J[curTripletSize + dualI * 2 + 1] = localVIFinder->second * 2 + 1;
-            V[curTripletSize + dualI * 2 + 1] = weights_subdomain[subdomainI](dualMapperI.second, 1);
+            int _2dualI = dualI * 2;
+            int _2dualIp1 = _2dualI + 1;
+            int _2localVI = localVIFinder->second * 2;
+            int _2localVIp1 = _2localVI + 1;
+            I[curTripletSize + _2dualI] = _2localVI;
+            J[curTripletSize + _2dualI] = _2localVI;
+            V[curTripletSize + _2dualI] = weights_subdomain[subdomainI](dualMapperI.second, 0);
+            I[curTripletSize + _2dualIp1] = _2localVIp1;
+            J[curTripletSize + _2dualIp1] = _2localVIp1;
+            V[curTripletSize + _2dualIp1] = weights_subdomain[subdomainI](dualMapperI.second, 1);
             dualI++;
         }
     }

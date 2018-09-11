@@ -20,7 +20,7 @@
 #include <iostream>
 
 extern std::ofstream logFile;
-extern Timer timer_temp;
+extern Timer timer_temp, timer_temp2;
 
 namespace FracCuts {
     
@@ -210,6 +210,7 @@ namespace FracCuts {
         for(int triI = 0; triI < data.F.rows(); triI++)
 #endif
         {
+            timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A;
@@ -220,10 +221,9 @@ namespace FracCuts {
             if(redoSVD) {
                 timer_temp.start(0);
                 svd[triI].compute(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-                timer_temp.stop();
+                timer_temp.start(1);
             }
             
-            timer_temp.start(1);
             compute_E(svd[triI].singularValues(), energyValPerElem[triI]);
             if(!uniformWeight) {
                 energyValPerElem[triI] *= data.triWeight[triI] * data.triArea[triI];
@@ -380,6 +380,7 @@ namespace FracCuts {
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
         for(int triI = 0; triI < data.F.rows(); triI++) {
+            timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A, F;
@@ -392,10 +393,9 @@ namespace FracCuts {
                 timer_temp.start(0);
                 svd[triI].compute(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
 //                svd[triI] = AutoFlipSVD<Eigen::MatrixXd>(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
-                timer_temp.stop();
+                timer_temp.start(1);
             }
             
-            timer_temp.start(1);
             Eigen::MatrixXd P;
             compute_dE_div_dF(F, svd[triI], P);
             
@@ -418,7 +418,8 @@ namespace FracCuts {
     }
     void Energy::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                     std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
-                                    Eigen::VectorXd* V, Eigen::VectorXi* I, Eigen::VectorXi* J,
+                                    double coef, Eigen::VectorXd* V,
+                                    Eigen::VectorXi* I, Eigen::VectorXi* J,
                                     bool projectSPD) const
     {
         std::vector<Eigen::MatrixXd> triHessians(data.F.rows());
@@ -429,6 +430,7 @@ namespace FracCuts {
         for(int triI = 0; triI < data.F.rows(); triI++)
 #endif
         {
+            timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A;
@@ -440,19 +442,16 @@ namespace FracCuts {
                 timer_temp.start(0);
                 svd[triI].compute(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 //                svd[triI] = AutoFlipSVD<Eigen::MatrixXd>(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-                timer_temp.stop();
+                timer_temp.start(1);
             }
             
-            timer_temp.start(1);
             Eigen::VectorXd dE_div_dsigma;
             compute_dE_div_dsigma(svd[triI].singularValues(), dE_div_dsigma);
             Eigen::MatrixXd d2E_div_dsigma2;
             compute_d2E_div_dsigma2(svd[triI].singularValues(), d2E_div_dsigma2);
             if(projectSPD) {
-                timer_temp.stop();
                 timer_temp.start(2);
                 IglUtils::makePD2d(d2E_div_dsigma2);
-                timer_temp.stop();
                 timer_temp.start(1);
             }
               
@@ -475,10 +474,8 @@ namespace FracCuts {
             B01(0, 0) = B01(1, 1) = leftCoef + rightCoef;
             B01(0, 1) = B01(1, 0) = leftCoef - rightCoef;
             if(projectSPD) {
-                timer_temp.stop();
                 timer_temp.start(2);
                 IglUtils::makePD2d(B01);
-                timer_temp.stop();
                 timer_temp.start(1);
             }
               
@@ -536,12 +533,11 @@ namespace FracCuts {
                 }
             }
               
-            const double w = data.triWeight[triI] * data.triArea[triI];
+            const double w = coef * data.triWeight[triI] * data.triArea[triI];
             Eigen::MatrixXd wdP_div_dx;
             IglUtils::dF_div_dx_mult(w * dP_div_dF.transpose(), A, wdP_div_dx);
             IglUtils::dF_div_dx_mult(wdP_div_dx.transpose(), A, triHessians[triI]);
-            timer_temp.stop();
-              
+            
             Eigen::VectorXi& vInd = vInds[triI];
             vInd = triVInd;
             for(int vI = 0; vI < 3; vI++) {
@@ -549,6 +545,7 @@ namespace FracCuts {
                     vInd[vI] = -1;
                 }
             }
+            timer_temp.stop();
         }
 #ifdef USE_TBB
         );
