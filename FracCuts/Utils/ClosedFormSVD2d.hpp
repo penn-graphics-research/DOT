@@ -55,8 +55,14 @@ namespace FracCuts {
             const double c = A(0, 1);
             const double d = A(1, 1);
             
-            const double eps = 1.0e-10;
-            if((std::abs(a - d) < eps) && (std::abs(b + c) < eps)) {
+            const double ad = a * d;
+            const double bc = b * c;
+            const double _2admbc = 2.0 * (ad - bc);
+            const double sqn = A.squaredNorm();
+            
+            const double sum = sqn + _2admbc;
+            const double dif = sqn - _2admbc;
+            if(dif <= 0.0) {
                 // avoid dividing by 0 in general formula
                 const double aa = (a + d) / 2.0;
                 const double bb = (b - c) / 2.0;
@@ -64,7 +70,6 @@ namespace FracCuts {
                 Base::m_singularValues.array() = lambda;
                 
                 if(computeU) {
-//                    if(std::abs(lambda) < eps) {
                     if(lambda == 0.0) {
                         // avoid dividing by 0
                         Base::m_matrixU.setIdentity();
@@ -80,7 +85,7 @@ namespace FracCuts {
                     Base::m_matrixV.setIdentity();
                 }
             }
-            else if((std::abs(a + d) < eps) && (std::abs(b - c) < eps)) {
+            else if(sum <= 0.0) {
                 // avoid dividing by 0 in general formula
                 // symmetric matrix with a=-d
                 const double aa = (a - d) / 2.0;
@@ -89,7 +94,7 @@ namespace FracCuts {
                 Base::m_singularValues << lambda, -lambda;
                 
                 if(computeU || computeV) {
-                    if(std::abs(bb) < eps) {
+                    if(bb == 0.0) {
                         // avoid dividing by 0 and sqrt(<0)
                         if(computeU) {
                             Base::m_matrixU.setIdentity();
@@ -102,9 +107,11 @@ namespace FracCuts {
                     else {
                         const double a_div_lambda_half = aa / lambda / 2.0;
                         bool neg_b = (bb < 0.0);
-                        const double cos = std::sqrt(0.5 + a_div_lambda_half);
-                        const double sin = (neg_b ? -std::sqrt(0.5 - a_div_lambda_half) :
-                                            std::sqrt(0.5 - a_div_lambda_half));
+                        const double cos2 = 0.5 + a_div_lambda_half;
+                        const double cos = ((cos2 <= 0.0) ? 0.0 : std::sqrt(cos2));
+                        const double sin2 = 0.5 - a_div_lambda_half;
+                        const double sin = ((sin2 <= 0.0) ? 0.0 :
+                                            (neg_b ? -std::sqrt(sin2) : std::sqrt(sin2)));
                         if(computeU) {
                             Base::m_matrixU << cos, -sin, sin, cos;
                         }
@@ -116,14 +123,8 @@ namespace FracCuts {
                 }
             }
             else {
-                const double ad = a * d;
-                const double bc = b * c;
-                
-                const double _2admbc = 2.0 * (ad - bc);
-                const double sqn = A.squaredNorm();
-                
-                const double sqrt_sum = std::sqrt(sqn + _2admbc); // safe
-                const double sqrt_dif = std::sqrt(sqn - _2admbc); // safe
+                const double sqrt_sum = std::sqrt(sum); // safe
+                const double sqrt_dif = std::sqrt(dif); // safe
                 
                 Base::m_singularValues[0] = (sqrt_sum + sqrt_dif) / 2.0;
                 Base::m_singularValues[1] = ((_2admbc < 0.0) ?
@@ -136,7 +137,7 @@ namespace FracCuts {
                     const double c2 = c * c;
                     const double d2 = d * d;
                     
-                    const double denom = std::sqrt(sqn * sqn - _2admbc * _2admbc) * 2.0; // safe
+                    const double denom = sqrt_sum * sqrt_dif * 2.0;
                     
                     const double a2md2 = a2 - d2;
                     const double b2mc2 = b2 - c2;
@@ -146,7 +147,7 @@ namespace FracCuts {
                     const bool neg_ab_p_cd = ((ab + cd) < 0);
                     
                     if(computeU) {
-                        const double a2md2_m_b2mc2_div_ = (a2md2 - b2mc2) / denom;
+                        const double a2md2_m_b2mc2_div_ = (a2md2 - b2mc2) / denom; // safe
                         
                         // avoid sqrt(<0)
                         const double cosl2 = 0.5 + a2md2_m_b2mc2_div_;
@@ -163,7 +164,7 @@ namespace FracCuts {
                         const double ac = a * c;
                         const double bd = b * d;
                         const bool neg_ac_p_bd = ((ac + bd) < 0);
-                        const double a2md2_p_b2mc2_div_ = (a2md2 + b2mc2) / denom;
+                        const double a2md2_p_b2mc2_div_ = (a2md2 + b2mc2) / denom; // safe
                         
                         // avoid sqrt(<0)
                         const double cosr2 = 0.5 + a2md2_p_b2mc2_div_;
