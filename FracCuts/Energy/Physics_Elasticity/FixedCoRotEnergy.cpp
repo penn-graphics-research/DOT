@@ -76,13 +76,13 @@ namespace FracCuts {
                                              const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                              Eigen::MatrixXd& dE_div_dF) const
     {
-        // 2D
-        const double J = svd.singularValues().prod();
-        Eigen::Matrix2d JFInvT, VT = svd.matrixV().transpose();
-        JFInvT.col(0) = svd.matrixU().col(0) * svd.singularValues()[1];
-        JFInvT.col(1) = svd.matrixU().col(1) * svd.singularValues()[0];
-        JFInvT *= VT;
-        dE_div_dF = (2 * u * (F - svd.matrixU() * VT) + lambda * (J - 1) * JFInvT);
+        Eigen::Matrix2d JFInvT;
+        JFInvT(0, 0) = F(1, 1);
+        JFInvT(0, 1) = -F(1, 0);
+        JFInvT(1, 0) = -F(0, 1);
+        JFInvT(1, 1) = F(0, 0);
+        dE_div_dF = (2 * u * (F - svd.matrixU() * svd.matrixV().transpose()) +
+                     lambda * (svd.singularValues().prod() - 1) * JFInvT);
     }
     
     void FixedCoRotEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
