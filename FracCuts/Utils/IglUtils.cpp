@@ -491,6 +491,29 @@ namespace FracCuts {
         }
     }
     
+    void IglUtils::writeSparseMatrixToFile(const std::string& filePath,
+                                           const std::map<std::pair<int, int>, double>& mtr,
+                                           bool MATLAB)
+    {
+        std::ofstream out;
+        out.open(filePath);
+        if(out.is_open()) {
+            if(!MATLAB) {
+                int mtrSize = mtr.rbegin()->first.first + 1;
+                out << mtrSize << " " << mtrSize << " " << mtr.size() << std::endl;
+            }
+            for(const auto& entryI : mtr) {
+                out << entryI.first.first + MATLAB << " "
+                    << entryI.first.second + MATLAB << " "
+                    << entryI.second << std::endl;
+            }
+            out.close();
+        }
+        else {
+            std::cout << "writeSparseMatrixToFile failed! file open error!" << std::endl;
+        }
+    }
+    
     void IglUtils::loadSparseMatrixFromFile(const std::string& filePath, Eigen::SparseMatrix<double>& mtr)
     {
         std::ifstream in;

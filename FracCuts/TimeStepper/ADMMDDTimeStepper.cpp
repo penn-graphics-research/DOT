@@ -16,6 +16,8 @@
 #include "EigenLibSolver.hpp"
 #endif
 
+#include "IglUtils.hpp"
+
 #ifdef USE_METIS
 #include "METIS.hpp"
 #endif
@@ -54,6 +56,7 @@ namespace FracCuts {
         
         elemList_subdomain.resize(mesh_subdomain.size());
         globalVIToLocal_subdomain.resize(mesh_subdomain.size());
+        localVIToGlobal_subdomain.resize(mesh_subdomain.size());
         globalTriIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
         svd_subdomain.resize(mesh_subdomain.size());
@@ -106,6 +109,11 @@ namespace FracCuts {
                                     globalVIToLocal_subdomain[subdomainI],
                                     globalTriIToLocal_subdomain[subdomainI]);
             
+            localVIToGlobal_subdomain[subdomainI].resize(globalVIToLocal_subdomain[subdomainI].size());
+            for(const auto& g2lI : globalVIToLocal_subdomain[subdomainI]) {
+                localVIToGlobal_subdomain[subdomainI][g2lI.second] = g2lI.first;
+            }
+            
             xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
             svd_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].F.rows());
         }
@@ -120,6 +128,7 @@ namespace FracCuts {
         du_subdomain.resize(mesh_subdomain.size());
         dz_subdomain.resize(mesh_subdomain.size());
         weights_subdomain.resize(mesh_subdomain.size());
+        weightMtr_subdomain.resize(mesh_subdomain.size());
         weightSum.resize(result.V.rows(), 2);
         weightSum.setZero();
         isSharedVert.resize(0);
@@ -403,7 +412,40 @@ namespace FracCuts {
                     weights_subdomain[subdomainI](dualMapperI.second, dimI) *= multiplier;
                     weightSum(dualMapperI.first, dimI) += weights_subdomain[subdomainI](dualMapperI.second, dimI);
                 }
+                // off-diagonals
+                for(int rowI = 0; rowI < 2; rowI++) {
+                    for(int colI = 0; colI < 2; colI++) {
+                        double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
+                                                                dualMapperI.first * 2 + colI) -
+                                         linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
+                                                                                      localI * 2 + colI));
+                        weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, localI * 2 + colI)] += offset;
+//                        //DEBUG fill with dual index
+//                        weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, dualMapperI.second * 2 + colI)] += offset;
+                    }
+                }
+                for(const auto& nbVI_local : mesh_subdomain[subdomainI].vNeighbor[localI]) {
+                    const auto& nbVI_global = localVIToGlobal_subdomain[subdomainI][nbVI_local];
+                    auto finder = globalVIToDual_subdomain[subdomainI].find(nbVI_global);
+                    if(finder != globalVIToDual_subdomain[subdomainI].end()) {
+                        for(int rowI = 0; rowI < 2; rowI++) {
+                            for(int colI = 0; colI < 2; colI++) {
+                                double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
+                                                                        nbVI_global * 2 + colI) -
+                                                 linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
+                                                                                              nbVI_local * 2 + colI));
+                                weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, nbVI_local * 2 + colI)] += offset;
+//                                //DEBUG fill with dual index
+//                                weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, finder->second * 2 + colI)] += offset;
+                            }
+                        }
+                    }
+                }
             }
+//            //DEBUG
+//            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/OptCuts_dynamic/output/WM" +
+//                                              std::to_string(subdomainI),
+//                                              weightMtr_subdomain[subdomainI], true);
         }
     }
     

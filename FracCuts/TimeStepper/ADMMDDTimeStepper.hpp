@@ -19,12 +19,14 @@ namespace FracCuts {
         std::vector<Eigen::VectorXi> elemList_subdomain;
         std::vector<TriangleSoup> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
+        std::vector<std::vector<int>> localVIToGlobal_subdomain;
         std::vector<std::map<int, int>> globalTriIToLocal_subdomain;
         std::vector<std::map<int, int>> globalVIToDual_subdomain;
         std::vector<Eigen::MatrixXd> xHat_subdomain;
         int dualDim;
         std::vector<Eigen::MatrixXd> u_subdomain, du_subdomain, dz_subdomain;
         std::vector<Eigen::MatrixXd> weights_subdomain;
+        std::vector<std::map<std::pair<int, int>, double>> weightMtr_subdomain;
         Eigen::MatrixXd weightSum;
         std::vector<bool> isSharedVert;
         Eigen::VectorXi sharedVerts;

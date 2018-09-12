@@ -127,10 +127,17 @@ namespace FracCuts {
             }
         }
         
-        static void writeSparseMatrixToFile(const std::string& filePath, const Eigen::SparseMatrix<double>& mtr, bool MATLAB = false);
-        static void writeSparseMatrixToFile(const std::string& filePath, const Eigen::VectorXi& I, const Eigen::VectorXi& J,
+        static void writeSparseMatrixToFile(const std::string& filePath,
+                                            const Eigen::SparseMatrix<double>& mtr,
+                                            bool MATLAB = false);
+        static void writeSparseMatrixToFile(const std::string& filePath,
+                                            const Eigen::VectorXi& I, const Eigen::VectorXi& J,
                                             const Eigen::VectorXd& V, bool MATLAB = false);
-        static void loadSparseMatrixFromFile(const std::string& filePath, Eigen::SparseMatrix<double>& mtr);
+        static void writeSparseMatrixToFile(const std::string& filePath,
+                                            const std::map<std::pair<int, int>, double>& mtr,
+                                            bool MATLAB = false);
+        static void loadSparseMatrixFromFile(const std::string& filePath,
+                                             Eigen::SparseMatrix<double>& mtr);
         
         static void sparseMatrixToTriplet(const Eigen::SparseMatrix<double>& mtr,
                                           Eigen::VectorXi& I, Eigen::VectorXi& J, Eigen::VectorXd& V);
