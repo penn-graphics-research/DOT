@@ -55,6 +55,7 @@ namespace FracCuts {
                                              const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                              Eigen::MatrixXd& dE_div_dF) const
     {
+        //TODO: optimize for 2D
         const double J = svd.singularValues().prod();
         Eigen::Matrix2d FInvT = svd.matrixU() *
             Eigen::DiagonalMatrix<double, 2>(1.0 / svd.singularValues()[0], 1.0 / svd.singularValues()[1]) *

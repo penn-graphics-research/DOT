@@ -832,27 +832,75 @@ namespace FracCuts {
     }
     void IglUtils::dF_div_dx_mult(const Eigen::MatrixXd& right,
                                   const Eigen::MatrixXd& A,
-                                  Eigen::MatrixXd& result)
+                                  Eigen::MatrixXd& result,
+                                  bool symmetric)
     {
-        
         assert(right.rows() == 4);
         assert(right.cols() > 0);
         
-        result.resize(6, right.cols());
-        
-        const double mA11mA21 = -A(0, 0) - A(1, 0);
-        const double mA12mA22 = -A(0, 1) - A(1, 1);
+        result.conservativeResize(6, right.cols());
 
-        for(int colI = 0; colI < right.cols(); colI++) {
-            result.col(colI) <<
-                right(0, colI) * mA11mA21 + right(1, colI) * mA12mA22,
-                right(2, colI) * mA11mA21 + right(3, colI) * mA12mA22,
-                right(0, colI) * A(0, 0) + right(1, colI) * A(0, 1),
-                right(2, colI) * A(0, 0) + right(3, colI) * A(0, 1),
-                right(0, colI) * A(1, 0) + right(1, colI) * A(1, 1),
-                right(2, colI) * A(1, 0) + right(3, colI) * A(1, 1);
+        //TODO
+        if(symmetric) {
+            assert(right.cols() == 6);
+            // int colI = 0;
+            const double _0000 = right(0, 0) * A(0, 0);
+            const double _0010 = right(0, 0) * A(1, 0);
+            const double _1001 = right(1, 0) * A(0, 1);
+            const double _1011 = right(1, 0) * A(1, 1);
+            const double _2000 = right(2, 0) * A(0, 0);
+            const double _2010 = right(2, 0) * A(1, 0);
+            const double _3001 = right(3, 0) * A(0, 1);
+            const double _3011 = right(3, 0) * A(1, 1);
+            result(0, 0) = -_0000 - _0010 - _1001 - _1011;
+            result(1, 0) = result(0, 1) = -_2000 - _2010 - _3001 - _3011;
+            result(2, 0) = result(0, 2) = _0000 + _1001;
+            result(3, 0) = result(0, 3) = _2000 + _3001;
+            result(4, 0) = result(0, 4) = _0010 + _1011;
+            result(5, 0) = result(0, 5) = _2010 + _3011;
+            // colI = 1;
+            const double _2100 = right(2, 1) * A(0, 0);
+            const double _2110 = right(2, 1) * A(1, 0);
+            const double _3101 = right(3, 1) * A(0, 1);
+            const double _3111 = right(3, 1) * A(1, 1);
+            result(1, 1) = -_2100 - _2110 - _3101 - _3111;
+            result(2, 1) = result(1, 2) = right(0, 1) * A(0, 0) + right(1, 1) * A(0, 1);
+            result(3, 1) = result(1, 3) = _2100 + _3101;
+            result(4, 1) = result(1, 4) = right(0, 1) * A(1, 0) + right(1, 1) * A(1, 1);
+            result(5, 1) = result(1, 5) = _2110 + _3111;
+            // colI = 2;
+            result(2, 2) = right(0, 2) * A(0, 0) + right(1, 2) * A(0, 1);
+            result(3, 2) = result(2, 3) = right(2, 2) * A(0, 0) + right(3, 2) * A(0, 1);
+            result(4, 2) = result(2, 4) = right(0, 2) * A(1, 0) + right(1, 2) * A(1, 1);
+            result(5, 2) = result(2, 5) = right(2, 2) * A(1, 0) + right(3, 2) * A(1, 1);
+            // colI = 3;
+            result(3, 3) = right(2, 3) * A(0, 0) + right(3, 3) * A(0, 1);
+            result(4, 3) = result(3, 4) = right(0, 3) * A(1, 0) + right(1, 3) * A(1, 1);
+            result(5, 3) = result(3, 5) = right(2, 3) * A(1, 0) + right(3, 3) * A(1, 1);
+            // colI = 4;
+            result(4, 4) = right(0, 4) * A(1, 0) + right(1, 4) * A(1, 1),
+            result(5, 4) = result(4, 5) = right(2, 4) * A(1, 0) + right(3, 4) * A(1, 1);
+            // colI = 5;
+            result(5, 5) = right(2, 5) * A(1, 0) + right(3, 5) * A(1, 1);
         }
-        
+        else {
+            for(int colI = 0; colI < right.cols(); colI++) {
+                const double _000 = right(0, colI) * A(0, 0);
+                const double _010 = right(0, colI) * A(1, 0);
+                const double _101 = right(1, colI) * A(0, 1);
+                const double _111 = right(1, colI) * A(1, 1);
+                const double _200 = right(2, colI) * A(0, 0);
+                const double _210 = right(2, colI) * A(1, 0);
+                const double _301 = right(3, colI) * A(0, 1);
+                const double _311 = right(3, colI) * A(1, 1);
+                result(0, colI) = -_000 - _010 - _101 - _111;
+                result(1, colI) = -_200 - _210 - _301 - _311;
+                result(2, colI) = _000 + _101;
+                result(3, colI) = _200 + _301;
+                result(4, colI) = _010 + _111;
+                result(5, colI) = _210 + _311;
+            }
+        }
     }
     void IglUtils::dF_div_dx_mult(const Eigen::MatrixXd& right,
                                   const Eigen::MatrixXd& A,
@@ -860,17 +908,22 @@ namespace FracCuts {
     {
         assert((right.rows() == 2) && (right.cols() == 2));
         
-        const double mA11mA21 = -A(0, 0) - A(1, 0);
-        const double mA12mA22 = -A(0, 1) - A(1, 1);
+        const double _0000 = right(0, 0) * A(0, 0);
+        const double _0010 = right(0, 0) * A(1, 0);
+        const double _0101 = right(0, 1) * A(0, 1);
+        const double _0111 = right(0, 1) * A(1, 1);
+        const double _1000 = right(1, 0) * A(0, 0);
+        const double _1010 = right(1, 0) * A(1, 0);
+        const double _1101 = right(1, 1) * A(0, 1);
+        const double _1111 = right(1, 1) * A(1, 1);
         
         result.resize(6);
-        result <<
-            right(0, 0) * mA11mA21 + right(0, 1) * mA12mA22,
-            right(1, 0) * mA11mA21 + right(1, 1) * mA12mA22,
-            right(0, 0) * A(0, 0) + right(0, 1) * A(0, 1),
-            right(1, 0) * A(0, 0) + right(1, 1) * A(0, 1),
-            right(0, 0) * A(1, 0) + right(0, 1) * A(1, 1),
-            right(1, 0) * A(1, 0) + right(1, 1) * A(1, 1);
+        result[0] = -_0000 - _0010 - _0101 - _0111;
+        result[1] = -_1000 - _1010 - _1101 - _1111;
+        result[2] = _0000 + _0101;
+        result[3] = _1000 + _1101;
+        result[4] = _0010 + _0111;
+        result[5] = _1010 + _1111;
     }
     
     void IglUtils::sampleSegment(const Eigen::RowVectorXd& vs,

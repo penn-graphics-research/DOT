@@ -177,7 +177,8 @@ namespace FracCuts {
                                       Eigen::MatrixXd& dF_div_dx);
         static void dF_div_dx_mult(const Eigen::MatrixXd& right,
                                    const Eigen::MatrixXd& A,
-                                   Eigen::MatrixXd& result);
+                                   Eigen::MatrixXd& result,
+                                   bool symmetric);
         static void dF_div_dx_mult(const Eigen::MatrixXd& right,
                                    const Eigen::MatrixXd& A,
                                    Eigen::VectorXd& result);

@@ -210,18 +210,21 @@ namespace FracCuts {
         for(int triI = 0; triI < data.F.rows(); triI++)
 #endif
         {
+            timer_temp2.start(4);
             timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A;
-            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = data.restTriInv[triI]; //TODO: this only need to be computed once
             
             if(redoSVD) {
+                timer_temp2.stop();
                 timer_temp.start(0);
                 svd[triI].compute(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
+                timer_temp2.start(4);
             }
             
             compute_E(svd[triI].singularValues(), energyValPerElem[triI]);
@@ -229,6 +232,7 @@ namespace FracCuts {
                 energyValPerElem[triI] *= data.triWeight[triI] * data.triArea[triI];
             }
             timer_temp.stop();
+            timer_temp2.stop();
         }
 #ifdef USE_TBB
         );
@@ -380,14 +384,16 @@ namespace FracCuts {
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
         for(int triI = 0; triI < data.F.rows(); triI++) {
+            timer_temp2.start(5);
             timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A, F;
-            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = data.restTriInv[triI];
             F = Xt * A;
+            timer_temp2.stop();
             
             if(redoSVD) {
                 timer_temp.start(0);
@@ -396,20 +402,24 @@ namespace FracCuts {
                 timer_temp.start(1);
             }
             
+            timer_temp2.start(6);
             Eigen::MatrixXd P;
             compute_dE_div_dF(F, svd[triI], P);
             
             const double w = data.triWeight[triI] * data.triArea[triI];
             P *= w;
             
+            timer_temp2.start(7);
             Eigen::VectorXd gradient_cont;
             IglUtils::dF_div_dx_mult(P, A, gradient_cont);
             
+            timer_temp2.start(8);
             gradient.segment(triVInd[0] * 2, 2) += gradient_cont.segment(0, 2);
             gradient.segment(triVInd[1] * 2, 2) += gradient_cont.segment(2, 2);
             gradient.segment(triVInd[2] * 2, 2) += gradient_cont.segment(4, 2);
             //TODO: funtionalize it
             timer_temp.stop();
+            timer_temp2.stop();
         }
         
         for(const auto fixedVI : data.fixedVert) {
@@ -434,8 +444,8 @@ namespace FracCuts {
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
             Eigen::Matrix2d Xt, A;
-            Xt << (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose(),
-                (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
+            Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             A = data.restTriInv[triI];
             
             if(redoSVD) {
@@ -445,17 +455,21 @@ namespace FracCuts {
                 timer_temp.start(1);
             }
             
+            // compute A
+            timer_temp2.start(0);
             Eigen::VectorXd dE_div_dsigma;
             compute_dE_div_dsigma(svd[triI].singularValues(), dE_div_dsigma);
             Eigen::MatrixXd d2E_div_dsigma2;
             compute_d2E_div_dsigma2(svd[triI].singularValues(), d2E_div_dsigma2);
+            timer_temp2.stop();
             if(projectSPD) {
                 timer_temp.start(2);
                 IglUtils::makePD2d(d2E_div_dsigma2);
                 timer_temp.start(1);
             }
-              
+            
             // compute B
+            timer_temp2.start(1);
             Eigen::Matrix2d B01;
             double leftCoef = d2E_div_dsigma2(0, 0);
             const double dif_sigma = svd[triI].singularValues()[0] - svd[triI].singularValues()[1];
@@ -473,6 +487,7 @@ namespace FracCuts {
             }
             B01(0, 0) = B01(1, 1) = leftCoef + rightCoef;
             B01(0, 1) = B01(1, 0) = leftCoef - rightCoef;
+            timer_temp2.stop();
             if(projectSPD) {
                 timer_temp.start(2);
                 IglUtils::makePD2d(B01);
@@ -480,16 +495,18 @@ namespace FracCuts {
             }
               
             // compute M using A(d2E_div_dsigma2) and B
+            const double w = coef * data.triWeight[triI] * data.triArea[triI];
+            timer_temp2.start(2);
             Eigen::MatrixXd M(4, 4);
             M.setZero();
-            M(0, 0) = d2E_div_dsigma2(0, 0);
-            M(0, 3) = d2E_div_dsigma2(0, 1);
-            M.block(1, 1, 2, 2) = B01;
-            M(3, 0) = d2E_div_dsigma2(1, 0);
-            M(3, 3) = d2E_div_dsigma2(1, 1);
-              
+            M(0, 0) = w * d2E_div_dsigma2(0, 0);
+            M(0, 3) = w * d2E_div_dsigma2(0, 1);
+            M.block(1, 1, 2, 2) = w * B01;
+            M(3, 0) = w * d2E_div_dsigma2(1, 0);
+            M(3, 3) = w * d2E_div_dsigma2(1, 1);
+            
             // compute dP_div_dF
-            Eigen::MatrixXd dP_div_dF(4, 4);
+            Eigen::MatrixXd wdP_div_dF(4, 4);
             const Eigen::MatrixXd& U = svd[triI].matrixU();
             const Eigen::MatrixXd& V = svd[triI].matrixV();
             for(int i = 0; i < 2; i++) {
@@ -502,7 +519,7 @@ namespace FracCuts {
                             int rs = _2r + s;
                             if(ij < rs) {
                                 // upper right
-                                dP_div_dF(ij, rs) = dP_div_dF(rs, ij) =
+                                wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
                                 (M(0, 0) * U(i, 0) * U(r, 0) * V(s, 0) * V(j, 0) +
                                 M(0, 3) * U(i, 0) * U(r, 1) * V(s, 1) * V(j, 0) +
                                 M(1, 1) * U(i, 0) * U(r, 0) * V(s, 1) * V(j, 1) +
@@ -514,7 +531,7 @@ namespace FracCuts {
                             }
                             else if(ij == rs) {
                                 // diagonal
-                                dP_div_dF(ij, rs) =
+                                wdP_div_dF(ij, rs) =
                                 (M(0, 0) * U(i, 0) * U(r, 0) * V(s, 0) * V(j, 0) +
                                 M(0, 3) * U(i, 0) * U(r, 1) * V(s, 1) * V(j, 0) +
                                 M(1, 1) * U(i, 0) * U(r, 0) * V(s, 1) * V(j, 1) +
@@ -532,11 +549,13 @@ namespace FracCuts {
                     }
                 }
             }
-              
-            const double w = coef * data.triWeight[triI] * data.triArea[triI];
+            timer_temp2.stop();
+            
             Eigen::MatrixXd wdP_div_dx;
-            IglUtils::dF_div_dx_mult(w * dP_div_dF.transpose(), A, wdP_div_dx);
-            IglUtils::dF_div_dx_mult(wdP_div_dx.transpose(), A, triHessians[triI]);
+            timer_temp2.start(3);
+            IglUtils::dF_div_dx_mult(wdP_div_dF.transpose(), A, wdP_div_dx, false);
+            IglUtils::dF_div_dx_mult(wdP_div_dx.transpose(), A, triHessians[triI], true);
+            timer_temp2.stop();
             
             Eigen::VectorXi& vInd = vInds[triI];
             vInd = triVInd;
