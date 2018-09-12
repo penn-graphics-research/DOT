@@ -380,6 +380,34 @@ namespace FracCuts {
                     u_subdomain[subdomainI](dualMapperI.second, 1) /= weights_subdomain[subdomainI](dualMapperI.second, 1);
                 }
             }
+            
+            // weighting matrix
+            Eigen::VectorXd rhs(globalVIToDual_subdomain[subdomainI].size() * 2);
+            for(const auto& dualMapperI : globalVIToDual_subdomain[subdomainI]) {
+                int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
+                rhs.segment(dualMapperI.second * 2, 2) = g.segment(dualMapperI.first * 2, 2) - g_subdomain.segment(localI * 2, 2);
+            }
+            //TODO: consider using sparse matrix
+            Eigen::MatrixXd coefMtr(rhs.size(), rhs.size());
+            coefMtr.setZero();
+            for(const auto& entryI : weightMtr_subdomain[subdomainI]) {
+                coefMtr(entryI.first.first, entryI.first.second) = entryI.second;
+            }
+            for(const auto& fVI : result.fixedVert) {
+                const auto dualFinder = globalVIToDual_subdomain[subdomainI].find(fVI);
+                if(dualFinder != globalVIToDual_subdomain[subdomainI].end()) {
+                    coefMtr.col(dualFinder->second * 2).setZero();
+                    coefMtr.col(dualFinder->second * 2 + 1).setZero();
+                    coefMtr.row(dualFinder->second * 2).setZero();
+                    coefMtr.row(dualFinder->second * 2 + 1).setZero();
+                    coefMtr.block(dualFinder->second * 2, dualFinder->second * 2, 2, 2).setIdentity();
+                }
+            }
+            Eigen::VectorXd dualVec = coefMtr.ldlt().solve(rhs);
+            for(int uI = 0; uI < u_subdomain[subdomainI].rows(); uI++) {
+                u_subdomain[subdomainI].row(uI) = dualVec.segment(uI * 2, 2).transpose();
+            }
+//            std::cout << u_subdomain[subdomainI] << std::endl; //DEBUG
         }
 #ifdef USE_TBB
         );
@@ -412,6 +440,7 @@ namespace FracCuts {
                     weights_subdomain[subdomainI](dualMapperI.second, dimI) *= multiplier;
                     weightSum(dualMapperI.first, dimI) += weights_subdomain[subdomainI](dualMapperI.second, dimI);
                 }
+                
                 // off-diagonals
                 for(int rowI = 0; rowI < 2; rowI++) {
                     for(int colI = 0; colI < 2; colI++) {
@@ -419,9 +448,9 @@ namespace FracCuts {
                                                                 dualMapperI.first * 2 + colI) -
                                          linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
                                                                                       localI * 2 + colI));
-                        weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, localI * 2 + colI)] += offset;
-//                        //DEBUG fill with dual index
-//                        weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, dualMapperI.second * 2 + colI)] += offset;
+//                        weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, localI * 2 + colI)] += offset;
+                        //DEBUG fill with dual index
+                        weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, dualMapperI.second * 2 + colI)] += offset;
                     }
                 }
                 for(const auto& nbVI_local : mesh_subdomain[subdomainI].vNeighbor[localI]) {
@@ -434,9 +463,9 @@ namespace FracCuts {
                                                                         nbVI_global * 2 + colI) -
                                                  linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
                                                                                               nbVI_local * 2 + colI));
-                                weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, nbVI_local * 2 + colI)] += offset;
-//                                //DEBUG fill with dual index
-//                                weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, finder->second * 2 + colI)] += offset;
+//                                weightMtr_subdomain[subdomainI][std::pair<int, int>(localI * 2 + rowI, nbVI_local * 2 + colI)] += offset;
+                                //DEBUG fill with dual index
+                                weightMtr_subdomain[subdomainI][std::pair<int, int>(dualMapperI.second * 2 + rowI, finder->second * 2 + colI)] += offset;
                             }
                         }
                     }
@@ -556,6 +585,7 @@ namespace FracCuts {
                 result.V(vI, 1) /= weightSum(vI, 1);
             }
         }
+        // with off-diagonal weightMtr: handle fixed vert entries!!
     }
     
     // subdomain energy computation
@@ -653,6 +683,7 @@ namespace FracCuts {
             V[curTripletSize + _2dualIp1] = weights_subdomain[subdomainI](dualMapperI.second, 1);
             dualI++;
         }
+        // with off-diagonal weightMtr: no fixed vert entries!!
     }
     
 }
