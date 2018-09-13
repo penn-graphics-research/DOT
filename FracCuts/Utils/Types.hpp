@@ -20,6 +20,9 @@
 
 #define USE_CLOSEDFORMSVD2D
 
+// for comparing subversions
+#define USE_GW
+
 namespace FracCuts {
     enum MethodType {
         MT_OURS,

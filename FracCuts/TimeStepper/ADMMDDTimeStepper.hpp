@@ -22,13 +22,17 @@ namespace FracCuts {
         std::vector<std::vector<int>> localVIToGlobal_subdomain;
         std::vector<std::map<int, int>> globalTriIToLocal_subdomain;
         std::vector<std::map<int, int>> globalVIToDual_subdomain;
+        std::vector<std::vector<int>> dualIndIToLocal_subdomain; //TODO: use it to simplify index querying
+        std::vector<std::vector<int>> dualIndIToShared_subdomain;
         std::vector<Eigen::MatrixXd> xHat_subdomain;
         int dualDim;
         std::vector<Eigen::MatrixXd> u_subdomain, du_subdomain, dz_subdomain;
         std::vector<Eigen::MatrixXd> weights_subdomain;
         std::vector<std::map<std::pair<int, int>, double>> weightMtr_subdomain;
+        std::vector<std::map<std::pair<int, int>, double>> weightMtrFixed_subdomain;
         Eigen::MatrixXd weightSum;
         std::vector<bool> isSharedVert;
+        std::map<int, int> globalVIToShared;
         Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
         std::vector<std::vector<AutoFlipSVD<Eigen::MatrixXd>>> svd_subdomain;
