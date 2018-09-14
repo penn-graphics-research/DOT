@@ -384,24 +384,28 @@ namespace FracCuts {
                                      std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                      Eigen::VectorXd& gradient) const
     {
-        gradient.resize(data.V.rows() * 2);
-        gradient.setZero();
-        for(int triI = 0; triI < data.F.rows(); triI++) {
+        static std::vector<Eigen::Matrix<double, 6, 1>> gradient_cont;
+        gradient_cont.resize(data.F.rows());
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
+#else
+        for(int triI = 0; triI < data.F.rows(); triI++)
+#endif
+        {
             timer_temp2.start(5);
             timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Matrix2d Xt, A, F;
+            Eigen::Matrix2d Xt, F;
             Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
             Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = data.restTriInv[triI];
+            const Eigen::Matrix2d& A = data.restTriInv[triI];
             F = Xt * A;
             timer_temp2.stop();
             
             if(redoSVD) {
                 timer_temp.start(0);
                 svd[triI].compute(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
-//                svd[triI] = AutoFlipSVD<Eigen::MatrixXd>(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
             
@@ -413,17 +417,24 @@ namespace FracCuts {
             P *= w;
             
             timer_temp2.start(7);
-            Eigen::Matrix<double, 6, 1> gradient_cont;
-            IglUtils::dF_div_dx_mult(P, A, gradient_cont);
-            
-            timer_temp2.start(8);
-            gradient.segment(triVInd[0] * 2, 2) += gradient_cont.segment(0, 2);
-            gradient.segment(triVInd[1] * 2, 2) += gradient_cont.segment(2, 2);
-            gradient.segment(triVInd[2] * 2, 2) += gradient_cont.segment(4, 2);
-            //TODO: funtionalize it
+            IglUtils::dF_div_dx_mult(P, A, gradient_cont[triI]);
             timer_temp.stop();
             timer_temp2.stop();
         }
+#ifdef USE_TBB
+        );
+#endif
+        timer_temp2.start(8);
+        gradient.conservativeResize(data.V.rows() * 2);
+        gradient.setZero();
+        for(int triI = 0; triI < data.F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = data.F.row(triI);
+            const Eigen::Matrix<double, 6, 1>& grad_cont = gradient_cont[triI];
+            gradient.segment(triVInd[0] * 2, 2) += grad_cont.segment(0, 2);
+            gradient.segment(triVInd[1] * 2, 2) += grad_cont.segment(2, 2);
+            gradient.segment(triVInd[2] * 2, 2) += grad_cont.segment(4, 2);
+        }
+        timer_temp2.stop();
         
         for(const auto fixedVI : data.fixedVert) {
             gradient.segment(2 * fixedVI, 2).setZero();
@@ -456,7 +467,6 @@ namespace FracCuts {
             if(redoSVD) {
                 timer_temp.start(0);
                 svd[triI].compute(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-//                svd[triI] = AutoFlipSVD<Eigen::MatrixXd>(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
             const Eigen::Vector2d& sigma = svd[triI].singularValues();

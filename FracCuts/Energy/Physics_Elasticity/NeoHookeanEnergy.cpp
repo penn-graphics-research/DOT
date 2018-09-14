@@ -24,10 +24,10 @@ namespace FracCuts {
         const double sigmaProd = singularValues.prod();
         const double log_sigmaProd = std::log(sigmaProd);
         
-        E = u / 2.0 * (sigma2Sum - singularValues.size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd;
+        E = u / 2.0 * (sigma2Sum - singularValues.size()) - (u - lambda / 2.0 * log_sigmaProd) * log_sigmaProd;
     }
     void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
-                                       Eigen::Vector2d& dE_div_dsigma) const
+                                                 Eigen::Vector2d& dE_div_dsigma) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
         
