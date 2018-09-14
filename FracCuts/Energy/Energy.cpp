@@ -459,13 +459,14 @@ namespace FracCuts {
 //                svd[triI] = AutoFlipSVD<Eigen::MatrixXd>(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
+            const Eigen::Vector2d& sigma = svd[triI].singularValues();
             
             // compute A
             timer_temp2.start(0);
             Eigen::Vector2d dE_div_dsigma;
-            compute_dE_div_dsigma(svd[triI].singularValues(), dE_div_dsigma);
+            compute_dE_div_dsigma(sigma, dE_div_dsigma);
             Eigen::Matrix2d d2E_div_dsigma2;
-            compute_d2E_div_dsigma2(svd[triI].singularValues(), d2E_div_dsigma2);
+            compute_d2E_div_dsigma2(sigma, d2E_div_dsigma2);
             timer_temp2.stop();
             if(projectSPD) {
                 timer_temp.start(2);
@@ -477,14 +478,14 @@ namespace FracCuts {
             timer_temp2.start(1);
             Eigen::Matrix2d B01;
             double leftCoef = d2E_div_dsigma2(0, 0);
-            const double dif_sigma = svd[triI].singularValues()[0] - svd[triI].singularValues()[1];
+            const double dif_sigma = sigma[0] - sigma[1];
             const double eps = 1.0e-8;
             if(std::abs(dif_sigma) > eps) {
                 leftCoef = (dE_div_dsigma[0] - dE_div_dsigma[1]) / dif_sigma;
             }
             leftCoef /= 2.0;
             double rightCoef = dE_div_dsigma[0] + dE_div_dsigma[1];
-            double sum_sigma = svd[triI].singularValues().sum();
+            double sum_sigma = sigma.sum();
             if(sum_sigma < eps) {
                 rightCoef /= 2.0 * eps;
             }
