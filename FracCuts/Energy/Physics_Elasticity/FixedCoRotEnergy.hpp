@@ -37,6 +37,7 @@ namespace FracCuts {
         
     protected:
         const double u, lambda;
+        const double _2u;
     };
     
 }

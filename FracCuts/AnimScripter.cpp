@@ -25,18 +25,18 @@ namespace FracCuts {
                 break;
                 
             case AST_HANG:
-                mesh.fixedVert.clear();
+                mesh.resetFixedVert();
                 for(const auto borderI : mesh.borderVerts_primitive) {
-                    mesh.fixedVert.insert(borderI.back());
+                    mesh.addFixedVert(borderI.back());
                 }
                 break;
                 
             case AST_STRETCH: {
-                mesh.fixedVert.clear();
+                mesh.resetFixedVert();
                 handleVerts.resize(0);
                 int bI = 0;
                 for(const auto borderI : mesh.borderVerts_primitive) {
-                    mesh.fixedVert.insert(borderI.begin(), borderI.end());
+                    mesh.addFixedVert(borderI);
                     handleVerts.emplace_back(borderI);
                     for(const auto bVI : borderI) {
                         velocity_handleVerts[bVI] << std::pow(-1.0, bI) * -0.1, 0.0;
@@ -47,11 +47,11 @@ namespace FracCuts {
             }
                 
             case AST_SQUASH: {
-                mesh.fixedVert.clear();
+                mesh.resetFixedVert();
                 handleVerts.resize(0);
                 int bI = 0;
                 for(const auto borderI : mesh.borderVerts_primitive) {
-                    mesh.fixedVert.insert(borderI.begin(), borderI.end());
+                    mesh.addFixedVert(borderI);
                     handleVerts.emplace_back(borderI);
                     for(const auto bVI : borderI) {
                         velocity_handleVerts[bVI] << std::pow(-1.0, bI) * 0.03, 0.0;
@@ -62,11 +62,11 @@ namespace FracCuts {
             }
                 
             case AST_BEND: {
-                mesh.fixedVert.clear();
+                mesh.resetFixedVert();
                 handleVerts.resize(0);
                 int bI = 0;
                 for(const auto borderI : mesh.borderVerts_primitive) {
-                    mesh.fixedVert.insert(borderI.begin(), borderI.end());
+                    mesh.addFixedVert(borderI);
                     handleVerts.emplace_back(borderI);
                     for(int bVI = 0; bVI + 1 < borderI.size(); bVI++) {
                         angVel_handleVerts[borderI[bVI]] = std::pow(-1.0, bI) * -0.05 * M_PI;

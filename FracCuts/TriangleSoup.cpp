@@ -731,6 +731,9 @@ namespace FracCuts {
         if(resetFixedV) {
             fixedVert.clear();
             fixedVert.insert(0);
+            isFixedVert.resize(0);
+            isFixedVert.resize(V.rows(), false);
+            isFixedVert[0] = true;
         }
         
         boundaryEdge.resize(cohE.rows());
@@ -930,11 +933,30 @@ namespace FracCuts {
     
     void TriangleSoup::resetFixedVert(const std::set<int>& p_fixedVert)
     {
+        isFixedVert.resize(0);
+        isFixedVert.resize(V.rows(), false);
         for(const auto& vI : p_fixedVert) {
             assert(vI < V.rows());
+            isFixedVert[vI] = true;
         }
         
         fixedVert = p_fixedVert;
+        computeLaplacianMtr();
+    }
+    void TriangleSoup::addFixedVert(int vI)
+    {
+        assert(vI < V.rows());
+        fixedVert.insert(vI);
+        isFixedVert[vI] = true;
+    }
+    void TriangleSoup::addFixedVert(const std::vector<int>& p_fixedVert)
+    {
+        for(const auto& vI : p_fixedVert) {
+            assert(vI < V.rows());
+            isFixedVert[vI] = true;
+        }
+        
+        fixedVert.insert(p_fixedVert.begin(), p_fixedVert.end());
         computeLaplacianMtr();
     }
     

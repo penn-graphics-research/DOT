@@ -434,9 +434,11 @@ namespace FracCuts {
                                     double coef, Eigen::VectorXd* V,
                                     Eigen::VectorXi* I, Eigen::VectorXi* J,
                                     bool projectSPD) const
-    {
-        std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
-        std::vector<Eigen::Vector3i> vInds(data.F.rows());
+    {        
+        static std::vector<Eigen::Matrix<double, 6, 6>> triHessians;
+        triHessians.resize(data.F.rows());
+        static std::vector<Eigen::Vector3i> vInds;
+        vInds.resize(data.F.rows());
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
 #else
@@ -446,10 +448,10 @@ namespace FracCuts {
             timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Matrix2d Xt, A;
+            Eigen::Matrix2d Xt;
             Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
             Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
-            A = data.restTriInv[triI];
+            const Eigen::Matrix2d& A = data.restTriInv[triI];
             
             if(redoSVD) {
                 timer_temp.start(0);
@@ -482,7 +484,7 @@ namespace FracCuts {
             }
             leftCoef /= 2.0;
             double rightCoef = dE_div_dsigma[0] + dE_div_dsigma[1];
-            double sum_sigma = svd[triI].singularValues()[0] + svd[triI].singularValues()[1];
+            double sum_sigma = svd[triI].singularValues().sum();
             if(sum_sigma < eps) {
                 rightCoef /= 2.0 * eps;
             }
@@ -561,13 +563,11 @@ namespace FracCuts {
             IglUtils::dF_div_dx_mult<6>(wdP_div_dx.transpose(), A, triHessians[triI], true);
             timer_temp2.stop();
             
+            
             Eigen::Vector3i& vInd = vInds[triI];
-            vInd = triVInd;
-            for(int vI = 0; vI < 3; vI++) {
-                if(data.fixedVert.find(vInd[vI]) != data.fixedVert.end()) {
-                    vInd[vI] = -1;
-                }
-            }
+            vInd[0] = (data.isFixedVert[triVInd[0]] ? -1 : triVInd[0]);
+            vInd[1] = (data.isFixedVert[triVInd[1]] ? -1 : triVInd[1]);
+            vInd[2] = (data.isFixedVert[triVInd[2]] ? -1 : triVInd[2]);
             timer_temp.stop();
         }
 #ifdef USE_TBB

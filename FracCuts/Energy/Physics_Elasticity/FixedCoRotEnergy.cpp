@@ -33,13 +33,13 @@ namespace FracCuts {
     void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                                  Eigen::Vector2d& dE_div_dsigma) const
     {
-        const double sigmaProdm1 = singularValues.prod() - 1.0;
+        const double sigmaProdm1lambda = lambda * (singularValues.prod() - 1.0);
         Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
         
-        dE_div_dsigma[0] = (2.0 * u * (singularValues[0] - 1.0) +
-                            lambda * sigmaProd_noI[0] * sigmaProdm1);
-        dE_div_dsigma[1] = (2.0 * u * (singularValues[1] - 1.0) +
-                            lambda * sigmaProd_noI[1] * sigmaProdm1);
+        dE_div_dsigma[0] = (_2u * (singularValues[0] - 1.0) +
+                            sigmaProd_noI[0] * sigmaProdm1lambda);
+        dE_div_dsigma[1] = (_2u * (singularValues[1] - 1.0) +
+                            sigmaProd_noI[1] * sigmaProdm1lambda);
     }
     void FixedCoRotEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                                    Eigen::Matrix2d& d2E_div_dsigma2) const
@@ -47,8 +47,8 @@ namespace FracCuts {
         const double sigmaProd = singularValues.prod();
         Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
         
-        d2E_div_dsigma2(0, 0) = 2.0 * u + lambda * sigmaProd_noI[0] * sigmaProd_noI[0];
-        d2E_div_dsigma2(1, 1) = 2.0 * u + lambda * sigmaProd_noI[1] * sigmaProd_noI[1];
+        d2E_div_dsigma2(0, 0) = _2u + lambda * sigmaProd_noI[0] * sigmaProd_noI[0];
+        d2E_div_dsigma2(1, 1) = _2u + lambda * sigmaProd_noI[1] * sigmaProd_noI[1];
         d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
             lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
     }
@@ -61,7 +61,7 @@ namespace FracCuts {
         JFInvT(0, 1) = -F(1, 0);
         JFInvT(1, 0) = -F(0, 1);
         JFInvT(1, 1) = F(0, 0);
-        dE_div_dF = (2 * u * (F - svd.matrixU() * svd.matrixV().transpose()) +
+        dE_div_dF = (_2u * (F - svd.matrixU() * svd.matrixV().transpose()) +
                      lambda * (svd.singularValues().prod() - 1) * JFInvT);
     }
     
@@ -101,7 +101,7 @@ namespace FracCuts {
     }
     
     FixedCoRotEnergy::FixedCoRotEnergy(double YM, double PR) :
-        Energy(true, false, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
+        Energy(true, false, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR)), _2u(2.0 * u)
     {
         const double sigmam12Sum = 2;
         const double sigmaProdm1 = 3;
@@ -112,7 +112,7 @@ namespace FracCuts {
     
     void FixedCoRotEnergy::getBulkModulus(double& bulkModulus)
     {
-        bulkModulus = lambda + (2.0/3.0) * u;
+        bulkModulus = lambda + _2u / 3.0;
     }
     
 }

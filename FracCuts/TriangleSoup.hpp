@@ -64,6 +64,7 @@ namespace FracCuts{
         double virtualRadius;
         std::vector<std::set<std::pair<int, int>>> validSplit;
         std::set<int> fixedVert; // for linear solve
+        std::vector<bool> isFixedVert;
         Eigen::Matrix<double, 2, 3> bbox;
 //        Eigen::MatrixXd cotVals; // cotangent values of rest triangle corners
         Eigen::VectorXd vertWeight; // for regional seam placement
@@ -97,7 +98,9 @@ namespace FracCuts{
         void computeMassMatrix(const igl::MassMatrixType type = igl::MASSMATRIX_TYPE_VORONOI);
         void computeFeatures(bool multiComp = false, bool resetFixedV = false);
         void updateFeatures(void);
-        void resetFixedVert(const std::set<int>& p_fixedVert);
+        void resetFixedVert(const std::set<int>& p_fixedVert = std::set<int>());
+        void addFixedVert(int vI);
+        void addFixedVert(const std::vector<int>& p_fixedVert);
         
         bool separateTriangle(const Eigen::VectorXd& measure, double thres);
         bool splitVertex(const Eigen::VectorXd& measure, double thres);
