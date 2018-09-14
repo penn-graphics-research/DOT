@@ -54,11 +54,11 @@ namespace FracCuts {
         virtual void checkHessian(const TriangleSoup& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
         virtual void getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
-                                              std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                              std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                               Eigen::VectorXd& energyValPerElem,
                                               bool uniformWeight = false) const;
         virtual void computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
-                                           std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                           std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                            double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
@@ -66,10 +66,10 @@ namespace FracCuts {
                                          bool projectSPD = true) const;
         
         virtual void computeGradientByPK(const TriangleSoup& data, bool redoSVD,
-                                         std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                         std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
-                                        std::vector<AutoFlipSVD<Eigen::MatrixXd>>& svd,
+                                        std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                         double coef, Eigen::VectorXd* V,
                                         Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                         bool projectSPD = true) const;
@@ -98,15 +98,15 @@ namespace FracCuts {
                                            Eigen::MatrixXd& hessian,
                                            bool projectSPD = true) const;
         
-        virtual void compute_E(const Eigen::VectorXd& singularValues,
+        virtual void compute_E(const Eigen::Vector2d& singularValues,
                                double& E) const;
-        virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                           Eigen::VectorXd& dE_div_dsigma) const;
-        virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                             Eigen::MatrixXd& d2E_div_dsigma2) const;
-        virtual void compute_dE_div_dF(const Eigen::MatrixXd& F,
-                                       const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                       Eigen::MatrixXd& dE_div_dF) const;
+        virtual void compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+                                           Eigen::Vector2d& dE_div_dsigma) const;
+        virtual void compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+                                             Eigen::Matrix2d& d2E_div_dsigma2) const;
+        virtual void compute_dE_div_dF(const Eigen::Matrix2d& F,
+                                       const AutoFlipSVD<Eigen::Matrix2d>& svd,
+                                       Eigen::Matrix2d& dE_div_dF) const;
         
         virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
         

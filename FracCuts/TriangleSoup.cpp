@@ -771,7 +771,8 @@ namespace FracCuts {
             Eigen::Vector2d x0[3];
             IglUtils::mapTriangleTo2D(x0_3D, x0);
             Eigen::Matrix2d X0;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
+            X0.col(0) = x0[1] - x0[0];
+            X0.col(1) = x0[2] - x0[0];
             restTriInv[triI] = X0.inverse();
             //TODO: support areaThres_AM
             

@@ -18,11 +18,11 @@ namespace FracCuts {
     
     void FixedCoRotEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        std::vector<AutoFlipSVD<Eigen::MatrixXd>> svd(data.F.rows());
+        std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
         Energy::getEnergyValPerElemBySVD(data, true, svd, energyValPerElem, uniformWeight);
     }
     
-    void FixedCoRotEnergy::compute_E(const Eigen::VectorXd& singularValues,
+    void FixedCoRotEnergy::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         const double sigmam12Sum = (singularValues - Eigen::Vector2d::Ones()).squaredNorm();
@@ -30,51 +30,31 @@ namespace FracCuts {
         
         E = u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1;
     }
-    void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                                 Eigen::VectorXd& dE_div_dsigma) const
+    void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+                                                 Eigen::Vector2d& dE_div_dsigma) const
     {
         const double sigmaProdm1 = singularValues.prod() - 1.0;
-        Eigen::Vector2d sigmaProd_noI = Eigen::Vector2d::Ones();
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            for(int sigmaJ = 0; sigmaJ < singularValues.size(); sigmaJ++) {
-                if(sigmaJ != sigmaI) {
-                    sigmaProd_noI[sigmaI] *= singularValues[sigmaJ];
-                }
-            }
-        }
+        Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
         
-        dE_div_dsigma.resize(singularValues.size());
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            dE_div_dsigma[sigmaI] = 2.0 * u * (singularValues[sigmaI] - 1.0) +
-                lambda * sigmaProd_noI[sigmaI] * sigmaProdm1;
-        }
+        dE_div_dsigma[0] = (2.0 * u * (singularValues[0] - 1.0) +
+                            lambda * sigmaProd_noI[0] * sigmaProdm1);
+        dE_div_dsigma[1] = (2.0 * u * (singularValues[1] - 1.0) +
+                            lambda * sigmaProd_noI[1] * sigmaProdm1);
     }
-    void FixedCoRotEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                                   Eigen::MatrixXd& d2E_div_dsigma2) const
+    void FixedCoRotEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         const double sigmaProd = singularValues.prod();
-        Eigen::Vector2d sigmaProd_noI = Eigen::Vector2d::Ones();
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            for(int sigmaJ = 0; sigmaJ < singularValues.size(); sigmaJ++) {
-                if(sigmaJ != sigmaI) {
-                    sigmaProd_noI[sigmaI] *= singularValues[sigmaJ];
-                }
-            }
-        }
+        Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
         
-        d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            d2E_div_dsigma2(sigmaI, sigmaI) = 2.0 * u +
-                lambda * sigmaProd_noI[sigmaI] * sigmaProd_noI[sigmaI];
-            for(int sigmaJ = sigmaI + 1; sigmaJ < singularValues.size(); sigmaJ++) {
-                d2E_div_dsigma2(sigmaI, sigmaJ) = d2E_div_dsigma2(sigmaJ, sigmaI) =
-                    lambda * ((sigmaProd - 1.0) + sigmaProd_noI[sigmaI] * sigmaProd_noI[sigmaJ]);
-            }
-        }
+        d2E_div_dsigma2(0, 0) = 2.0 * u + lambda * sigmaProd_noI[0] * sigmaProd_noI[0];
+        d2E_div_dsigma2(1, 1) = 2.0 * u + lambda * sigmaProd_noI[1] * sigmaProd_noI[1];
+        d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
+            lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
     }
-    void FixedCoRotEnergy::compute_dE_div_dF(const Eigen::MatrixXd& F,
-                                             const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                             Eigen::MatrixXd& dE_div_dF) const
+    void FixedCoRotEnergy::compute_dE_div_dF(const Eigen::Matrix2d& F,
+                                             const AutoFlipSVD<Eigen::Matrix2d>& svd,
+                                             Eigen::Matrix2d& dE_div_dF) const
     {
         Eigen::Matrix2d JFInvT;
         JFInvT(0, 0) = F(1, 1);

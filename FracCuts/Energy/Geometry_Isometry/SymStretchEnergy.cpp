@@ -777,7 +777,7 @@ namespace FracCuts {
         logFile << "energyVal computation error = " << err << std::endl;
     }
     
-    void SymStretchEnergy::compute_E(const Eigen::VectorXd& singularValues,
+    void SymStretchEnergy::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         E = 0.0;
@@ -786,8 +786,8 @@ namespace FracCuts {
             E += sigma2[sigmaI] + 1.0 / sigma2[sigmaI];
         }
     }
-    void SymStretchEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                                 Eigen::VectorXd& dE_div_dsigma) const
+    void SymStretchEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+                                                 Eigen::Vector2d& dE_div_dsigma) const
     {
         dE_div_dsigma.resize(singularValues.size());
         for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
@@ -795,8 +795,8 @@ namespace FracCuts {
                 2.0 * std::pow(singularValues[sigmaI], -3);
         }
     }
-    void SymStretchEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                                   Eigen::MatrixXd& d2E_div_dsigma2) const
+    void SymStretchEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
         d2E_div_dsigma2.setZero();

@@ -31,12 +31,12 @@ namespace FracCuts {
         virtual void computeDivGradPerVert(const TriangleSoup& data, Eigen::VectorXd& divGradPerVert) const;
         virtual void computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const;
         
-        virtual void compute_E(const Eigen::VectorXd& singularValues,
+        virtual void compute_E(const Eigen::Vector2d& singularValues,
                                double& E) const;
-        virtual void compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                           Eigen::VectorXd& dE_div_dsigma) const;
-        virtual void compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                             Eigen::MatrixXd& d2E_div_dsigma2) const;
+        virtual void compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+                                           Eigen::Vector2d& dE_div_dsigma) const;
+        virtual void compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+                                             Eigen::Matrix2d& d2E_div_dsigma2) const;
         
         virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
         

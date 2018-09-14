@@ -35,7 +35,7 @@ namespace FracCuts {
         std::map<int, int> globalVIToShared;
         Eigen::VectorXi sharedVerts;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
-        std::vector<std::vector<AutoFlipSVD<Eigen::MatrixXd>>> svd_subdomain;
+        std::vector<std::vector<AutoFlipSVD<Eigen::Matrix2d>>> svd_subdomain;
         
     public:
         ADMMDDTimeStepper(const TriangleSoup& p_data0,

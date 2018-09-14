@@ -13,11 +13,11 @@ namespace FracCuts {
     
     void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
-        std::vector<AutoFlipSVD<Eigen::MatrixXd>> svd(data.F.rows());
+        std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
         Energy::getEnergyValPerElemBySVD(data, true, svd, energyValPerElem, uniformWeight);
     }
     
-    void NeoHookeanEnergy::compute_E(const Eigen::VectorXd& singularValues,
+    void NeoHookeanEnergy::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         const double sigma2Sum = singularValues.squaredNorm();
@@ -26,40 +26,38 @@ namespace FracCuts {
         
         E = u / 2.0 * (sigma2Sum - singularValues.size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd;
     }
-    void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::VectorXd& singularValues,
-                                       Eigen::VectorXd& dE_div_dsigma) const
+    void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+                                       Eigen::Vector2d& dE_div_dsigma) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
         
-        dE_div_dsigma.resize(singularValues.size());
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            const double inv = 1.0 / singularValues[sigmaI];
-            dE_div_dsigma[sigmaI] = u * (singularValues[sigmaI] - inv) + lambda * inv * log_sigmaProd;
-        }
+        const double inv0 = 1.0 / singularValues[0];
+        dE_div_dsigma[0] = u * (singularValues[0] - inv0) + lambda * inv0 * log_sigmaProd;
+        const double inv1 = 1.0 / singularValues[1];
+        dE_div_dsigma[1] = u * (singularValues[1] - inv1) + lambda * inv1 * log_sigmaProd;
     }
-    void NeoHookeanEnergy::compute_d2E_div_dsigma2(const Eigen::VectorXd& singularValues,
-                                                   Eigen::MatrixXd& d2E_div_dsigma2) const
+    void NeoHookeanEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
         
-        d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            const double inv2 = 1.0 / singularValues[sigmaI] / singularValues[sigmaI];
-            d2E_div_dsigma2(sigmaI, sigmaI) = u * (1.0 + inv2) - lambda * inv2 * (log_sigmaProd - 1.0);
-            for(int sigmaJ = sigmaI + 1; sigmaJ < singularValues.size(); sigmaJ++) {
-                d2E_div_dsigma2(sigmaI, sigmaJ) = d2E_div_dsigma2(sigmaJ, sigmaI) = lambda / singularValues[sigmaI] / singularValues[sigmaJ];
-            }
-        }
+        const double inv2_0 = 1.0 / singularValues[0] / singularValues[0];
+        d2E_div_dsigma2(0, 0) = u * (1.0 + inv2_0) - lambda * inv2_0 * (log_sigmaProd - 1.0);
+        const double inv2_1 = 1.0 / singularValues[1] / singularValues[1];
+        d2E_div_dsigma2(1, 1) = u * (1.0 + inv2_1) - lambda * inv2_1 * (log_sigmaProd - 1.0);
+        d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) = lambda / singularValues[0] / singularValues[1];
     }
-    void NeoHookeanEnergy::compute_dE_div_dF(const Eigen::MatrixXd& F,
-                                             const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                             Eigen::MatrixXd& dE_div_dF) const
+    void NeoHookeanEnergy::compute_dE_div_dF(const Eigen::Matrix2d& F,
+                                             const AutoFlipSVD<Eigen::Matrix2d>& svd,
+                                             Eigen::Matrix2d& dE_div_dF) const
     {
         //TODO: optimize for 2D
         const double J = svd.singularValues().prod();
-        Eigen::Matrix2d FInvT = svd.matrixU() *
-            Eigen::DiagonalMatrix<double, 2>(1.0 / svd.singularValues()[0], 1.0 / svd.singularValues()[1]) *
-            svd.matrixV().transpose();
+        Eigen::Matrix2d FInvT;
+        FInvT(0, 0) = F(1, 1) / J;
+        FInvT(0, 1) = -F(1, 0) / J;
+        FInvT(1, 0) = -F(0, 1) / J;
+        FInvT(1, 1) = F(0, 0) / J;
         dE_div_dF = u * (F - FInvT) + lambda * std::log(J) * FInvT;
     }
     

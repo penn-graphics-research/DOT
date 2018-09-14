@@ -49,19 +49,77 @@ namespace FracCuts {
         
         static void addBlockToMatrix(Eigen::SparseMatrix<double>& mtr, const Eigen::MatrixXd& block,
                                      const Eigen::VectorXi& index, int dim);
-        static void addBlockToMatrix(const Eigen::MatrixXd& block, const Eigen::VectorXi& index, int dim,
-                                     Eigen::VectorXd* V, Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL);
-        static void addDiagonalToMatrix(const Eigen::VectorXd& diagonal, const Eigen::VectorXi& index, int dim,
-                                     Eigen::VectorXd* V, Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL);
-        
-        template<typename Scalar, int rows, int cols>
-        static void symmetrizeMatrix(Eigen::Matrix<Scalar, rows, cols>& mtr) {
-            if(rows != cols) {
+        template<int blockSize, int indexSize>
+        static void addBlockToMatrix(const Eigen::Matrix<double, blockSize, blockSize>& block,
+                                     const Eigen::Matrix<int, indexSize, 1>& index,
+                                     int dim, Eigen::VectorXd* V,
+                                     Eigen::VectorXi* I = NULL,
+                                     Eigen::VectorXi* J = NULL)
+        {
+            assert(indexSize * dim == blockSize);
+            
+            int num_free = 0;
+            for(int indI = 0; indI < indexSize; indI++) {
+                if(index[indI] >= 0) {
+                    num_free++;
+                }
+            }
+            if(!num_free) {
                 return;
             }
             
+            assert(V);
+            int tripletInd = static_cast<int>(V->size());
+            const int entryAmt = static_cast<int>(dim * dim * num_free * num_free);
+            V->conservativeResize(tripletInd + entryAmt);
+            if(I) {
+                assert(J);
+                assert(I->size() == tripletInd);
+                assert(J->size() == tripletInd);
+                I->conservativeResize(tripletInd + entryAmt);
+                J->conservativeResize(tripletInd + entryAmt);
+            }
+            
+            for(int indI = 0; indI < indexSize; indI++) {
+                if(index[indI] < 0) {
+                    continue;
+                }
+                int startIndI = index[indI] * dim;
+                int startIndI_block = indI * dim;
+                
+                for(int indJ = 0; indJ < indexSize; indJ++) {
+                    if(index[indJ] < 0) {
+                        continue;
+                    }
+                    int startIndJ = index[indJ] * dim;
+                    int startIndJ_block = indJ * dim;
+                    
+                    for(int dimI = 0; dimI < dim; dimI++) {
+                        for(int dimJ = 0; dimJ < dim; dimJ++) {
+                            (*V)[tripletInd] = block(startIndI_block + dimI, startIndJ_block + dimJ);
+                            if(I) {
+                                (*I)[tripletInd] = startIndI + dimI;
+                                (*J)[tripletInd] = startIndJ + dimJ;
+                            }
+                            tripletInd++;
+                        }
+                    }
+                }
+            }
+            assert(tripletInd == V->size());
+        }
+        static void addDiagonalToMatrix(const Eigen::VectorXd& diagonal, const Eigen::VectorXi& index, int dim,
+                                     Eigen::VectorXd* V, Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL);
+        
+        template<typename Scalar, int size>
+        static void symmetrizeMatrix(Eigen::Matrix<Scalar, size, size>& mtr) {
+            if(size == Eigen::Dynamic) {
+                assert(mtr.rows() == mtr.cols());
+            }
+            int rows = ((size == Eigen::Dynamic) ? mtr.rows() : size);
+            
             for(int rowI = 0; rowI < rows; rowI++) {
-                for(int colI = rowI + 1; colI < cols; colI++) {
+                for(int colI = rowI + 1; colI < rows; colI++) {
                     double &a = mtr(rowI, colI), &b = mtr(colI, rowI);
                     a = b = (a + b) / 2.0;
                 }
@@ -105,10 +163,11 @@ namespace FracCuts {
             
             double b2 = b * b;
             const double D = a * d - b2;
-            const double T = a + d;
-            const double L2 = T / 2.0 - std::sqrt(T * T / 4.0 - D);
+            const double T_div_2 = (a + d) / 2.0;
+            const double sqrtTT4D = std::sqrt(T_div_2 * T_div_2 - D);
+            const double L2 = T_div_2 - sqrtTT4D;
             if(L2 < 0.0) {
-                const double L1 = T / 2.0 + std::sqrt(T * T / 4.0 - D);
+                const double L1 = T_div_2 + sqrtTT4D;
                 if(L1 <= 0.0) {
                     symMtr.setZero();
                 }
@@ -180,15 +239,90 @@ namespace FracCuts {
                                              Eigen::MatrixXd& dU_div_dF,
                                              Eigen::MatrixXd& dV_div_dF);
         
-        static void compute_dF_div_dx(const Eigen::MatrixXd& A,
-                                      Eigen::MatrixXd& dF_div_dx);
-        static void dF_div_dx_mult(const Eigen::MatrixXd& right,
-                                   const Eigen::MatrixXd& A,
-                                   Eigen::MatrixXd& result,
-                                   bool symmetric);
-        static void dF_div_dx_mult(const Eigen::MatrixXd& right,
-                                   const Eigen::MatrixXd& A,
-                                   Eigen::VectorXd& result);
+        static void compute_dF_div_dx(const Eigen::Matrix2d& A,
+                                      Eigen::Matrix<double, 6, 4>& dF_div_dx);
+        template<int colSize>
+        static void dF_div_dx_mult(const Eigen::Matrix<double, 4, colSize>& right,
+                                   const Eigen::Matrix2d& A,
+                                   Eigen::Matrix<double, 6, colSize>& result,
+                                   bool symmetric)
+        {
+            if(colSize == Eigen::Dynamic) {
+                assert(right.cols() > 0);
+            }
+            else {
+                assert(colSize > 0);
+            }
+            
+            if(symmetric) {
+                if(colSize == Eigen::Dynamic) {
+                    assert(right.cols() == 6);
+                }
+                else {
+                    assert(colSize == 6);
+                }
+                // int colI = 0;
+                const double _0000 = right(0, 0) * A(0, 0);
+                const double _0010 = right(0, 0) * A(1, 0);
+                const double _1001 = right(1, 0) * A(0, 1);
+                const double _1011 = right(1, 0) * A(1, 1);
+                const double _2000 = right(2, 0) * A(0, 0);
+                const double _2010 = right(2, 0) * A(1, 0);
+                const double _3001 = right(3, 0) * A(0, 1);
+                const double _3011 = right(3, 0) * A(1, 1);
+                result(0, 0) = -_0000 - _0010 - _1001 - _1011;
+                result(1, 0) = result(0, 1) = -_2000 - _2010 - _3001 - _3011;
+                result(2, 0) = result(0, 2) = _0000 + _1001;
+                result(3, 0) = result(0, 3) = _2000 + _3001;
+                result(4, 0) = result(0, 4) = _0010 + _1011;
+                result(5, 0) = result(0, 5) = _2010 + _3011;
+                // colI = 1;
+                const double _2100 = right(2, 1) * A(0, 0);
+                const double _2110 = right(2, 1) * A(1, 0);
+                const double _3101 = right(3, 1) * A(0, 1);
+                const double _3111 = right(3, 1) * A(1, 1);
+                result(1, 1) = -_2100 - _2110 - _3101 - _3111;
+                result(2, 1) = result(1, 2) = right(0, 1) * A(0, 0) + right(1, 1) * A(0, 1);
+                result(3, 1) = result(1, 3) = _2100 + _3101;
+                result(4, 1) = result(1, 4) = right(0, 1) * A(1, 0) + right(1, 1) * A(1, 1);
+                result(5, 1) = result(1, 5) = _2110 + _3111;
+                // colI = 2;
+                result(2, 2) = right(0, 2) * A(0, 0) + right(1, 2) * A(0, 1);
+                result(3, 2) = result(2, 3) = right(2, 2) * A(0, 0) + right(3, 2) * A(0, 1);
+                result(4, 2) = result(2, 4) = right(0, 2) * A(1, 0) + right(1, 2) * A(1, 1);
+                result(5, 2) = result(2, 5) = right(2, 2) * A(1, 0) + right(3, 2) * A(1, 1);
+                // colI = 3;
+                result(3, 3) = right(2, 3) * A(0, 0) + right(3, 3) * A(0, 1);
+                result(4, 3) = result(3, 4) = right(0, 3) * A(1, 0) + right(1, 3) * A(1, 1);
+                result(5, 3) = result(3, 5) = right(2, 3) * A(1, 0) + right(3, 3) * A(1, 1);
+                // colI = 4;
+                result(4, 4) = right(0, 4) * A(1, 0) + right(1, 4) * A(1, 1),
+                result(5, 4) = result(4, 5) = right(2, 4) * A(1, 0) + right(3, 4) * A(1, 1);
+                // colI = 5;
+                result(5, 5) = right(2, 5) * A(1, 0) + right(3, 5) * A(1, 1);
+            }
+            else {
+                for(int colI = 0; colI < right.cols(); colI++) {
+                    const double _000 = right(0, colI) * A(0, 0);
+                    const double _010 = right(0, colI) * A(1, 0);
+                    const double _101 = right(1, colI) * A(0, 1);
+                    const double _111 = right(1, colI) * A(1, 1);
+                    const double _200 = right(2, colI) * A(0, 0);
+                    const double _210 = right(2, colI) * A(1, 0);
+                    const double _301 = right(3, colI) * A(0, 1);
+                    const double _311 = right(3, colI) * A(1, 1);
+                    result(0, colI) = -_000 - _010 - _101 - _111;
+                    result(1, colI) = -_200 - _210 - _301 - _311;
+                    result(2, colI) = _000 + _101;
+                    result(3, colI) = _200 + _301;
+                    result(4, colI) = _010 + _111;
+                    result(5, colI) = _210 + _311;
+                }
+            }
+        }
+        static void dF_div_dx_mult(const Eigen::Matrix2d& right,
+                                   const Eigen::Matrix2d& A,
+                                   Eigen::Matrix<double, 6, 1>& result);
         
         static void sampleSegment(const Eigen::RowVectorXd& vs,
                                   const Eigen::RowVectorXd& ve,

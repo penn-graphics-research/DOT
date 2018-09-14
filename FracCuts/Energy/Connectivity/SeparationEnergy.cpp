@@ -110,13 +110,13 @@ namespace FracCuts {
                 if(fixed[0]) {
                     if(!fixed[2]) {
                         vInd[0] = data.cohE(cohI, 2);
-                        IglUtils::addBlockToMatrix(hessian_ac.block(2, 2, 2, 2), vInd, 2, V, I, J);
+                        IglUtils::addBlockToMatrix<2, 1>(hessian_ac.block(2, 2, 2, 2), vInd, 2, V, I, J);
                     }
                 }
                 else {
                     if(fixed[2]) {
                         vInd[0] = data.cohE(cohI, 0);
-                        IglUtils::addBlockToMatrix(hessian_ac.block(0, 0, 2, 2), vInd, 2, V, I, J);
+                        IglUtils::addBlockToMatrix<2, 1>(hessian_ac.block(0, 0, 2, 2), vInd, 2, V, I, J);
                     }
                     else {
                         IglUtils::addBlockToMatrix(hessian_ac, Eigen::Vector2i(data.cohE(cohI, 0), data.cohE(cohI, 2)), 2, V, I, J);
@@ -126,13 +126,13 @@ namespace FracCuts {
                 if(fixed[1]) {
                     if(!fixed[3]) {
                         vInd[0] = data.cohE(cohI, 3);
-                        IglUtils::addBlockToMatrix(hessian_bd.block(2, 2, 2, 2), vInd, 2, V, I, J);
+                        IglUtils::addBlockToMatrix<2, 1>(hessian_bd.block(2, 2, 2, 2), vInd, 2, V, I, J);
                     }
                 }
                 else {
                     if(fixed[3]) {
                         vInd[0] = data.cohE(cohI, 1);
-                        IglUtils::addBlockToMatrix(hessian_bd.block(0, 0, 2, 2), vInd, 2, V, I, J);
+                        IglUtils::addBlockToMatrix<2, 1>(hessian_bd.block(0, 0, 2, 2), vInd, 2, V, I, J);
                     }
                     else {
                         IglUtils::addBlockToMatrix(hessian_bd, Eigen::Vector2i(data.cohE(cohI, 1), data.cohE(cohI, 3)), 2, V, I, J);
