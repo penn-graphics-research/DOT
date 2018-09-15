@@ -387,6 +387,52 @@ namespace FracCuts {
             }
         }
     }
+    void IglUtils::addBlockToMatrix(const Eigen::Matrix<double, 2, 6>& block,
+                                    const Eigen::RowVector3i& index, int rowIndI,
+                                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
+    {
+        int rowStart = index[rowIndI] * 2;
+        if(rowStart < 0) {
+            rowStart = -rowStart - 2;
+            linSysSolver->addCoeff(rowStart, rowStart, 1.0);
+            linSysSolver->addCoeff(rowStart + 1, rowStart + 1, 1.0);
+            return;
+        }
+        
+        if(index[0] >= 0) {
+            int _2index0 = index[0] * 2;
+            linSysSolver->addCoeff(rowStart, _2index0, block(0, 0));
+            linSysSolver->addCoeff(rowStart, _2index0 + 1, block(0, 1));
+            linSysSolver->addCoeff(rowStart + 1, _2index0, block(1, 0));
+            linSysSolver->addCoeff(rowStart + 1, _2index0 + 1, block(1, 1));
+        }
+        
+        if(index[1] >= 0) {
+            int _2index1 = index[1] * 2;
+            linSysSolver->addCoeff(rowStart, _2index1, block(0, 2));
+            linSysSolver->addCoeff(rowStart, _2index1 + 1, block(0, 3));
+            linSysSolver->addCoeff(rowStart + 1, _2index1, block(1, 2));
+            linSysSolver->addCoeff(rowStart + 1, _2index1 + 1, block(1, 3));
+        }
+        
+        if(index[2] >= 0) {
+            int _2index2 = index[2] * 2;
+            linSysSolver->addCoeff(rowStart, _2index2, block(0, 4));
+            linSysSolver->addCoeff(rowStart, _2index2 + 1, block(0, 5));
+            linSysSolver->addCoeff(rowStart + 1, _2index2, block(1, 4));
+            linSysSolver->addCoeff(rowStart + 1, _2index2 + 1, block(1, 5));
+        }
+    }
+    void IglUtils::addIdBlockToMatrixDiag(const Eigen::VectorXi& index,
+                                          LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
+    {
+        for(int indI = 0; indI < index.size(); indI++) {
+            int rowStart = index[indI] * 2;
+            assert(rowStart >= 0);
+            linSysSolver->addCoeff(rowStart, rowStart, 1.0);
+            linSysSolver->addCoeff(rowStart + 1, rowStart + 1, 1.0);
+        }
+    }
     
     void IglUtils::writeSparseMatrixToFile(const std::string& filePath,
                                            const Eigen::VectorXi& I, const Eigen::VectorXi& J,

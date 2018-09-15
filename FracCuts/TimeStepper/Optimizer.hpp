@@ -47,10 +47,6 @@ namespace FracCuts {
         double w_scaf;
         Scaffold scaffold; // air meshes to enforce bijectivity
         
-        // constant precondition matrix for solving the linear system for search directions
-        Eigen::VectorXi I_mtr, J_mtr; // triplet representation
-        Eigen::VectorXd V_mtr;
-        
         // SPD solver for solving the linear system for search directions
         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *linSysSolver;
         
@@ -164,8 +160,8 @@ namespace FracCuts {
                                      bool redoSVD, Eigen::VectorXd& gradient,
                                      bool excludeScaffold = false);
         virtual void computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
-                                       bool redoSVD, Eigen::VectorXi& I, Eigen::VectorXi& J,
-                                       Eigen::VectorXd& V);
+                                       bool redoSVD,
+                                       LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver);
         virtual void computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
         
         virtual void initStepSize(const TriangleSoup& data, double& stepSize) const;

@@ -85,6 +85,7 @@ namespace FracCuts {
                     ia[rowI * 2 + 2] = ia[rowI * 2 + 1] + 1;
                 }
             }
+            a.resize(ja.size());
         }
         virtual void set_pattern(const Eigen::SparseMatrix<double>& mtr) = 0; //NOTE: mtr must be SPD
         
@@ -133,6 +134,29 @@ namespace FracCuts {
             }
             else {
                 return 0.0;
+            }
+        }
+        virtual void setCoeff(int rowI, int colI, double val) {
+            //TODO: faster O(1) indices!!
+            
+            if(rowI <= colI) {
+                assert(rowI < IJ2aI.size());
+                const auto finder = IJ2aI[rowI].find(colI);
+                assert(finder != IJ2aI[rowI].end());
+                a[finder->second] = val;
+            }
+        }
+        virtual void setZero(void) {
+            a.setZero();
+        }
+        virtual void addCoeff(int rowI, int colI, double val) {
+            //TODO: faster O(1) indices!!
+            
+            if(rowI <= colI) {
+                assert(rowI < IJ2aI.size());
+                const auto finder = IJ2aI[rowI].find(colI);
+                assert(finder != IJ2aI[rowI].end());
+                a[finder->second] += val;
             }
         }
     };

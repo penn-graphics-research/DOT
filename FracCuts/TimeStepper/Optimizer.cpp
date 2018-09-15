@@ -256,15 +256,14 @@ namespace FracCuts {
     
     void Optimizer::precompute(void)
     {
-        computePrecondMtr(result, scaffold, true, I_mtr, J_mtr, V_mtr);
-        
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
 //            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
         linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                   scaffolding ? fixedV_withScaf : result.fixedVert);
-        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-        if(!mute) { timer_step.stop(); timer_step.start(2); }
+        if(!mute) { timer_step.stop(); }
+        computePrecondMtr(result, scaffold, true, linSysSolver);
+        if(!mute) { timer_step.start(2); }
         linSysSolver->analyze_pattern();
         if(!mute) { timer_step.stop(); }
         if(!needRefactorize) {
@@ -274,8 +273,8 @@ namespace FracCuts {
                 if(!mute) { timer_step.stop(); }
             }
             catch(std::exception e) {
-                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_factorizeFail", I_mtr, J_mtr, V_mtr, true);
-                exit(-1);
+//                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_factorizeFail", I_mtr, J_mtr, V_mtr, true);
+                assert(0);
             }
         }
     }
@@ -378,12 +377,9 @@ namespace FracCuts {
         if(!mute) {
             std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
         }
-        computePrecondMtr(result, scaffold, true, I_mtr, J_mtr, V_mtr);
+        computePrecondMtr(result, scaffold, true, linSysSolver);
         
-        if(!mute) { timer_step.start(1); }
-//            linSysSolver->update_a(V_mtr);
-        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-        if(!mute) { timer_step.stop(); timer_step.start(3); }
+        if(!mute) { timer_step.start(3); }
         linSysSolver->factorize();
         if(!mute) { timer_step.stop(); }
     }
@@ -445,14 +441,16 @@ namespace FracCuts {
             if(!mute) {
                 std::cout << "recompute proxy/Hessian matrix and factorize..." << std::endl;
             }
-            computePrecondMtr(result, scaffold, false, I_mtr, J_mtr, V_mtr);
             
             if(!mute) { timer_step.start(1); }
 //                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
             linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                       scaffolding ? fixedV_withScaf : result.fixedVert);
-            linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-            if(!mute) { timer_step.stop(); timer_step.start(2); }
+            if(!mute) { timer_step.stop(); }
+            
+            computePrecondMtr(result, scaffold, false, linSysSolver);
+            
+            if(!mute) { timer_step.start(2); }
             linSysSolver->analyze_pattern();
             if(!mute) { timer_step.stop(); }
             if(!needRefactorize) {
@@ -734,8 +732,7 @@ namespace FracCuts {
                 
                 Eigen::VectorXi I, J;
                 Eigen::VectorXd V;
-                computePrecondMtr(result, scaffold, false, I, J, V);
-                linSysSolver->update_a(I, J, V);
+                computePrecondMtr(result, scaffold, false, linSysSolver);
                 
 #ifdef USE_TBB
                 tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
@@ -817,24 +814,19 @@ namespace FracCuts {
         if(needRefactorize) {
             // for the changing hessian
             if(!fractureInitiated) {
-                if(!mute) {
-                    std::cout << "recompute proxy/Hessian matrix..." << std::endl;
-                }
-                computePrecondMtr(result, scaffold, false, I_mtr, J_mtr, V_mtr);
-            }
-            
-            if(!fractureInitiated) {
                 if(scaffolding) {
                     if(!mute) { timer_step.start(1); }
 //                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
                     linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                               scaffolding ? fixedV_withScaf : result.fixedVert);
-                    linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
+                    if(!mute) { timer_step.stop(); }
+                    
+                    computePrecondMtr(result, scaffold, false, linSysSolver);
                     
                     if(!mute) {
                         std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;
                     }
-                    if(!mute) { timer_step.stop(); timer_step.start(2); }
+                    if(!mute) { timer_step.start(2); }
                     linSysSolver->analyze_pattern();
                     if(!mute) { timer_step.stop(); }
                 }
@@ -842,10 +834,7 @@ namespace FracCuts {
                     if(!mute) {
                         std::cout << "updating matrix entries..." << std::endl;
                     }
-                    if(!mute) { timer_step.start(1); }
-//                        linSysSolver->update_a(V_mtr);
-                    linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
-                    if(!mute) { timer_step.stop(); }
+                    computePrecondMtr(result, scaffold, false, linSysSolver);
                 }
             }
             try {
@@ -857,8 +846,8 @@ namespace FracCuts {
                 if(!mute) { timer_step.stop(); }
             }
             catch(std::exception e) {
-                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr", I_mtr, J_mtr, V_mtr, true);
-                exit(-1);
+//                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr", I_mtr, J_mtr, V_mtr, true);
+                assert(0);
             }
         }
         
@@ -1177,44 +1166,35 @@ namespace FracCuts {
         if(!mute) { timer_step.stop(); }
     }
     void Optimizer::computePrecondMtr(const TriangleSoup& data, const Scaffold& scaffoldData,
-                                      bool redoSVD, Eigen::VectorXi& I, Eigen::VectorXi& J,
-                                      Eigen::VectorXd& V)
+                                      bool redoSVD,
+                                      LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver)
     {
         if(!mute) { timer_step.start(0); }
-        I.conservativeResize(0);
-        J.conservativeResize(0);
-        V.conservativeResize(0);
+        p_linSysSolver->setZero();
         //!!! should consider add first and then do projected Newton if multiple energies are used
         for(int eI = 0; eI < energyTerms.size(); eI++) {
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
             energyTerms[eI]->computeHessianByPK(data, redoSVD, svd,
-                                                energyParams[eI] * dtSq, &V, &I, &J);
+                                                energyParams[eI] * dtSq,
+                                                p_linSysSolver);
         }
         
-        if(scaffolding) {
-            SymStretchEnergy SD;
-            Eigen::VectorXi I_scaf, J_scaf;
-            Eigen::VectorXd V_scaf;
-            SD.computePrecondMtr(scaffoldData.airMesh, &V_scaf, &I_scaf, &J_scaf, true);
-            scaffoldData.augmentProxyMatrix(I, J, V, I_scaf, J_scaf, V_scaf, w_scaf / scaffold.airMesh.F.rows() * dtSq);
-        }
+//        if(scaffolding) {
+//            SymStretchEnergy SD;
+//            Eigen::VectorXi I_scaf, J_scaf;
+//            Eigen::VectorXd V_scaf;
+//            SD.computePrecondMtr(scaffoldData.airMesh, &V_scaf, &I_scaf, &J_scaf, true);
+//            scaffoldData.augmentProxyMatrix(I, J, V, I_scaf, J_scaf, V_scaf, w_scaf / scaffold.airMesh.F.rows() * dtSq);
+//        }
 //            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/FracCuts/mtr", I_mtr, J_mtr, V_mtr, true);
         
 #ifndef STATIC_SOLVE
-        int curTripletSize = static_cast<int>(I.size());
-        I.conservativeResize(I.size() + data.V.rows() * 2);
-        J.conservativeResize(J.size() + data.V.rows() * 2);
-        V.conservativeResize(V.size() + data.V.rows() * 2);
         for(int vI = 0; vI < result.V.rows(); vI++) {
             double massI = data.massMatrix.coeff(vI, vI);
             int ind0 = vI * 2;
             int ind1 = ind0 + 1;
-            I[curTripletSize + ind0] = ind0;
-            J[curTripletSize + ind0] = ind0;
-            V[curTripletSize + ind0] = massI;
-            I[curTripletSize + ind1] = ind1;
-            J[curTripletSize + ind1] = ind1;
-            V[curTripletSize + ind1] = massI;
+            p_linSysSolver->addCoeff(ind0, ind0, massI);
+            p_linSysSolver->addCoeff(ind1, ind1, massI);
         }
         //TODO: mass of negative space vertices
 #endif

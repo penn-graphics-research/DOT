@@ -450,8 +450,8 @@ namespace FracCuts {
     }
     void Energy::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                     std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                    double coef, Eigen::VectorXd* V,
-                                    Eigen::VectorXi* I, Eigen::VectorXi* J,
+                                    double coef,
+                                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                     bool projectSPD) const
     {        
         static std::vector<Eigen::Matrix<double, 6, 6>> triHessians;
@@ -584,29 +584,28 @@ namespace FracCuts {
             
             
             Eigen::Vector3i& vInd = vInds[triI];
-            vInd[0] = (data.isFixedVert[triVInd[0]] ? -1 : triVInd[0]);
-            vInd[1] = (data.isFixedVert[triVInd[1]] ? -1 : triVInd[1]);
-            vInd[2] = (data.isFixedVert[triVInd[2]] ? -1 : triVInd[2]);
+            vInd[0] = (data.isFixedVert[triVInd[0]] ? (-triVInd[0] - 1) : triVInd[0]);
+            vInd[1] = (data.isFixedVert[triVInd[1]] ? (-triVInd[1] - 1) : triVInd[1]);
+            vInd[2] = (data.isFixedVert[triVInd[2]] ? (-triVInd[2] - 1) : triVInd[2]);
             timer_temp.stop();
         }
 #ifdef USE_TBB
         );
 #endif
         timer_temp.start(3);
-        for(int triI = 0; triI < data.F.rows(); triI++) {
-            IglUtils::addBlockToMatrix<6, 3>(triHessians[triI], vInds[triI], 2, V, I, J);
-            //!!! the index can be cached if matrix structure doesn't change
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < data.V.rows(); vI++)
+#endif
+        {
+            for(const auto FLocI : data.vFLoc[vI]) {
+                IglUtils::addBlockToMatrix(triHessians[FLocI.first].block<2, 6>(FLocI.second * 2, 0), vInds[FLocI.first], FLocI.second, linSysSolver);
+            }
         }
-        
-        Eigen::VectorXi fixedVertInd;
-        fixedVertInd.resize(data.fixedVert.size());
-        int fVI = 0;
-        for(const auto fixedVI : data.fixedVert) {
-            fixedVertInd[fVI++] = fixedVI;
-        }
-        IglUtils::addDiagonalToMatrix(Eigen::VectorXd::Ones(data.fixedVert.size() * 2),
-                                      fixedVertInd, 2, V, I, J);
-        //!!! the index can be cached if matrix structure doesn't change
+#ifdef USE_TBB
+        );
+#endif
         timer_temp.stop();
     }
     

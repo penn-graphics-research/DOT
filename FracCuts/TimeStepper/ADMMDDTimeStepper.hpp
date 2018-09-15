@@ -73,8 +73,7 @@ namespace FracCuts {
         // subdomain energy computation
         void computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei);
         void computeGradient_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& g);
-        void computeHessianProxy_subdomain(int subdomainI, bool redoSVD, Eigen::VectorXd& V,
-                                           Eigen::VectorXi& I, Eigen::VectorXi& J);
+        void computeHessianProxy_subdomain(int subdomainI, bool redoSVD);
     };
 }
 

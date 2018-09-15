@@ -17,6 +17,8 @@
 #include "AutoFlipSVD.hpp"
 #endif
 
+#include "LinSysSolver.hpp"
+
 #include <Eigen/Eigen>
 
 #include <iostream>
@@ -108,8 +110,16 @@ namespace FracCuts {
             }
             assert(tripletInd == V->size());
         }
-        static void addDiagonalToMatrix(const Eigen::VectorXd& diagonal, const Eigen::VectorXi& index, int dim,
-                                     Eigen::VectorXd* V, Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL);
+        static void addDiagonalToMatrix(const Eigen::VectorXd& diagonal,
+                                        const Eigen::VectorXi& index,
+                                        int dim, Eigen::VectorXd* V,
+                                        Eigen::VectorXi* I = NULL,
+                                        Eigen::VectorXi* J = NULL);
+        static void addBlockToMatrix(const Eigen::Matrix<double, 2, 6>& block,
+                                     const Eigen::RowVector3i& index, int rowIndI,
+                                     LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver);
+        static void addIdBlockToMatrixDiag(const Eigen::VectorXi& index,
+                                           LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver);
         
         template<typename Scalar, int size>
         static void symmetrizeMatrix(Eigen::Matrix<Scalar, size, size>& mtr) {

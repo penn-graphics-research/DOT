@@ -17,6 +17,8 @@
 #include "AutoFlipSVD.hpp"
 #endif
 
+#include "LinSysSolver.hpp"
+
 namespace FracCuts {
     
     // a class for energy terms in the objective of an optimization problem
@@ -70,8 +72,8 @@ namespace FracCuts {
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                         std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                        double coef, Eigen::VectorXd* V,
-                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
+                                        double coef,
+                                        LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                         bool projectSPD = true) const;
         
         virtual void computeEnergyValBySVD(const TriangleSoup& data, int triI,
