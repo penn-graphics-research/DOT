@@ -261,8 +261,9 @@ namespace FracCuts {
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
 //            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+        linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                   scaffolding ? fixedV_withScaf : result.fixedVert);
+        linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
         if(!mute) { timer_step.stop(); timer_step.start(2); }
         linSysSolver->analyze_pattern();
         if(!mute) { timer_step.stop(); }
@@ -448,8 +449,9 @@ namespace FracCuts {
             
             if(!mute) { timer_step.start(1); }
 //                linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr, scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+            linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                       scaffolding ? fixedV_withScaf : result.fixedVert);
+            linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
             if(!mute) { timer_step.stop(); timer_step.start(2); }
             linSysSolver->analyze_pattern();
             if(!mute) { timer_step.stop(); }
@@ -825,9 +827,9 @@ namespace FracCuts {
                 if(scaffolding) {
                     if(!mute) { timer_step.start(1); }
 //                        linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
-                    linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr,
-                                              scaffolding ? vNeighbor_withScaf : result.vNeighbor,
+                    linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                               scaffolding ? fixedV_withScaf : result.fixedVert);
+                    linSysSolver->update_a(I_mtr, J_mtr, V_mtr);
                     
                     if(!mute) {
                         std::cout << "symbolically factorizing proxy/Hessian matrix..." << std::endl;

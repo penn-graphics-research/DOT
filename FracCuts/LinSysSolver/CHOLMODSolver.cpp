@@ -39,13 +39,10 @@ namespace FracCuts {
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const vectorTypeI &II,
-                                                              const vectorTypeI &JJ,
-                                                              const vectorTypeS &SS,
-                                                              const std::vector<std::set<int>>& vNeighbor,
+    void CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const std::vector<std::set<int>>& vNeighbor,
                                                               const std::set<int>& fixedVert)
     {
-        Base::set_pattern(II, JJ, SS, vNeighbor, fixedVert);
+        Base::set_pattern(vNeighbor, fixedVert);
         
         //TODO: directly save into A
         if(!A) {
@@ -56,8 +53,6 @@ namespace FracCuts {
         Base::ia.array() -= 1; Base::ja.array() -= 1; // CHOLMOD's index starts from 0
         memcpy(A->i, Base::ja.data(), Base::ja.size() * sizeof(Base::ja[0]));
         memcpy(A->p, Base::ia.data(), Base::ia.size() * sizeof(Base::ia[0]));
-        
-        update_a(II, JJ, SS);
     }
     template <typename vectorTypeI, typename vectorTypeS>
     void  CHOLMODSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr)

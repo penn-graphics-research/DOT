@@ -30,15 +30,9 @@ namespace FracCuts {
     public:
         virtual void set_type(int threadAmt, int _mtype, bool is_upper_half = false) = 0;
         
-        virtual void set_pattern(const vectorTypeI &II,
-                                 const vectorTypeI &JJ,
-                                 const vectorTypeS &SS,
-                                 const std::vector<std::set<int>>& vNeighbor,
+        virtual void set_pattern(const std::vector<std::set<int>>& vNeighbor,
                                  const std::set<int>& fixedVert)
         {
-            assert(II.size() == JJ.size());
-            assert(II.size() == SS.size());
-            
             numRows = static_cast<int>(vNeighbor.size()) * 2;
             ia.resize(vNeighbor.size() * 2 + 1);
             ia[0] = 1; // 1 + nnz above row i

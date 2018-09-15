@@ -316,15 +316,10 @@ namespace FracCuts {
     }
 
     template <typename vectorTypeI, typename vectorTypeS>
-    void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const vectorTypeI &II_,
-                                                             const vectorTypeI &JJ_,
-                                                             const vectorTypeS &SS_,
-                                                             const std::vector<std::set<int>>& vNeighbor,
+    void PardisoSolver<vectorTypeI,vectorTypeS>::set_pattern(const std::vector<std::set<int>>& vNeighbor,
                                                              const std::set<int>& fixedVert)
     {
-        Base::set_pattern(II_, JJ_, SS_, vNeighbor, fixedVert);
-        
-        update_a(II_, JJ_, SS_);
+        Base::set_pattern(vNeighbor, fixedVert);
         
     #ifdef PLOTS_PARDISO
         printf("ia: ");

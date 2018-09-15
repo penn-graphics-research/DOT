@@ -19,10 +19,7 @@ namespace FracCuts {
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const vectorTypeI &II,
-                                                               const vectorTypeI &JJ,
-                                                               const vectorTypeS &SS,
-                                                               const std::vector<std::set<int>>& vNeighbor,
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const std::vector<std::set<int>>& vNeighbor,
                                                                const std::set<int>& fixedVert)
     {
         if(useDense) {
@@ -30,7 +27,7 @@ namespace FracCuts {
             coefMtr_dense.resize(Base::numRows, Base::numRows);
         }
         else {
-            Base::set_pattern(II, JJ, SS, vNeighbor, fixedVert);
+            Base::set_pattern(vNeighbor, fixedVert);
             
             //TODO: directly save into mtr
             coefMtr.resize(Base::numRows, Base::numRows);
@@ -40,8 +37,6 @@ namespace FracCuts {
             memcpy(coefMtr.innerIndexPtr(), Base::ja.data(), Base::ja.size() * sizeof(Base::ja[0]));
             memcpy(coefMtr.outerIndexPtr(), Base::ia.data(), Base::ia.size() * sizeof(Base::ia[0]));
         }
-        
-        update_a(II, JJ, SS);
     }
     template <typename vectorTypeI, typename vectorTypeS>
     void EigenLibSolver<vectorTypeI, vectorTypeS>::set_pattern(const Eigen::SparseMatrix<double>& mtr) //NOTE: mtr must be SPD

@@ -251,7 +251,7 @@ namespace FracCuts {
             computeHessianProxy_subdomain(subdomainI, true, V, I, J);
             
             linSysSolver_subdomain[subdomainI]->set_type(1, 2);
-            linSysSolver_subdomain[subdomainI]->set_pattern(I, J, V, mesh_subdomain[subdomainI].vNeighbor,
+            linSysSolver_subdomain[subdomainI]->set_pattern(mesh_subdomain[subdomainI].vNeighbor,
                                                             mesh_subdomain[subdomainI].fixedVert);
             linSysSolver_subdomain[subdomainI]->analyze_pattern();
         }
@@ -264,7 +264,7 @@ namespace FracCuts {
         Eigen::VectorXd V;
         computePrecondMtr(result, scaffold, true, I, J, V);
         linSysSolver->set_type(1, 2);
-        linSysSolver->set_pattern(I, J, V, result.vNeighbor, result.fixedVert);
+        linSysSolver->set_pattern(result.vNeighbor, result.fixedVert);
         
         initWeights();
     }
