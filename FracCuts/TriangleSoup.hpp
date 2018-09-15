@@ -76,6 +76,7 @@ namespace FracCuts{
         std::map<std::pair<int, int>, int> edge2Tri;
         std::vector<std::set<int>> vNeighbor;
         std::map<std::pair<int, int>, int> cohEIndex;
+        std::vector<std::set<std::pair<int, int>>> vFLoc;
         
         std::set<int> fracTail;
         int curFracTail;

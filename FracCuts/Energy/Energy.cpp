@@ -427,17 +427,25 @@ namespace FracCuts {
         timer_temp2.start(8);
         gradient.conservativeResize(data.V.rows() * 2);
         gradient.setZero();
-        for(int triI = 0; triI < data.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
-            const Eigen::Matrix<double, 6, 1>& grad_cont = gradient_cont[triI];
-            gradient.segment(triVInd[0] * 2, 2) += grad_cont.segment(0, 2);
-            gradient.segment(triVInd[1] * 2, 2) += grad_cont.segment(2, 2);
-            gradient.segment(triVInd[2] * 2, 2) += grad_cont.segment(4, 2);
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < data.V.rows(); vI++)
+#endif
+        {
+            int _2vI = vI * 2;
+            for(const auto FLocI : data.vFLoc[vI]) {
+                gradient.segment<2>(_2vI) +=
+                    gradient_cont[FLocI.first].segment<2>(FLocI.second * 2);
+            }
         }
+#ifdef USE_TBB
+        );
+#endif
         timer_temp2.stop();
         
         for(const auto fixedVI : data.fixedVert) {
-            gradient.segment(2 * fixedVI, 2).setZero();
+            gradient.segment<2>(2 * fixedVI).setZero();
         }
     }
     void Energy::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
@@ -518,7 +526,7 @@ namespace FracCuts {
             M.setZero();
             M(0, 0) = w * d2E_div_dsigma2(0, 0);
             M(0, 3) = w * d2E_div_dsigma2(0, 1);
-            M.block(1, 1, 2, 2) = w * B01;
+            M.block<2, 2>(1, 1) = w * B01;
             M(3, 0) = w * d2E_div_dsigma2(1, 0);
             M(3, 3) = w * d2E_div_dsigma2(1, 1);
             

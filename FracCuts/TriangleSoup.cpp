@@ -762,9 +762,15 @@ namespace FracCuts {
         e0SqLen_div_dbAreaSq.resize(F.rows());
         e1SqLen_div_dbAreaSq.resize(F.rows());
         e0dote1_div_dbAreaSq.resize(F.rows());
+        vFLoc.resize(0);
+        vFLoc.resize(V.rows());
         std::vector<Eigen::RowVector3d> vertNormals(V_rest.rows(), Eigen::Vector3d::Zero());
         for(int triI = 0; triI < F.rows(); triI++) {
             const Eigen::Vector3i& triVInd = F.row(triI);
+            
+            vFLoc[triVInd[0]].insert(std::pair<int, int>(triI, 0));
+            vFLoc[triVInd[1]].insert(std::pair<int, int>(triI, 1));
+            vFLoc[triVInd[2]].insert(std::pair<int, int>(triI, 2));
             
             const Eigen::Vector3d& P1 = V_rest.row(triVInd[0]);
             const Eigen::Vector3d& P2 = V_rest.row(triVInd[1]);
