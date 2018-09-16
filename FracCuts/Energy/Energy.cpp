@@ -200,6 +200,7 @@ namespace FracCuts {
     
     void Energy::getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
                                           std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                          std::vector<Eigen::Matrix2d>& F,
                                           Eigen::VectorXd& energyValPerElem,
                                           bool uniformWeight) const
     {
@@ -219,10 +220,11 @@ namespace FracCuts {
                 Eigen::Matrix2d Xt;
                 Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
                 Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+                F[triI] = Xt * data.restTriInv[triI];
                 timer_temp2.stop();
                 
                 timer_temp.start(0);
-                svd[triI].compute(Xt * data.restTriInv[triI], Eigen::ComputeFullU | Eigen::ComputeFullV);
+                svd[triI].compute(F[triI], Eigen::ComputeFullU | Eigen::ComputeFullV);
 //                Eigen::Matrix2d F = Xt * A;
 //                fprintf(out, "%le %le %le %le\n", F(0, 0), F(0, 1), F(1, 0), F(1, 1));
             }
@@ -244,10 +246,11 @@ namespace FracCuts {
     
     void Energy::computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
                                        std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                       std::vector<Eigen::Matrix2d>& F,
                                        double& energyVal) const
     {
         Eigen::VectorXd energyValPerElem;
-        getEnergyValPerElemBySVD(data, redoSVD, svd, energyValPerElem);
+        getEnergyValPerElemBySVD(data, redoSVD, svd, F, energyValPerElem);
         energyVal = energyValPerElem.sum();
     }
     
@@ -382,36 +385,38 @@ namespace FracCuts {
     
     void Energy::computeGradientByPK(const TriangleSoup& data, bool redoSVD,
                                      std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                     std::vector<Eigen::Matrix2d>& F,
                                      Eigen::VectorXd& gradient) const
     {
-        static std::vector<Eigen::Matrix<double, 6, 1>> gradient_cont;
-        gradient_cont.resize(data.F.rows());
+        std::vector<Eigen::Matrix<double, 6, 1>> gradient_cont(data.F.rows());
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
 #else
         for(int triI = 0; triI < data.F.rows(); triI++)
 #endif
         {
-            timer_temp2.start(5);
-            timer_temp.start(1);
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
-            
-            Eigen::Matrix2d Xt, F;
-            Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
-            Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             const Eigen::Matrix2d& A = data.restTriInv[triI];
-            F = Xt * A;
-            timer_temp2.stop();
             
             if(redoSVD) {
+                timer_temp2.start(5);
+                timer_temp.start(1);
+                const Eigen::RowVector3i& triVInd = data.F.row(triI);
+                
+                Eigen::Matrix2d Xt;
+                Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
+                Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+                
+                F[triI] = Xt * A;
+                timer_temp2.stop();
+                
                 timer_temp.start(0);
-                svd[triI].compute(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+                svd[triI].compute(F[triI], Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
             
             timer_temp2.start(6);
             Eigen::Matrix2d P;
-            compute_dE_div_dF(F, svd[triI], P);
+            compute_dE_div_dF(F[triI], svd[triI], P);
             
             const double w = data.triWeight[triI] * data.triArea[triI];
             P *= w;
@@ -450,14 +455,13 @@ namespace FracCuts {
     }
     void Energy::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                     std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                    std::vector<Eigen::Matrix2d>& F,
                                     double coef,
                                     LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                     bool projectSPD) const
     {        
-        static std::vector<Eigen::Matrix<double, 6, 6>> triHessians;
-        triHessians.resize(data.F.rows());
-        static std::vector<Eigen::Vector3i> vInds;
-        vInds.resize(data.F.rows());
+        std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
+        std::vector<Eigen::Vector3i> vInds(data.F.rows());
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
 #else
@@ -467,14 +471,15 @@ namespace FracCuts {
             timer_temp.start(1);
             const Eigen::RowVector3i& triVInd = data.F.row(triI);
             
-            Eigen::Matrix2d Xt;
-            Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
-            Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
             const Eigen::Matrix2d& A = data.restTriInv[triI];
             
             if(redoSVD) {
                 timer_temp.start(0);
-                svd[triI].compute(Xt * A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+                Eigen::Matrix2d Xt;
+                Xt.col(0) = (data.V.row(triVInd[1]) - data.V.row(triVInd[0])).transpose();
+                Xt.col(1) = (data.V.row(triVInd[2]) - data.V.row(triVInd[0])).transpose();
+                F[triI] = Xt * A;
+                svd[triI].compute(F[triI], Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
             const Eigen::Vector2d& sigma = svd[triI].singularValues();
@@ -581,7 +586,6 @@ namespace FracCuts {
             IglUtils::dF_div_dx_mult<4>(wdP_div_dF.transpose(), A, wdP_div_dx, false);
             IglUtils::dF_div_dx_mult<6>(wdP_div_dx.transpose(), A, triHessians[triI], true);
             timer_temp2.stop();
-            
             
             Eigen::Vector3i& vInd = vInds[triI];
             vInd[0] = (data.isFixedVert[triVInd[0]] ? (-triVInd[0] - 1) : triVInd[0]);

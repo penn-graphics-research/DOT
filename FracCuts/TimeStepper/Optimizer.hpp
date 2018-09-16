@@ -85,6 +85,7 @@ namespace FracCuts {
         AnimScripter animScripter;
         int innerIterAmt;
         std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd;
+        std::vector<Eigen::Matrix2d> F;
         
     public: // constructor and destructor
         Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,

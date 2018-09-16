@@ -60,6 +60,7 @@ namespace FracCuts {
         globalTriIToLocal_subdomain.resize(mesh_subdomain.size());
         xHat_subdomain.resize(mesh_subdomain.size());
         svd_subdomain.resize(mesh_subdomain.size());
+        F_subdomain.resize(mesh_subdomain.size());
         
 #ifdef USE_METIS
         METIS partitions(result);
@@ -116,6 +117,7 @@ namespace FracCuts {
             
             xHat_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].V.rows(), 2);
             svd_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].F.rows());
+            F_subdomain[subdomainI].resize(mesh_subdomain[subdomainI].F.rows());
         }
 #ifdef USE_TBB
         );
@@ -656,7 +658,8 @@ namespace FracCuts {
     {
         // incremental potential:
         energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
-                                              svd_subdomain[subdomainI], Ei);
+                                              svd_subdomain[subdomainI],
+                                              F_subdomain[subdomainI], Ei);
         Ei *= dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -698,7 +701,8 @@ namespace FracCuts {
     {
         // incremental potential:
         energyTerms[0]->computeGradientByPK(mesh_subdomain[subdomainI], redoSVD,
-                                            svd_subdomain[subdomainI], g);
+                                            svd_subdomain[subdomainI],
+                                            F_subdomain[subdomainI], g);
         g *= dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -738,7 +742,8 @@ namespace FracCuts {
         // incremental potential:
         linSysSolver_subdomain[subdomainI]->setZero();
         energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
-                                           svd_subdomain[subdomainI], dtSq,
+                                           svd_subdomain[subdomainI],
+                                           F_subdomain[subdomainI], dtSq,
                                            linSysSolver_subdomain[subdomainI]);
         
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {

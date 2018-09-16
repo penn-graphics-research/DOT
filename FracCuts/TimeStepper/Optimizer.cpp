@@ -130,6 +130,7 @@ namespace FracCuts {
         
         result = data0;
         svd.resize(result.F.rows());
+        F.resize(result.F.rows());
         animScripter.initAnimScript(result);
         resultV_n = result.V;
         if(scaffolding) {
@@ -1105,11 +1106,11 @@ namespace FracCuts {
     {
         if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
-        energyTerms[0]->computeEnergyValBySVD(data, redoSVD, svd, energyVal_ET[0]);
+        energyTerms[0]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
 //            energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
-            energyTerms[eI]->computeEnergyValBySVD(data, redoSVD, svd, energyVal_ET[eI]);
+            energyTerms[eI]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[eI]);
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         
@@ -1138,11 +1139,11 @@ namespace FracCuts {
     {
         if(!mute) { timer_step.start(0); }
 //        energyTerms[0]->computeGradient(data, gradient_ET[0]);
-        energyTerms[0]->computeGradientByPK(data, redoSVD, svd, gradient_ET[0]);
+        energyTerms[0]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
 //            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
-            energyTerms[eI]->computeGradientByPK(data, redoSVD, svd, gradient_ET[eI]);
+            energyTerms[eI]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
@@ -1174,7 +1175,7 @@ namespace FracCuts {
         //!!! should consider add first and then do projected Newton if multiple energies are used
         for(int eI = 0; eI < energyTerms.size(); eI++) {
 //                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
-            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd,
+            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd, F,
                                                 energyParams[eI] * dtSq,
                                                 p_linSysSolver);
         }

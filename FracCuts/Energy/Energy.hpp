@@ -57,10 +57,12 @@ namespace FracCuts {
         
         virtual void getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
                                               std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                              std::vector<Eigen::Matrix2d>& F,
                                               Eigen::VectorXd& energyValPerElem,
                                               bool uniformWeight = false) const;
         virtual void computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
                                            std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                           std::vector<Eigen::Matrix2d>& F,
                                            double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
@@ -69,9 +71,11 @@ namespace FracCuts {
         
         virtual void computeGradientByPK(const TriangleSoup& data, bool redoSVD,
                                          std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                         std::vector<Eigen::Matrix2d>& F,
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                         std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
+                                        std::vector<Eigen::Matrix2d>& F,
                                         double coef,
                                         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                         bool projectSPD = true) const;
