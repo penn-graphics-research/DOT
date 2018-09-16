@@ -414,6 +414,9 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
         " numFac" << timer_step.timing(3) << " backSolve" << timer_step.timing(4) << " lineSearch" << timer_step.timing(5) <<
         " bSplit" << timer_step.timing(6) << " iSplit" << timer_step.timing(7) << " cMerge" << timer_step.timing(8) <<
         " SVD" << timer_temp.timing(0) << " derivComp" << timer_temp.timing(1) << " SPD" << timer_temp.timing(2) << " blk2Mtr" << timer_temp.timing(3) <<
+        " inertiaE" << timer_temp.timing(4) <<
+        " inertiaG" << timer_temp.timing(5) <<
+        " inertiaH" << timer_temp.timing(6) <<
         " compA" << timer_temp2.timing(0) <<
         " compB" << timer_temp2.timing(1) <<
         " comp_dP_div_dF" << timer_temp2.timing(2) <<
@@ -1493,6 +1496,9 @@ int main(int argc, char *argv[])
     timer_temp.new_activity("derivComp");
     timer_temp.new_activity("SPD");
     timer_temp.new_activity("blk2Mtr");
+    timer_temp.new_activity("inertiaE");
+    timer_temp.new_activity("inertiaG");
+    timer_temp.new_activity("inertiaH");
     
     timer_temp2.new_activity("compA");
     timer_temp2.new_activity("compB");

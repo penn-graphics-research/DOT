@@ -78,9 +78,10 @@ namespace FracCuts {
         
     protected: // dynamic information
         Eigen::VectorXd velocity;
-        Eigen::MatrixXd resultV_n;
+        Eigen::MatrixXd resultV_n, xTilta;
         double dt, dtSq;
         const Eigen::Vector2d gravity;
+        Eigen::Vector2d gravityDtSq;
         int frameAmt;
         AnimScripter animScripter;
         int innerIterAmt;
@@ -142,6 +143,7 @@ namespace FracCuts {
         
     protected: // helper functions
         virtual void initX(int option);
+        virtual void computeXTilta(void);
         virtual bool fullyImplicit(void);
         
         // solve for new configuration in the next iteration

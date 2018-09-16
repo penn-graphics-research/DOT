@@ -38,7 +38,7 @@ extern const std::string outputFolderPath;
 extern const bool fractureMode;
 
 extern std::ofstream logFile;
-extern Timer timer, timer_step;
+extern Timer timer, timer_step, timer_temp;
 
 namespace FracCuts {
     
@@ -144,6 +144,7 @@ namespace FracCuts {
         data_findExtrema = data0;
         updateTargetGRes();
         velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        computeXTilta();
         computeEnergyVal(result, scaffold, true, lastEnergyVal);
         if(!mute) {
             writeEnergyValToFile(true);
@@ -228,6 +229,7 @@ namespace FracCuts {
         dtSq = dt * dt;
         frameAmt = duration / dt;
         updateTargetGRes();
+        gravityDtSq = dtSq * gravity;
     }
     
 //    void Optimizer::fixDirection(void)
@@ -322,6 +324,7 @@ namespace FracCuts {
                 velocity = Eigen::Map<Eigen::MatrixXd>(Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>((result.V - resultV_n).array() / dt).data(),
                                                        velocity.rows(), 1);
                 resultV_n = result.V;
+                computeXTilta();
 #endif
             }
             globalIterNum++;
@@ -648,11 +651,12 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
+                    if(result.isFixedVert[vI]) {
+                        searchDir.segment(vI * 2, 2).setZero();
+
                     }
                     else {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
                     }
                 }
 #ifdef USE_TBB
@@ -667,11 +671,11 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + dtSq * gravity;
+                    if(result.isFixedVert[vI]) {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                     else {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + gravityDtSq;
                     }
                 }
 #ifdef USE_TBB
@@ -688,13 +692,13 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                    if(result.isFixedVert[vI]) {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                    else {
                         double mass = result.massMatrix.coeff(vI, vI);
                         searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
                                                         dtSq * (gravity - f.segment(vI * 2, 2) / mass));
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -712,13 +716,13 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
+                    if(result.isFixedVert[vI]) {
+                        searchDir.segment(vI * 2, 2).setZero();
+                    }
+                    else {
                         double mass = result.massMatrix.coeff(vI, vI);
                         searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
                                                         dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
-                    }
-                    else {
-                        searchDir.segment(vI * 2, 2).setZero();
                     }
                 }
 #ifdef USE_TBB
@@ -741,12 +745,12 @@ namespace FracCuts {
                 for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
                 {
-                    if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
-                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                    if(result.isFixedVert[vI]) {
+                        searchDir.segment(vI * 2, 2).setZero();
                     }
                     else {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
+                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
                     }
                 }
 #ifdef USE_TBB
@@ -784,6 +788,30 @@ namespace FracCuts {
         }
         stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
     }
+    
+    void Optimizer::computeXTilta(void)
+    {
+        xTilta.conservativeResize(result.V.rows(), 2);
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < result.V.rows(); vI++)
+#endif
+        {
+            if(result.isFixedVert[vI]) {
+                xTilta.row(vI) = resultV_n.row(vI);
+            }
+            else {
+                xTilta.row(vI) = (resultV_n.row(vI) +
+                                  (velocity.segment<2>(vI * 2) * dt +
+                                   gravityDtSq).transpose());
+            }
+        }
+#ifdef USE_TBB
+        );
+#endif
+    }
+    
     bool Optimizer::fullyImplicit(void)
     {
         initX(0);
@@ -1105,11 +1133,10 @@ namespace FracCuts {
                                      bool redoSVD, double& energyVal, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
-//        energyTerms[0]->computeEnergyVal(data, energyVal_ET[0]);
+        
         energyTerms[0]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-//            energyTerms[eI]->computeEnergyVal(data, energyVal_ET[eI]);
             energyTerms[eI]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[eI]);
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
@@ -1125,12 +1152,23 @@ namespace FracCuts {
         }
         
 #ifndef STATIC_SOLVE
-        for(int vI = 0; vI < data.V.rows(); vI++) {
-            double massI = data.massMatrix.coeff(vI, vI);
-//            energyVal += dtSq / 2.0 * velocity.segment(vI * 2, 2).squaredNorm() * massI;
-            energyVal += (data.V.row(vI) - resultV_n.row(vI) - dt * velocity.segment(vI * 2, 2).transpose()  - dtSq * gravity.transpose()).squaredNorm() * massI / 2.0;
+        timer_temp.start(4);
+        Eigen::VectorXd energyVals(data.V.rows());
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < data.V.rows(); vI++)
+#endif
+        {
+            energyVals[vI] = ((data.V.row(vI) - xTilta.row(vI)).squaredNorm() *
+                              data.massMatrix.coeff(vI, vI) / 2.0);
         }
+#ifdef USE_TBB
+        );
+#endif
+        energyVal += energyVals.sum();
         //TODO: mass of negative space vertices
+        timer_temp.stop();
 #endif
         if(!mute) { timer_step.stop(); }
     }
@@ -1138,11 +1176,10 @@ namespace FracCuts {
                                     bool redoSVD, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
-//        energyTerms[0]->computeGradient(data, gradient_ET[0]);
+        
         energyTerms[0]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-//            energyTerms[eI]->computeGradient(data, gradient_ET[eI]);
             energyTerms[eI]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
@@ -1154,15 +1191,23 @@ namespace FracCuts {
         }
         
 #ifndef STATIC_SOLVE
-        for(int vI = 0; vI < data.V.rows(); vI++) {
-            double massI = data.massMatrix.coeff(vI, vI);
-//            gradient.segment(vI * 2, 2) += -dt * massI * velocity.segment(vI * 2, 2);
-            gradient.segment(vI * 2, 2) += massI * (data.V.row(vI).transpose() - resultV_n.row(vI).transpose() - dt * velocity.segment(vI * 2, 2) - dtSq * gravity);
+        timer_temp.start(5);
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < data.V.rows(); vI++)
+#endif
+        {
+            if(!data.isFixedVert[vI]) {
+                gradient.segment<2>(vI * 2) += (data.massMatrix.coeff(vI, vI) *
+                                                (data.V.row(vI) - xTilta.row(vI)).transpose());
+            }
         }
-        for(const auto& fixedVI : data.fixedVert) {
-            gradient.segment(fixedVI * 2, 2).setZero();
-        }
+#ifdef USE_TBB
+        );
+#endif
         //TODO: mass of negative space vertices
+        timer_temp.stop();
 #endif
         if(!mute) { timer_step.stop(); }
     }
@@ -1171,10 +1216,9 @@ namespace FracCuts {
                                       LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver)
     {
         if(!mute) { timer_step.start(0); }
+        
         p_linSysSolver->setZero();
-        //!!! should consider add first and then do projected Newton if multiple energies are used
         for(int eI = 0; eI < energyTerms.size(); eI++) {
-//                energyTerms[eI]->computePrecondMtr(data, &V, &I, &J);
             energyTerms[eI]->computeHessianByPK(data, redoSVD, svd, F,
                                                 energyParams[eI] * dtSq,
                                                 p_linSysSolver);
@@ -1190,29 +1234,28 @@ namespace FracCuts {
 //            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/FracCuts/mtr", I_mtr, J_mtr, V_mtr, true);
         
 #ifndef STATIC_SOLVE
-        for(int vI = 0; vI < result.V.rows(); vI++) {
-            double massI = data.massMatrix.coeff(vI, vI);
-            int ind0 = vI * 2;
-            int ind1 = ind0 + 1;
-            p_linSysSolver->addCoeff(ind0, ind0, massI);
-            p_linSysSolver->addCoeff(ind1, ind1, massI);
+        timer_temp.start(6);
+#ifdef USE_TBB
+        tbb::parallel_for(0, (int)data.V.rows(), 1, [&](int vI)
+#else
+        for(int vI = 0; vI < data.V.rows(); vI++)
+#endif
+        {
+            if(!data.isFixedVert[vI]) {
+                double massI = data.massMatrix.coeff(vI, vI);
+                int ind0 = vI * 2;
+                int ind1 = ind0 + 1;
+                p_linSysSolver->addCoeff(ind0, ind0, massI);
+                p_linSysSolver->addCoeff(ind1, ind1, massI);
+            }
         }
+#ifdef USE_TBB
+        );
+#endif
         //TODO: mass of negative space vertices
+        timer_temp.stop();
 #endif
         if(!mute) { timer_step.stop(); }
-//        Eigen::BDCSVD<Eigen::MatrixXd> svd((Eigen::MatrixXd(precondMtr)));
-//        logFile << "singular values of precondMtr_E:" << std::endl << svd.singularValues() << std::endl;
-//        double det = 1.0;
-//        for(int i = svd.singularValues().size() - 1; i >= 0; i--) {
-//            det *= svd.singularValues()[i];
-//        }
-//        std::cout << "det(precondMtr_E) = " << det << std::endl;
-        
-//        const double det = Eigen::MatrixXd(precondMtr).determinant();
-//        logFile << det << std::endl;
-//        if(det <= 1e-10) {
-//            std::cout << "***Warning: Indefinte hessian!" << std::endl;
-//        }
     }
     void Optimizer::computeHessian(const TriangleSoup& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const
     {
