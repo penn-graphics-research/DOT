@@ -67,7 +67,7 @@ namespace FracCuts {
                 const double aa = (a + d) / 2.0;
                 const double bb = (b - c) / 2.0;
                 const double lambda = std::sqrt(aa * aa + bb * bb);
-                Base::m_singularValues.array() = lambda;
+                Base::m_singularValues.setConstant(lambda);
                 
                 if(computeU) {
                     if(lambda == 0.0) {

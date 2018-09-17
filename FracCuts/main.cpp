@@ -163,7 +163,7 @@ void updateViewerData_seam(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::Matrix
         
         //TODO: seamscore only for autocuts
         seamColor.resize(0, 3);
-        double seamThickness = (viewUV ? (triSoup[viewChannel]->virtualRadius * 0.0007 / viewer.core.model_zoom * texScale) :
+        double seamThickness = (viewUV ? (triSoup[viewChannel]->virtualRadius * 0.0007 / viewer.core.camera_zoom * texScale) :
                                 (triSoup[viewChannel]->virtualRadius * 0.006));
         for(int eI = 0; eI < triSoup[viewChannel]->cohE.rows(); eI++) {
             const Eigen::RowVector4i& cohE = triSoup[viewChannel]->cohE.row(eI);

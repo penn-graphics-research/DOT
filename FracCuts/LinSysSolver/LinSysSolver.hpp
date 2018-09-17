@@ -10,8 +10,10 @@
 #define LinSysSolver_hpp
 
 #include <Eigen/Eigen>
+#include <Eigen/Sparse>
 
 #include <set>
+#include <map>
 
 namespace FracCuts {
     
@@ -158,6 +160,16 @@ namespace FracCuts {
                 assert(finder != IJ2aI[rowI].end());
                 a[finder->second] += val;
             }
+        }
+        
+        virtual int getNumRows(void) const {
+            return numRows;
+        }
+        virtual int getNumNonzeros(void) const {
+            return a.size();
+        }
+        virtual const std::vector<std::map<int, int>>& getIJ2aI(void) const {
+            return IJ2aI;
         }
     };
     

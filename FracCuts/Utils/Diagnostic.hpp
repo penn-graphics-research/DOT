@@ -56,17 +56,17 @@ namespace FracCuts{
                 switch(diagMode) {
                     case 0: {
                         // compute SVD to a sparse matrix
-                        if(argc > 3) {
-                            Eigen::SparseMatrix<double> mtr;
-                            FracCuts::IglUtils::loadSparseMatrixFromFile(argv[3], mtr);
-                            Eigen::MatrixXd mtr_dense(mtr);
-                            Eigen::BDCSVD<Eigen::MatrixXd> svd(mtr_dense);
-                            std::cout << "singular values of mtr:" << std::endl << svd.singularValues() << std::endl;
-                            std::cout << "det(mtr) = " << mtr_dense.determinant() << std::endl;
-                        }
-                        else {
-                            std::cout << "Please enter matrix file path!" << std::endl;
-                        }
+//                        if(argc > 3) {
+//                            Eigen::SparseMatrix<double> mtr;
+//                            FracCuts::IglUtils::loadSparseMatrixFromFile(argv[3], mtr);
+//                            Eigen::MatrixXd mtr_dense(mtr);
+//                            Eigen::BDCSVD<Eigen::MatrixXd> svd(mtr_dense);
+//                            std::cout << "singular values of mtr:" << std::endl << svd.singularValues() << std::endl;
+//                            std::cout << "det(mtr) = " << mtr_dense.determinant() << std::endl;
+//                        }
+//                        else {
+//                            std::cout << "Please enter matrix file path!" << std::endl;
+//                        }
                         break;
                     }
                         
@@ -707,7 +707,7 @@ namespace FracCuts{
                                     UV_.conservativeResize(UV_.rows() + V.rows(), 2);
                                     UV_.bottomRows(V.rows()) = V.leftCols(2);
                                     faceLabel.conservativeResize(faceLabel.rows() + F.rows());
-                                    faceLabel.bottomRows(F.rows()).array() = subdomainI;
+                                    faceLabel.bottomRows(F.rows()).setConstant(subdomainI);
                                     
                                     subdomainI++;
                                     meshPath = resultsFolderPath + '/' + std::string(buf) +

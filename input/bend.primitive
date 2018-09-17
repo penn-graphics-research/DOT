@@ -1,3 +1,4 @@
+shape grid
 script bend
 energy FCR
 timeStepper Newton

@@ -502,7 +502,7 @@ namespace FracCuts {
             Eigen::Matrix2d B01;
             double leftCoef = d2E_div_dsigma2(0, 0);
             const double dif_sigma = sigma[0] - sigma[1];
-            const double eps = 1.0e-8;
+            const double eps = 1.0e-6;
             if(std::abs(dif_sigma) > eps) {
                 leftCoef = (dE_div_dsigma[0] - dE_div_dsigma[1]) / dif_sigma;
             }

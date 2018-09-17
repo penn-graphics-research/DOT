@@ -205,6 +205,9 @@ namespace FracCuts {
         static void writeSparseMatrixToFile(const std::string& filePath,
                                             const std::map<std::pair<int, int>, double>& mtr,
                                             bool MATLAB = false);
+        static void writeSparseMatrixToFile(const std::string& filePath,
+                                            LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                            bool MATLAB = false);
         static void loadSparseMatrixFromFile(const std::string& filePath,
                                              Eigen::SparseMatrix<double>& mtr);
         

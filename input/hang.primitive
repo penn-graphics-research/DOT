@@ -1,3 +1,4 @@
+shape grid
 script hang
 energy FCR
 timeStepper Newton

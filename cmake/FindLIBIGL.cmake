@@ -23,6 +23,7 @@ find_path(LIBIGL_INCLUDE_DIR igl/readOBJ.h
         /usr
         /usr/local
         /usr/local/igl/libigl
+        /usr/local/lib/libigl
     PATH_SUFFIXES include
 )
 

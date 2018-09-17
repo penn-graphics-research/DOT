@@ -1,3 +1,4 @@
+shape grid
 script null
 energy FCR
 timeStepper Newton

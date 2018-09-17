@@ -18,6 +18,12 @@ cd ..
 python batch.py
 ```
 
+### CMake Errors
+* The RandR library and headers were not found (on Ubuntu)
+```
+sudo apt-get install xorg-dev libglu1-mesa-dev
+```
+
 ## Compile
 IntelTBB, PARDISO, LibIGL, GLFW, Eigen are also needed.
 

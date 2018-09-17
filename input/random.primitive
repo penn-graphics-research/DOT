@@ -1,3 +1,4 @@
+shape grid
 script random
 energy FCR
 timeStepper Newton

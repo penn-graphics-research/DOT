@@ -1,3 +1,4 @@
+shape grid
 script onepoint
 energy FCR
 timeStepper Newton

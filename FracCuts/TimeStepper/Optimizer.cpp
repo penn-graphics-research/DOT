@@ -276,8 +276,11 @@ namespace FracCuts {
                 if(!mute) { timer_step.stop(); }
             }
             catch(std::exception e) {
-//                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_factorizeFail", I_mtr, J_mtr, V_mtr, true);
-                assert(0);
+                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_numFacFail",
+                                                  linSysSolver, true);
+                std::cout << "numerical factorization failed, " <<
+                    "matrix written into " << outputFolderPath + "mtr_numFacFail" << std::endl;
+                exit(-1);
             }
         }
     }
@@ -875,8 +878,11 @@ namespace FracCuts {
                 if(!mute) { timer_step.stop(); }
             }
             catch(std::exception e) {
-//                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr", I_mtr, J_mtr, V_mtr, true);
-                assert(0);
+                IglUtils::writeSparseMatrixToFile(outputFolderPath + "mtr_numFacFail",
+                                                  linSysSolver, true);
+                std::cout << "numerical factorization failed, " <<
+                    "matrix written into " << outputFolderPath + "mtr_numFacFail" << std::endl;
+                exit(-1);
             }
         }
         

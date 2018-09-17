@@ -1,7 +1,7 @@
-shape Sharkey
+shape grid
 script stretch
 energy FCR
-timeStepper ADMMDD
+timeStepper Newton
 resolution 1000
 size 1.0
 time 2.5 0.025

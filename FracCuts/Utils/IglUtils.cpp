@@ -503,6 +503,32 @@ namespace FracCuts {
         }
     }
     
+    void IglUtils::writeSparseMatrixToFile(const std::string& filePath,
+                                           LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                           bool MATLAB)
+    {
+        std::ofstream out;
+        out.open(filePath);
+        if(out.is_open()) {
+            if(!MATLAB) {
+                out << linSysSolver->getNumRows() << " " <<
+                    linSysSolver->getNumRows() << " " <<
+                    linSysSolver->getNumNonzeros() << std::endl;
+            }
+            for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
+                for(const auto& colIter : linSysSolver->getIJ2aI()[rowI]) {
+                    out << rowI + MATLAB << " "
+                        << colIter.first + MATLAB << " "
+                        << linSysSolver->coeffMtr(rowI, colIter.first) << std::endl;
+                }
+            }
+            out.close();
+        }
+        else {
+            std::cout << "writeSparseMatrixToFile failed! file open error!" << std::endl;
+        }
+    }
+    
     void IglUtils::loadSparseMatrixFromFile(const std::string& filePath, Eigen::SparseMatrix<double>& mtr)
     {
         std::ifstream in;

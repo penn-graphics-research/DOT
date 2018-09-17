@@ -10,7 +10,9 @@
 #include "IglUtils.hpp"
 #include "Timer.hpp"
 
+#ifdef USE_TBB
 #include <tbb/tbb.h>
+#endif
 
 extern Timer timer_temp;
 
