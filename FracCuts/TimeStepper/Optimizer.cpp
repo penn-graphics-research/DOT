@@ -1007,8 +1007,7 @@ namespace FracCuts {
         assert(data.V.rows() == result.V.rows());
         
         for(int vI = 0; vI < data.V.rows(); vI++) {
-            data.V(vI, 0) = dataV0(vI, 0) + stepSize * searchDir[vI * 2];
-            data.V(vI, 1) = dataV0(vI, 1) + stepSize * searchDir[vI * 2 + 1];
+            data.V.row(vI) = dataV0.row(vI) + stepSize * searchDir.segment<2>(vI * 2).transpose();
         }
         if(scaffolding) {
             scaffoldData.stepForward(scaffoldV0, searchDir, stepSize);

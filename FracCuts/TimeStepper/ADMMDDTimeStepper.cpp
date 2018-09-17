@@ -554,7 +554,7 @@ namespace FracCuts {
                 int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
                 dz_subdomain[subdomainI].row(dualMapperI.second) = mesh_subdomain[subdomainI].V.row(localI) - V0_ADMM.row(localI);
                 du_subdomain[subdomainI].row(dualMapperI.second) =
-                    mesh_subdomain[subdomainI].V.row(localI) - result.V.row(dualMapperI.first);
+                    0.5 * (mesh_subdomain[subdomainI].V.row(localI) - result.V.row(dualMapperI.first));
                 u_subdomain[subdomainI].row(dualMapperI.second) += du_subdomain[subdomainI].row(dualMapperI.second);
             }
         }
