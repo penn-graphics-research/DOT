@@ -262,6 +262,7 @@ namespace FracCuts {
         linSysSolver->set_pattern(result.vNeighbor, result.fixedVert);
         
         initWeights();
+        initConsensusSolver();
     }
     
     void ADMMDDTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
@@ -332,6 +333,7 @@ namespace FracCuts {
         innerIterAmt += ADMMIterI + 1;
         
         initWeights();
+        initConsensusSolver();
         
         return (ADMMIterI == ADMMIterAmt);
     }
@@ -493,6 +495,27 @@ namespace FracCuts {
 //                                              weightMtr_subdomain[subdomainI], true);
         }
     }
+    void ADMMDDTimeStepper::initConsensusSolver(void)
+    {
+#ifdef USE_GW
+        //TODO: consider using sparse matrix
+        consensusMtr.conservativeResize(sharedVerts.size() * 2, sharedVerts.size() * 2);
+        consensusMtr.setZero();
+        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+            for(const auto& entryI : weightMtr_subdomain[subdomainI]) {
+                consensusMtr(dualIndIToShared_subdomain[subdomainI][entryI.first.first],
+                        dualIndIToShared_subdomain[subdomainI][entryI.first.second]) += entryI.second;
+            }
+        }
+        for(const auto& fVI : result.fixedVert) {
+            auto finder = globalVIToShared.find(fVI);
+            if(finder != globalVIToShared.end()) {
+                consensusMtr.block(finder->second * 2, finder->second * 2, 2, 2).setIdentity();
+            }
+        }
+        consensusSolver = consensusMtr.ldlt();
+#endif
+    }
     
     void ADMMDDTimeStepper::subdomainSolve(void) // local solve
     {
@@ -617,19 +640,10 @@ namespace FracCuts {
                     entryI.second * augVec[entryI.first.second];
             }
         }
-        //TODO: consider using sparse matrix
-        Eigen::MatrixXd coefMtr(sharedVerts.size() * 2, sharedVerts.size() * 2);
-        coefMtr.setZero();
-        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
-            for(const auto& entryI : weightMtr_subdomain[subdomainI]) {
-                coefMtr(dualIndIToShared_subdomain[subdomainI][entryI.first.first],
-                        dualIndIToShared_subdomain[subdomainI][entryI.first.second]) += entryI.second;
-            }
-        }
+        
         for(const auto& fVI : result.fixedVert) {
             auto finder = globalVIToShared.find(fVI);
             if(finder != globalVIToShared.end()) {
-                coefMtr.block(finder->second * 2, finder->second * 2, 2, 2).setIdentity();
                 rhs.segment(finder->second * 2, 2) = result.V.row(fVI).transpose();
             }
         }
@@ -639,7 +653,8 @@ namespace FracCuts {
                     entryI.second * rhs[dualIndIToShared_subdomain[subdomainI][entryI.first.second]];
             }
         }
-        Eigen::VectorXd solvedSharedVerts = coefMtr.ldlt().solve(rhs); //TODO: prefactor in each time step
+        
+        Eigen::VectorXd solvedSharedVerts = consensusSolver.solve(rhs); //TODO: prefactor in each time step
         for(int svI = 0; svI < sharedVerts.size(); svI++) {
             result.V.row(sharedVerts[svI]) = solvedSharedVerts.segment(svI * 2, 2).transpose();
         }

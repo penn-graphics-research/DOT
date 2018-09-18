@@ -11,6 +11,8 @@
 
 #include "Optimizer.hpp"
 
+#include <Eigen/Cholesky>
+
 namespace FracCuts {
     
     class ADMMDDTimeStepper : public Optimizer
@@ -34,6 +36,8 @@ namespace FracCuts {
         std::vector<bool> isSharedVert;
         std::map<int, int> globalVIToShared;
         Eigen::VectorXi sharedVerts;
+        Eigen::MatrixXd consensusMtr;
+        Eigen::LDLT<Eigen::MatrixXd> consensusSolver;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
         std::vector<std::vector<AutoFlipSVD<Eigen::Matrix2d>>> svd_subdomain;
         std::vector<std::vector<Eigen::Matrix2d>> F_subdomain;
@@ -66,6 +70,7 @@ namespace FracCuts {
         void initPrimal(int option); // 0: last timestep; 1: explicit Euler; 2: xHat; 3: Symplectic Euler; 4: uniformly accelerated motion approximation; 5: Jacobi
         void initDual(void);
         void initWeights(void);
+        void initConsensusSolver(void);
         
         void subdomainSolve(void); // local solve
         void checkRes(void);
