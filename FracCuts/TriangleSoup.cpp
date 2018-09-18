@@ -826,7 +826,7 @@ namespace FracCuts {
         computeLaplacianMtr();
 #ifndef STATIC_SOLVE
         computeMassMatrix(igl::MASSMATRIX_TYPE_VORONOI);
-#endif STATIC_SOLVE
+#endif
         
 //        //!! for edge count minimization of separation energy
 //        for(int cohI = 0; cohI < cohE.rows(); cohI++)
