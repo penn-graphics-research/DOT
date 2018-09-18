@@ -25,7 +25,8 @@ namespace FracCuts {
     };
     
     Config::Config(void) :
-    resolution(100), size(1.0), duration(10.0), dt(0.025), YM(100.0), PR(0.4), shapeType(P_GRID)
+    resolution(100), size(1.0), duration(10.0), dt(0.025),
+    YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1)
     {}
     
     int Config::loadFromFile(const std::string& filePath)
@@ -46,6 +47,14 @@ namespace FracCuts {
                     std::string type;
                     ss >> type;
                     timeStepperType = getTimeStepperTypeByStr(type);
+                    if(timeStepperType == TST_ADMMDD) {
+                        ss >> partitionAmt;
+                        if(partitionAmt < 2) {
+                            partitionAmt = 4;
+                            std::cout << "use default partition amount: " <<
+                                partitionAmt << std::endl;
+                        }
+                    }
                 }
                 else if(token == "resolution") {
                     ss >> resolution;

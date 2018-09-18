@@ -46,7 +46,7 @@ namespace FracCuts {
                          const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
-                         AnimScriptType animScriptType) :
+                         const Config& animConfig) :
         data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams),
         gravity(0.0, -9.80665)
     {
@@ -126,7 +126,7 @@ namespace FracCuts {
         linSysSolver = new EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>();
 #endif
         
-        setAnimScriptType(animScriptType);
+        setAnimScriptType(animConfig.animScriptType);
         
         result = data0;
         svd.resize(result.F.rows());

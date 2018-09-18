@@ -45,13 +45,13 @@ namespace FracCuts {
                                          const Eigen::MatrixXd& UV_bnds,
                                          const Eigen::MatrixXi& E,
                                          const Eigen::VectorXi& bnd,
-                                         AnimScriptType animScriptType) :
+                                         const Config& animConfig) :
     Optimizer(p_data0, p_energyTerms, p_energyParams,
               p_propagateFracture, p_mute, p_scaffolding,
-              UV_bnds, E, bnd, animScriptType)
+              UV_bnds, E, bnd, animConfig)
     {
         // divide domain
-        const int partitionAmt = 4;
+        const int partitionAmt = animConfig.partitionAmt;
         mesh_subdomain.resize(partitionAmt);
         
         elemList_subdomain.resize(mesh_subdomain.size());

@@ -13,7 +13,7 @@
 #include "Energy.hpp"
 #include "Scaffold.hpp"
 #include "AnimScripter.hpp"
-
+#include "Config.hpp"
 #include "LinSysSolver.hpp"
 
 #include <fstream>
@@ -94,7 +94,7 @@ namespace FracCuts {
                   const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                   const Eigen::MatrixXi& E = Eigen::MatrixXi(),
                   const Eigen::VectorXi& bnd = Eigen::VectorXi(),
-                  AnimScriptType animScriptType = AST_NULL);
+                  const Config& animConfig = Config());
         ~Optimizer(void);
         
     public: // API

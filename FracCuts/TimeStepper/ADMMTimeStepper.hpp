@@ -36,7 +36,7 @@ namespace FracCuts {
                         const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                         const Eigen::MatrixXi& E = Eigen::MatrixXi(),
                         const Eigen::VectorXi& bnd = Eigen::VectorXi(),
-                        AnimScriptType animScriptType = AST_NULL);
+                        const Config& animConfig = Config());
         
     public:
         virtual void precompute(void);
