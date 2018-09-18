@@ -5,7 +5,7 @@ from os import listdir
 from os.path import isfile, join
 
 inputFolderPath = os.path.realpath('.') + '/input/'
-progPath = os.path.realpath('.') + '/build/Release/OptCuts_dynamic_bin'
+progPath = os.path.realpath('.') + '/build/OptCuts_dynamic_bin'
 
 priority = 'nice -n -10 '
 
