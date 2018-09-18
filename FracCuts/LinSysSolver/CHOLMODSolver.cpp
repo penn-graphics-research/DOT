@@ -109,6 +109,29 @@ namespace FracCuts {
         cholmod_free_dense(&x, &cm);
     }
     
+    template <typename vectorTypeI, typename vectorTypeS>
+    void CHOLMODSolver<vectorTypeI, vectorTypeS>::setZero(void)
+    {
+        //TODO: directly manipulate valuePtr without a
+        Base::setZero();
+        memcpy(A->x, Base::a.data(), Base::a.size() * sizeof(Base::a[0]));
+    }
+    
+    template <typename vectorTypeI, typename vectorTypeS>
+    void CHOLMODSolver<vectorTypeI, vectorTypeS>::addCoeff(int rowI, int colI, double val)
+    {
+        //TODO: directly manipulate valuePtr without a
+        //TODO: faster O(1) indices!!
+        
+        if(rowI <= colI) {
+            assert(rowI < Base::IJ2aI.size());
+            const auto finder = Base::IJ2aI[rowI].find(colI);
+            assert(finder != Base::IJ2aI[rowI].end());
+            Base::a[finder->second] += val;
+            ((double*)A->x)[finder->second] += val;
+        }
+    }
+    
     template class CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>;
     
 }

@@ -51,6 +51,10 @@ namespace FracCuts {
         
         void solve(Eigen::VectorXd &rhs,
                    Eigen::VectorXd &result);
+        
+        void setZero(void);
+        
+        virtual void addCoeff(int rowI, int colI, double val);
     };
     
 }

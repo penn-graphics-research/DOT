@@ -108,12 +108,36 @@ namespace FracCuts {
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
-    double EigenLibSolver<vectorTypeI, vectorTypeS>::coeffMtr(int rowI, int colI) const {
+    double EigenLibSolver<vectorTypeI, vectorTypeS>::coeffMtr(int rowI, int colI) const
+    {
         if(useDense) {
             return coefMtr_dense(rowI, colI);
         }
         else {
             return Base::coeffMtr(rowI, colI);
+        }
+    }
+    
+    template <typename vectorTypeI, typename vectorTypeS>
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::setZero(void)
+    {
+        //TODO: directly manipulate valuePtr without a
+        Base::setZero();
+        memcpy(coefMtr.valuePtr(), Base::a.data(), Base::a.size() * sizeof(Base::a[0]));
+    }
+    
+    template <typename vectorTypeI, typename vectorTypeS>
+    void EigenLibSolver<vectorTypeI, vectorTypeS>::addCoeff(int rowI, int colI, double val)
+    {
+        //TODO: directly manipulate valuePtr without a
+        //TODO: faster O(1) indices!!
+        
+        if(rowI <= colI) {
+            assert(rowI < Base::IJ2aI.size());
+            const auto finder = Base::IJ2aI[rowI].find(colI);
+            assert(finder != Base::IJ2aI[rowI].end());
+            Base::a[finder->second] += val;
+            coefMtr.valuePtr()[finder->second] += val;
         }
     }
     
