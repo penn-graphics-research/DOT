@@ -94,9 +94,10 @@ namespace FracCuts {
         inputStr += (getStrByShapeType(shapeType) + "_" +
                      AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
                      getStrByEnergyType(energyType) + "_" +
-                     IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR)) + "_" +
-                     getStrByTimeStepperType(timeStepperType) + "_" +
-                     IglUtils::rtos(dt) + "_" + std::to_string(resolution);
+                     IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR) + "_" +
+                     getStrByTimeStepperType(timeStepperType) +
+                     ((timeStepperType == TST_ADMMDD) ? std::to_string(partitionAmt) : "") +
+                     "_" + IglUtils::rtos(dt) + "_" + std::to_string(resolution));
     }
     
     EnergyType Config::getEnergyTypeByStr(const std::string& str)
