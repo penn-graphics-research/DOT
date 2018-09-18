@@ -27,6 +27,12 @@ option(LIBIGL_WITH_XML               "Use XML"            OFF)
 find_package(LIBIGL REQUIRED QUIET)
 
 
+# tbb
+include(tbb/cmake/TBBGet.cmake)
+tbb_get(TBB_ROOT tbb_root CONFIG_DIR TBB_DIR)
+find_package(TBB REQUIRED tbb)
+
+
 # project source files
 file(GLOB SRCFILES
   "FracCuts/*.cpp" 
@@ -52,4 +58,4 @@ include_directories(
 
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
 
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png)
+target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png TBB::tbb)
