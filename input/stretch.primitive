@@ -4,5 +4,5 @@ energy FCR
 timeStepper Newton
 resolution 1000
 size 1.0
-time 2.5 0.025
+time 10.0 0.025
 stiffness 100.0 0.4
