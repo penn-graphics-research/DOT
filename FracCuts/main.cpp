@@ -349,6 +349,10 @@ void updateViewerData(void)
 
 void saveScreenshot(const std::string& filePath, double scale = 1.0, bool writeGIF = false, bool writePNG = true)
 {
+    if(offlineMode) {
+        return;
+    }
+    
     if(writeGIF) {
         scale = GIFScale;
     }
@@ -613,7 +617,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 
 bool postDrawFunc(igl::opengl::glfw::Viewer& viewer)
 {
-    if((offlineMode || autoSwitch) && (iterNum == 0)) {
+    if(autoSwitch && (iterNum == 0)) {
         toggleOptimization();
     }
     
@@ -643,7 +647,7 @@ bool postDrawFunc(igl::opengl::glfw::Viewer& viewer)
             else {
                 GifEnd(&GIFWriter);
                 saveInfoForPresent();
-                if(offlineMode || autoSwitch) {
+                if(autoSwitch) {
                     exit(0);
                 }
                 else {
@@ -1274,8 +1278,9 @@ int main(int argc, char *argv[])
             
         case 100: {
             // offline optimization mode
+            autoSwitch = true;
             offlineMode = true;
-            std::cout << "Offline optimization mode" << std::endl;
+            std::cout << "Offline optimization mode without visualization" << std::endl;
             break;
         }
             
@@ -1623,19 +1628,26 @@ int main(int argc, char *argv[])
         std::cout << "regional seam placement weight loaded" << std::endl;
     }
     
-    // Setup viewer and launch
-    viewer.core.background_color << 1.0f, 1.0f, 1.0f, 0.0f;
-    viewer.callback_key_down = &key_down;
-    viewer.callback_pre_draw = &preDrawFunc;
-    viewer.callback_post_draw = &postDrawFunc;
-    viewer.data().show_lines = true;
-    viewer.core.orthographic = true;
-//    viewer.core.camera_zoom *= 1.9;
-    viewer.core.animation_max_fps = 60.0;
-    viewer.data().point_size = fracTailSize;
-    viewer.data().show_overlay = true;
-    viewer.launch();
-    
+    if(offlineMode) {
+        while(true) {
+            preDrawFunc(viewer);
+            postDrawFunc(viewer);
+        }
+    }
+    else {
+        // Setup viewer and launch
+        viewer.core.background_color << 1.0f, 1.0f, 1.0f, 0.0f;
+        viewer.callback_key_down = &key_down;
+        viewer.callback_pre_draw = &preDrawFunc;
+        viewer.callback_post_draw = &postDrawFunc;
+        viewer.data().show_lines = true;
+        viewer.core.orthographic = true;
+    //    viewer.core.camera_zoom *= 1.9;
+        viewer.core.animation_max_fps = 60.0;
+        viewer.data().point_size = fracTailSize;
+        viewer.data().show_overlay = true;
+        viewer.launch();
+    }
     
     // Before exit
     logFile.close();
