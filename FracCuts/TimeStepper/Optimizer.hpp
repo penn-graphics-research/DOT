@@ -26,7 +26,7 @@ namespace FracCuts {
         
     protected: // referenced data
         const TriangleSoup& data0; // initial guess
-        const std::vector<Energy*>& energyTerms; // E_0, E_1, E_2, ...
+        const std::vector<Energy<DIM>*>& energyTerms; // E_0, E_1, E_2, ...
         const std::vector<double>& energyParams; // a_0, a_1, a_2, ...
         // E = \Sigma_i a_i E_i
         
@@ -89,7 +89,7 @@ namespace FracCuts {
         std::vector<Eigen::Matrix2d> F;
         
     public: // constructor and destructor
-        Optimizer(const TriangleSoup& p_data0, const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
+        Optimizer(const TriangleSoup& p_data0, const std::vector<Energy<DIM>*>& p_energyTerms, const std::vector<double>& p_energyParams,
                   int p_propagateFracture = 1, bool p_mute = false, bool p_scaffolding = false,
                   const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                   const Eigen::MatrixXi& E = Eigen::MatrixXi(),

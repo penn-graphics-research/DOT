@@ -11,14 +11,16 @@
 
 namespace FracCuts {
     
-    void NeoHookeanEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void NeoHookeanEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
         std::vector<Eigen::Matrix2d> F(data.F.rows());
-        Energy::getEnergyValPerElemBySVD(data, true, svd, F, energyValPerElem, uniformWeight);
+        Energy<dim>::getEnergyValPerElemBySVD(data, true, svd, F, energyValPerElem, uniformWeight);
     }
     
-    void NeoHookeanEnergy::compute_E(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void NeoHookeanEnergy<dim>::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         const double sigma2Sum = singularValues.squaredNorm();
@@ -27,7 +29,8 @@ namespace FracCuts {
         
         E = u / 2.0 * (sigma2Sum - singularValues.size()) - (u - lambda / 2.0 * log_sigmaProd) * log_sigmaProd;
     }
-    void NeoHookeanEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void NeoHookeanEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                                  Eigen::Vector2d& dE_div_dsigma) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
@@ -37,7 +40,8 @@ namespace FracCuts {
         const double inv1 = 1.0 / singularValues[1];
         dE_div_dsigma[1] = u * (singularValues[1] - inv1) + lambda * inv1 * log_sigmaProd;
     }
-    void NeoHookeanEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void NeoHookeanEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                                    Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
@@ -48,7 +52,8 @@ namespace FracCuts {
         d2E_div_dsigma2(1, 1) = u * (1.0 + inv2_1) - lambda * inv2_1 * (log_sigmaProd - 1.0);
         d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) = lambda / singularValues[0] / singularValues[1];
     }
-    void NeoHookeanEnergy::compute_dE_div_dF(const Eigen::Matrix2d& F,
+    template<int dim>
+    void NeoHookeanEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix2d& F,
                                              const AutoFlipSVD<Eigen::Matrix2d>& svd,
                                              Eigen::Matrix2d& dE_div_dF) const
     {
@@ -62,7 +67,8 @@ namespace FracCuts {
         dE_div_dF = u * (F - FInvT) + lambda * std::log(J) * FInvT;
     }
     
-    void NeoHookeanEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
+    template<int dim>
+    void NeoHookeanEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
     {
         //TODO: move to super class, only provide a value
         
@@ -98,20 +104,24 @@ namespace FracCuts {
         std::cout << "energyVal computation error = " << err << std::endl;
     }
     
-    NeoHookeanEnergy::NeoHookeanEnergy(double YM, double PR) :
-        Energy(true, true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
+    template<int dim>
+    NeoHookeanEnergy<dim>::NeoHookeanEnergy(double YM, double PR) :
+        Energy<dim>(true, true, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR))
     {
         const double sigma2Sum = 8;
         const double sigmaProd = 4;
         const double log_sigmaProd = std::log(sigmaProd);
         
         const double visRange_max = u / 2.0 * (sigma2Sum - 2) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd;
-        Energy::setVisRange_energyVal(0.0, visRange_max);
+        Energy<dim>::setVisRange_energyVal(0.0, visRange_max);
     }
     
-    void NeoHookeanEnergy::getBulkModulus(double& bulkModulus)
+    template<int dim>
+    void NeoHookeanEnergy<dim>::getBulkModulus(double& bulkModulus)
     {
         bulkModulus = lambda + (2.0/3.0) * u;
     }
+    
+    template class NeoHookeanEnergy<2>;
     
 }

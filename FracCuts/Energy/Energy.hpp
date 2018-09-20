@@ -22,6 +22,7 @@
 namespace FracCuts {
     
     // a class for energy terms in the objective of an optimization problem
+    template<int dim>
     class Energy {
     protected:
         const bool needRefactorize;

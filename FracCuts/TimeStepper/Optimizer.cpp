@@ -43,7 +43,7 @@ extern Timer timer, timer_step, timer_temp;
 namespace FracCuts {
     
     Optimizer::Optimizer(const TriangleSoup& p_data0,
-                         const std::vector<Energy*>& p_energyTerms, const std::vector<double>& p_energyParams,
+                         const std::vector<Energy<DIM>*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
                          const Config& animConfig) :
@@ -1071,7 +1071,7 @@ namespace FracCuts {
         if(scaffolding) {
             Eigen::VectorXd searchDir_scaffold;
             scaffold.wholeSearchDir2airMesh(searchDir, searchDir_scaffold);
-            SymStretchEnergy SD;
+            SymStretchEnergy<DIM> SD;
             SD.initStepSize(scaffold.airMesh, searchDir_scaffold, stepSize);
         }
     }
@@ -1147,7 +1147,7 @@ namespace FracCuts {
         }
         
         if(scaffolding && (!excludeScaffold)) {
-            SymStretchEnergy SD;
+            SymStretchEnergy<DIM> SD;
             SD.computeEnergyVal(scaffoldData.airMesh, energyVal_scaffold, true);
             energyVal_scaffold *= w_scaf / scaffold.airMesh.F.rows();
             energyVal += energyVal_scaffold;
@@ -1190,7 +1190,7 @@ namespace FracCuts {
         }
         
         if(scaffolding) {
-            SymStretchEnergy SD;
+            SymStretchEnergy<DIM> SD;
             SD.computeGradient(scaffoldData.airMesh, gradient_scaffold, true);
             scaffoldData.augmentGradient(gradient, gradient_scaffold, (excludeScaffold ? 0.0 : (w_scaf / scaffold.airMesh.F.rows())));
         }

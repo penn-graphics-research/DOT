@@ -23,6 +23,8 @@
 // for comparing subversions
 #define USE_GW
 
+#define DIM 2
+
 namespace FracCuts {
     enum MethodType {
         MT_OURS,

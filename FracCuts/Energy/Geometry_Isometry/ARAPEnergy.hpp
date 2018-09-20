@@ -14,7 +14,8 @@
 namespace FracCuts
 {
     
-    class ARAPEnergy : public Energy
+    template<int dim>
+    class ARAPEnergy : public Energy<dim>
     {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;

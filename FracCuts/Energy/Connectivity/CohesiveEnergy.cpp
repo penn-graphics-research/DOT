@@ -12,7 +12,8 @@
 namespace FracCuts
 {
     
-    void CohesiveEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void CohesiveEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         energyValPerElem.resize(data.cohE.rows());
         for(int cohI = 0; cohI < data.cohE.rows(); cohI++)
@@ -45,7 +46,8 @@ namespace FracCuts
         }
     }
     
-    void CohesiveEnergy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    template<int dim>
+    void CohesiveEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
@@ -108,7 +110,8 @@ namespace FracCuts
         }
     }
     
-    void CohesiveEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    template<int dim>
+    void CohesiveEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         precondMtr.resize(data.V.rows() * 2, data.V.rows() * 2);
         precondMtr.reserve(data.V.rows() * 5 * 4);
@@ -189,24 +192,28 @@ namespace FracCuts
         precondMtr.makeCompressed();
     }
     
-    void CohesiveEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    template<int dim>
+    void CohesiveEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
         assert(0 && "no hessian computation for this energy");
     }
     
-    void CohesiveEnergy::checkEnergyVal(const TriangleSoup& data) const
+    template<int dim>
+    void CohesiveEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
     {
         
     }
     
-    CohesiveEnergy::CohesiveEnergy(double avgEdgeLen, double p_tau_param, double p_alpha, double p_lambda) :
-    tau_param(p_tau_param), alpha(p_alpha), lambda(p_lambda), Energy(false)
+    template<int dim>
+    CohesiveEnergy<dim>::CohesiveEnergy(double avgEdgeLen, double p_tau_param, double p_alpha, double p_lambda) :
+    tau_param(p_tau_param), alpha(p_alpha), lambda(p_lambda), Energy<dim>(false)
     {
         tau_base = lambda / 3.0 * avgEdgeLen * avgEdgeLen * avgEdgeLen;
         tau = tau_param * tau_base;
     }
     
-    void CohesiveEnergy::compute_dd_div_dx_M(const Eigen::RowVector4d& difVec, const Eigen::Matrix<Eigen::RowVector2d, 2, 2>& dP_div_dx,
+    template<int dim>
+    void CohesiveEnergy<dim>::compute_dd_div_dx_M(const Eigen::RowVector4d& difVec, const Eigen::Matrix<Eigen::RowVector2d, 2, 2>& dP_div_dx,
                                              Eigen::Vector2d& result, double elemWeight) const
     {
         result.setZero();
@@ -222,5 +229,7 @@ namespace FracCuts
         }
         result *= elemWeight * lambda;
     }
+    
+    template class CohesiveEnergy<2>;
     
 }

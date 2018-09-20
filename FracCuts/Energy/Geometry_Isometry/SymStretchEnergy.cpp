@@ -24,7 +24,8 @@ extern std::ofstream logFile;
 
 namespace FracCuts {
     
-    void SymStretchEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void SymStretchEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -49,7 +50,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
+    template<int dim>
+    void SymStretchEnergy<dim>::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -72,7 +74,8 @@ namespace FracCuts {
          U3m1.dot(U2m1) * data.e0dote1[triI] / 2 / data.triAreaSq[triI]);
     }
     
-    void SymStretchEnergy::getEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& energyValPerVert) const
+    template<int dim>
+    void SymStretchEnergy<dim>::getEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& energyValPerVert) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElem(data, energyValPerElem);
@@ -94,7 +97,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::getMaxUnweightedEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& MaxUnweightedEnergyValPerVert) const
+    template<int dim>
+    void SymStretchEnergy<dim>::getMaxUnweightedEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& MaxUnweightedEnergyValPerVert) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElem(data, energyValPerElem, true);
@@ -110,7 +114,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::computeDivGradPerVert(const TriangleSoup& data, Eigen::VectorXd& divGradPerVert) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computeDivGradPerVert(const TriangleSoup& data, Eigen::VectorXd& divGradPerVert) const
     {
         Eigen::MatrixXd localGradients;
         computeLocalGradient(data, localGradients);
@@ -198,7 +203,8 @@ namespace FracCuts {
 #endif
     }
     
-    void SymStretchEnergy::getDivGradPerElem(const TriangleSoup& data, Eigen::VectorXd& divGradPerElem) const
+    template<int dim>
+    void SymStretchEnergy<dim>::getDivGradPerElem(const TriangleSoup& data, Eigen::VectorXd& divGradPerElem) const
     {
         Eigen::VectorXd divGrad_vert;
         computeDivGradPerVert(data, divGrad_vert);
@@ -218,7 +224,8 @@ namespace FracCuts {
     }
     
     // doesn't work well for topology filtering
-    void SymStretchEnergy::computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -333,7 +340,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::computeLocalGradient(const TriangleSoup& data, Eigen::MatrixXd& localGradients) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computeLocalGradient(const TriangleSoup& data, Eigen::MatrixXd& localGradients) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -377,7 +385,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -426,7 +435,8 @@ namespace FracCuts {
         }
     }
     
-    void SymStretchEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
 //        precondMtr = data.LaplacianMtr;
         computeHessian(data, precondMtr, uniformWeight);
@@ -441,7 +451,8 @@ namespace FracCuts {
 //        std::cout << "det(precondMtr_ESD) = " << det << std::endl;
     }
     
-    void SymStretchEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+    template<int dim>
+    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
                                    Eigen::VectorXi* I, Eigen::VectorXi* J, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
@@ -570,7 +581,8 @@ namespace FracCuts {
                                       fixedVertInd, 2, V, I, J);
     }
     
-    void SymStretchEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    template<int dim>
+    void SymStretchEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -741,7 +753,8 @@ namespace FracCuts {
         hessian.makeCompressed();
     }
     
-    void SymStretchEnergy::checkEnergyVal(const TriangleSoup& data) const
+    template<int dim>
+    void SymStretchEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
     {
         logFile << "check energyVal computation..." << std::endl;
         
@@ -777,7 +790,8 @@ namespace FracCuts {
         logFile << "energyVal computation error = " << err << std::endl;
     }
     
-    void SymStretchEnergy::compute_E(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void SymStretchEnergy<dim>::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         E = 0.0;
@@ -786,7 +800,8 @@ namespace FracCuts {
             E += sigma2[sigmaI] + 1.0 / sigma2[sigmaI];
         }
     }
-    void SymStretchEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void SymStretchEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                                  Eigen::Vector2d& dE_div_dsigma) const
     {
         dE_div_dsigma.resize(singularValues.size());
@@ -795,7 +810,8 @@ namespace FracCuts {
                 2.0 * std::pow(singularValues[sigmaI], -3);
         }
     }
-    void SymStretchEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void SymStretchEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                                    Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
@@ -805,15 +821,19 @@ namespace FracCuts {
         }
     }
     
-    SymStretchEnergy::SymStretchEnergy(void) :
-        Energy(true, true, false, 4.0, 8.5)
+    template<int dim>
+    SymStretchEnergy<dim>::SymStretchEnergy(void) :
+        Energy<dim>(true, true, false, 4.0, 8.5)
     {}
     
-    void SymStretchEnergy::computeStressTensor(const Eigen::Vector3d v[3], const Eigen::Vector2d u[3], Eigen::Matrix2d& stressTensor)
+    template<int dim>
+    void SymStretchEnergy<dim>::computeStressTensor(const Eigen::Vector3d v[3], const Eigen::Vector2d u[3], Eigen::Matrix2d& stressTensor)
     {
         Eigen::Matrix2d F;
         IglUtils::computeDeformationGradient(v, u, F);
         Eigen::Matrix2d FmT = (F.transpose()).inverse();
         stressTensor = F - FmT * FmT.transpose() * FmT;
     }
+    
+    template class SymStretchEnergy<2>;
 }

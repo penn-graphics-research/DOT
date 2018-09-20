@@ -17,7 +17,8 @@ namespace FracCuts {
     
     //TODO: precomputation to accelerate optimization process
     
-    void ARAPEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void ARAPEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         energyValPerElem.resize(data.F.rows());
         for(int triI = 0; triI < data.F.rows(); triI++)
@@ -56,7 +57,8 @@ namespace FracCuts {
         }
     }
     
-    void ARAPEnergy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    template<int dim>
+    void ARAPEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
         Eigen::MatrixXd cotVals;
         igl::cotmatrix_entries(data.V_rest, data.F, cotVals);
@@ -115,26 +117,32 @@ namespace FracCuts {
         }
     }
     
-    void ARAPEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    template<int dim>
+    void ARAPEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         precondMtr = data.LaplacianMtr;
         //!!! currently does not support triangle weight
     }
     
-    void ARAPEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    template<int dim>
+    void ARAPEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
         assert(0 && "no hessian computation for this energy");
     }
     
-    void ARAPEnergy::checkEnergyVal(const TriangleSoup& data) const
+    template<int dim>
+    void ARAPEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
     {
         // not quite necessary
     }
     
-    ARAPEnergy::ARAPEnergy(void) :
-        Energy(false)
+    template<int dim>
+    ARAPEnergy<dim>::ARAPEnergy(void) :
+        Energy<dim>(false)
     {
         
     }
+    
+    template class ARAPEnergy<2>;
     
 }

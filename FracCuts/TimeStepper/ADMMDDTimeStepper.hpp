@@ -44,7 +44,7 @@ namespace FracCuts {
         
     public:
         ADMMDDTimeStepper(const TriangleSoup& p_data0,
-                          const std::vector<Energy*>& p_energyTerms,
+                          const std::vector<Energy<DIM>*>& p_energyTerms,
                           const std::vector<double>& p_energyParams,
                           int p_propagateFracture = 1,
                           bool p_mute = false,

@@ -13,7 +13,8 @@
 
 namespace FracCuts {
     
-    class SymStretchEnergy : public Energy
+    template<int dim>
+    class SymStretchEnergy : public Energy<dim>
     {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;

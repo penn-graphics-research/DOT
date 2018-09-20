@@ -24,7 +24,8 @@ extern Timer timer_temp, timer_temp2;
 
 namespace FracCuts {
     
-    Energy::Energy(bool p_needRefactorize,
+    template<int dim>
+    Energy<dim>::Energy(bool p_needRefactorize,
                    bool p_needElemInvSafeGuard,
                    bool p_crossSigmaDervative,
                    double visRange_min,
@@ -35,57 +36,68 @@ namespace FracCuts {
         visRange_energyVal(visRange_min, visRange_max)
     {}
     
-    Energy::~Energy(void)
+    template<int dim>
+    Energy<dim>::~Energy(void)
     {}
     
-    bool Energy::getNeedRefactorize(void) const
+    template<int dim>
+    bool Energy<dim>::getNeedRefactorize(void) const
     {
         return needRefactorize;
     }
     
-    const Eigen::Vector2d& Energy::getVisRange_energyVal(void) const
+    template<int dim>
+    const Eigen::Vector2d& Energy<dim>::getVisRange_energyVal(void) const
     {
         return visRange_energyVal;
     }
-    void Energy::setVisRange_energyVal(double visRange_min, double visRange_max)
+    template<int dim>
+    void Energy<dim>::setVisRange_energyVal(double visRange_min, double visRange_max)
     {
         visRange_energyVal << visRange_min, visRange_max;
     }
     
-    void Energy::computeEnergyVal(const TriangleSoup& data, double& energyVal, bool uniformWeight) const
+    template<int dim>
+    void Energy<dim>::computeEnergyVal(const TriangleSoup& data, double& energyVal, bool uniformWeight) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElem(data, energyValPerElem, uniformWeight);
         energyVal = energyValPerElem.sum();
     }
     
-    void Energy::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
+    template<int dim>
+    void Energy<dim>::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    template<int dim>
+    void Energy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    template<int dim>
+    void Energy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+    template<int dim>
+    void Energy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
                                    Eigen::VectorXi* I, Eigen::VectorXi* J, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    template<int dim>
+    void Energy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::checkGradient(const TriangleSoup& data) const
+    template<int dim>
+    void Energy<dim>::checkGradient(const TriangleSoup& data) const
     {
         std::cout << "checking energy gradient computation..." << std::endl;
         
@@ -129,7 +141,8 @@ namespace FracCuts {
         logFile << "g_finiteDiff = \n" << gradient_finiteDiff << std::endl;
     }
     
-    void Energy::checkHessian(const TriangleSoup& data, bool triplet) const
+    template<int dim>
+    void Energy<dim>::checkHessian(const TriangleSoup& data, bool triplet) const
     {
         std::cout << "checking energy hessian computation..." << std::endl;
         
@@ -198,7 +211,8 @@ namespace FracCuts {
         logFile << "h_finiteDiff = \n" << hessian_finiteDiff << std::endl;
     }
     
-    void Energy::getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
+    template<int dim>
+    void Energy<dim>::getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
                                           std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                           std::vector<Eigen::Matrix2d>& F,
                                           Eigen::VectorXd& energyValPerElem,
@@ -244,7 +258,8 @@ namespace FracCuts {
 //        fclose(out);
     }
     
-    void Energy::computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
+    template<int dim>
+    void Energy<dim>::computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
                                        std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                        std::vector<Eigen::Matrix2d>& F,
                                        double& energyVal) const
@@ -254,7 +269,8 @@ namespace FracCuts {
         energyVal = energyValPerElem.sum();
     }
     
-    void Energy::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
+    template<int dim>
+    void Energy<dim>::computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const
     {
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
@@ -290,7 +306,8 @@ namespace FracCuts {
         }
     }
     
-    void Energy::computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
+    template<int dim>
+    void Energy<dim>::computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
                                      Eigen::VectorXi* I, Eigen::VectorXi* J,
                                      bool projectSPD) const
     {
@@ -383,7 +400,8 @@ namespace FracCuts {
         timer_temp.stop();
     }
     
-    void Energy::computeGradientByPK(const TriangleSoup& data, bool redoSVD,
+    template<int dim>
+    void Energy<dim>::computeGradientByPK(const TriangleSoup& data, bool redoSVD,
                                      std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                      std::vector<Eigen::Matrix2d>& F,
                                      Eigen::VectorXd& gradient) const
@@ -453,7 +471,8 @@ namespace FracCuts {
             gradient.segment<2>(2 * fixedVI).setZero();
         }
     }
-    void Energy::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
+    template<int dim>
+    void Energy<dim>::computeHessianByPK(const TriangleSoup& data, bool redoSVD,
                                     std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                     std::vector<Eigen::Matrix2d>& F,
                                     double coef,
@@ -613,7 +632,8 @@ namespace FracCuts {
         timer_temp.stop();
     }
     
-    void Energy::computeEnergyValBySVD(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeEnergyValBySVD(const TriangleSoup& data, int triI,
                                        const Eigen::VectorXd& x,
                                        double& energyVal,
                                        bool uniformWeight) const
@@ -640,7 +660,8 @@ namespace FracCuts {
             energyVal *= data.triWeight[triI] * data.triArea[triI];
         }
     }
-    void Energy::computeGradientBySVD(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeGradientBySVD(const TriangleSoup& data, int triI,
                                       const Eigen::VectorXd& x,
                                       Eigen::VectorXd& gradient) const
     {
@@ -673,7 +694,8 @@ namespace FracCuts {
             gradient.segment(triVI * 2, 2) = w * dsigma_div_dx.block(triVI * 2, 0, 2, 2) * dE_div_dsigma;
         }
     }
-    void Energy::computeHessianBySVD(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeHessianBySVD(const TriangleSoup& data, int triI,
                                      const Eigen::VectorXd& x,
                                      Eigen::MatrixXd& hessian,
                                      bool projectSPD) const
@@ -735,7 +757,8 @@ namespace FracCuts {
         }
     }
     
-    void Energy::computeEnergyValBySVD_F(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeEnergyValBySVD_F(const TriangleSoup& data, int triI,
                                          const Eigen::RowVectorXd& F,
                                          double& energyVal,
                                          bool uniformWeight) const
@@ -749,7 +772,8 @@ namespace FracCuts {
             energyVal *= data.triWeight[triI] * data.triArea[triI];
         }
     }
-    void Energy::computeGradientBySVD_F(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeGradientBySVD_F(const TriangleSoup& data, int triI,
                                         const Eigen::RowVectorXd& F,
                                         Eigen::VectorXd& gradient) const
     {
@@ -772,7 +796,8 @@ namespace FracCuts {
         const double w = data.triWeight[triI] * data.triArea[triI];
         gradient *= w;
     }
-    void Energy::computeHessianBySVD_F(const TriangleSoup& data, int triI,
+    template<int dim>
+    void Energy<dim>::computeHessianBySVD_F(const TriangleSoup& data, int triI,
                                        const Eigen::RowVectorXd& F,
                                        Eigen::MatrixXd& hessian,
                                        bool projectSPD) const
@@ -825,29 +850,34 @@ namespace FracCuts {
         }
     }
     
-    void Energy::compute_E(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void Energy<dim>::compute_E(const Eigen::Vector2d& singularValues,
                            double& E) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
-    void Energy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void Energy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                        Eigen::Vector2d& dE_div_dsigma) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
-    void Energy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void Energy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                          Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
-    void Energy::compute_dE_div_dF(const Eigen::Matrix2d& F,
+    template<int dim>
+    void Energy<dim>::compute_dE_div_dF(const Eigen::Matrix2d& F,
                                    const AutoFlipSVD<Eigen::Matrix2d>& svd,
                                    Eigen::Matrix2d& dE_div_dF) const
     {
         assert(0 && "please implement this method in the subclass!");
     }
     
-    void Energy::compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const
+    template<int dim>
+    void Energy<dim>::compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const
     {
         Eigen::Matrix2d A = Eigen::Matrix2d::Identity();
         
@@ -894,14 +924,16 @@ namespace FracCuts {
         d2E_div_dF2_rest = d2E_div_dF2_left + d2E_div_dF2_right;
     }
     
-    void Energy::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
+    template<int dim>
+    void Energy<dim>::initStepSize(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
         if(needElemInvSafeGuard) {
             initStepSize_preventElemInv(data, searchDir, stepSize);
         }
     }
     
-    void Energy::initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
+    template<int dim>
+    void Energy<dim>::initStepSize_preventElemInv(const TriangleSoup& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
         assert(searchDir.size() == data.V.rows() * 2);
         assert(stepSize > 0.0);
@@ -963,7 +995,8 @@ namespace FracCuts {
         }
     }
     
-    void Energy::initStepSize(const Eigen::VectorXd& V,
+    template<int dim>
+    void Energy<dim>::initStepSize(const Eigen::VectorXd& V,
                               const Eigen::VectorXd& searchDir,
                               double& stepSize) const
     {
@@ -972,7 +1005,8 @@ namespace FracCuts {
         }
     }
     
-    void Energy::initStepSize_preventElemInv(const Eigen::VectorXd& V,
+    template<int dim>
+    void Energy<dim>::initStepSize_preventElemInv(const Eigen::VectorXd& V,
                                              const Eigen::VectorXd& searchDir,
                                              double& stepSize) const
     {
@@ -1031,9 +1065,12 @@ namespace FracCuts {
         }
     }
     
-    void Energy::getBulkModulus(double& bulkModulus)
+    template<int dim>
+    void Energy<dim>::getBulkModulus(double& bulkModulus)
     {
         assert(0 && "please implement this method in the subclass!");
     }
+    
+    template class Energy<2>;
     
 }

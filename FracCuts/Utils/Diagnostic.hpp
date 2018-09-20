@@ -34,7 +34,7 @@ extern uint32_t GIFDelay; //*10ms
 extern double GIFScale;
 
 extern std::vector<const FracCuts::TriangleSoup*> triSoup;
-extern std::vector<FracCuts::Energy*> energyTerms;
+extern std::vector<FracCuts::Energy<DIM>*> energyTerms;
 extern std::vector<double> energyParams;
 extern FracCuts::Optimizer* optimizer;
 
@@ -128,7 +128,7 @@ namespace FracCuts{
                         assert(distFile);
                         
                         // for rendering:
-                        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+                        energyTerms.emplace_back(new FracCuts::SymStretchEnergy<DIM>());
                         energyParams.emplace_back(1.0);
                         triSoup.resize(2);
                         viewer.core.background_color << 1.0f, 1.0f, 1.0f, 0.0f;
@@ -177,7 +177,7 @@ namespace FracCuts{
                             double seamLen;
                             resultMesh.computeSeamSparsity(seamLen, false);
                             double distortion;
-                            SymStretchEnergy SD;
+                            SymStretchEnergy<DIM> SD;
                             SD.computeEnergyVal(resultMesh, distortion);
                             file << distortion << " " << seamLen / resultMesh.virtualRadius << std::endl;
                             fprintf(distFile, "%s %lf\n", buf, distortion);
@@ -656,7 +656,7 @@ namespace FracCuts{
                         assert(dirList);
                         
                         // for rendering:
-                        energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+                        energyTerms.emplace_back(new FracCuts::SymStretchEnergy<DIM>());
                         energyParams.emplace_back(1.0);
                         triSoup.resize(2);
                         viewer.core.background_color << 1.0f, 1.0f, 1.0f, 0.0f;

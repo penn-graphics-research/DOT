@@ -37,7 +37,7 @@ extern std::string outputFolderPath;
 namespace FracCuts {
     
     ADMMDDTimeStepper::ADMMDDTimeStepper(const TriangleSoup& p_data0,
-                                         const std::vector<Energy*>& p_energyTerms,
+                                         const std::vector<Energy<DIM>*>& p_energyTerms,
                                          const std::vector<double>& p_energyParams,
                                          int p_propagateFracture,
                                          bool p_mute,

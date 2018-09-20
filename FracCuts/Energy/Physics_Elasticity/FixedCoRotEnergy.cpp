@@ -18,14 +18,16 @@ extern Timer timer_temp;
 
 namespace FracCuts {
     
-    void FixedCoRotEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void FixedCoRotEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
         std::vector<Eigen::Matrix2d> F(data.F.rows());
-        Energy::getEnergyValPerElemBySVD(data, true, svd, F, energyValPerElem, uniformWeight);
+        Energy<dim>::getEnergyValPerElemBySVD(data, true, svd, F, energyValPerElem, uniformWeight);
     }
     
-    void FixedCoRotEnergy::compute_E(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void FixedCoRotEnergy<dim>::compute_E(const Eigen::Vector2d& singularValues,
                                      double& E) const
     {
         const double sigmam12Sum = (singularValues - Eigen::Vector2d::Ones()).squaredNorm();
@@ -33,7 +35,8 @@ namespace FracCuts {
         
         E = u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1;
     }
-    void FixedCoRotEnergy::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void FixedCoRotEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                                  Eigen::Vector2d& dE_div_dsigma) const
     {
         const double sigmaProdm1lambda = lambda * (singularValues.prod() - 1.0);
@@ -44,7 +47,8 @@ namespace FracCuts {
         dE_div_dsigma[1] = (_2u * (singularValues[1] - 1.0) +
                             sigmaProd_noI[1] * sigmaProdm1lambda);
     }
-    void FixedCoRotEnergy::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
+    template<int dim>
+    void FixedCoRotEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                                    Eigen::Matrix2d& d2E_div_dsigma2) const
     {
         const double sigmaProd = singularValues.prod();
@@ -55,7 +59,8 @@ namespace FracCuts {
         d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
             lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
     }
-    void FixedCoRotEnergy::compute_dE_div_dF(const Eigen::Matrix2d& F,
+    template<int dim>
+    void FixedCoRotEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix2d& F,
                                              const AutoFlipSVD<Eigen::Matrix2d>& svd,
                                              Eigen::Matrix2d& dE_div_dF) const
     {
@@ -68,7 +73,8 @@ namespace FracCuts {
                      lambda * (svd.singularValues().prod() - 1) * JFInvT);
     }
     
-    void FixedCoRotEnergy::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
+    template<int dim>
+    void FixedCoRotEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
     {
         //TODO: move to super class, only provide a value
         
@@ -103,19 +109,23 @@ namespace FracCuts {
         std::cout << "energyVal computation error = " << err << std::endl;
     }
     
-    FixedCoRotEnergy::FixedCoRotEnergy(double YM, double PR) :
-        Energy(true, false, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR)), _2u(2.0 * u)
+    template<int dim>
+    FixedCoRotEnergy<dim>::FixedCoRotEnergy(double YM, double PR) :
+        Energy<dim>(true, false, true), u(YM / 2.0 / (1.0 + PR)), lambda(YM * PR / (1.0 + PR) / (1.0 - 2.0 * PR)), _2u(2.0 * u)
     {
         const double sigmam12Sum = 2;
         const double sigmaProdm1 = 3;
         
         const double visRange_max = (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
-        Energy::setVisRange_energyVal(0.0, visRange_max);
+        Energy<dim>::setVisRange_energyVal(0.0, visRange_max);
     }
     
-    void FixedCoRotEnergy::getBulkModulus(double& bulkModulus)
+    template<int dim>
+    void FixedCoRotEnergy<dim>::getBulkModulus(double& bulkModulus)
     {
         bulkModulus = lambda + _2u / 3.0;
     }
+    
+    template class FixedCoRotEnergy<2>;
     
 }

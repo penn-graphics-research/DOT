@@ -42,7 +42,7 @@ std::vector<const FracCuts::TriangleSoup*> triSoup;
 int vertAmt_input;
 FracCuts::TriangleSoup triSoup_backup;
 FracCuts::Optimizer* optimizer;
-std::vector<FracCuts::Energy*> energyTerms;
+std::vector<FracCuts::Energy<DIM>*> energyTerms;
 std::vector<double> energyParams;
 bool bijectiveParam = false;
 //bool bijectiveParam = true; //TODO: set as arguments!
@@ -552,9 +552,9 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
                 
             case 'h':
             case 'H': { //!!!needsUpdate mannual homotopy optimization
-                FracCuts::SeparationEnergy *sepE = NULL;
+                FracCuts::SeparationEnergy<DIM> *sepE = NULL;
                 for(const auto eTermI : energyTerms) {
-                    sepE = dynamic_cast<FracCuts::SeparationEnergy*>(eTermI);
+                    sepE = dynamic_cast<FracCuts::SeparationEnergy<DIM>*>(eTermI);
                     if(sepE != NULL) {
                         break;
                     }
@@ -1042,9 +1042,9 @@ bool preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 //        viewChannel = channel_result;
         updateViewerData();
         
-        FracCuts::SeparationEnergy *sepE = NULL;
+        FracCuts::SeparationEnergy<DIM> *sepE = NULL;
         for(const auto eTermI : energyTerms) {
-            sepE = dynamic_cast<FracCuts::SeparationEnergy*>(eTermI);
+            sepE = dynamic_cast<FracCuts::SeparationEnergy<DIM>*>(eTermI);
             if(sepE != NULL) {
                 break;
             }
@@ -1521,19 +1521,19 @@ int main(int argc, char *argv[])
         energyParams.emplace_back(1.0 - lambda);
         switch(config.energyType) {
             case FracCuts::ET_NH:
-                energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy(config.YM, config.PR));
+                energyTerms.emplace_back(new FracCuts::NeoHookeanEnergy<DIM>(config.YM, config.PR));
                 break;
                 
             case FracCuts::ET_FCR:
-                energyTerms.emplace_back(new FracCuts::FixedCoRotEnergy(config.YM, config.PR));
+                energyTerms.emplace_back(new FracCuts::FixedCoRotEnergy<DIM>(config.YM, config.PR));
                 break;
                 
             case FracCuts::ET_SD:
-                energyTerms.emplace_back(new FracCuts::SymStretchEnergy());
+                energyTerms.emplace_back(new FracCuts::SymStretchEnergy<DIM>());
                 break;
                 
             case FracCuts::ET_ARAP:
-                energyTerms.emplace_back(new FracCuts::ARAPEnergy());
+                energyTerms.emplace_back(new FracCuts::ARAPEnergy<DIM>());
                 break;
         }
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
@@ -1543,7 +1543,7 @@ int main(int argc, char *argv[])
     if((lambda != 0.0) && startWithTriSoup) {
         //DEBUG alternating framework
         energyParams.emplace_back(lambda);
-        energyTerms.emplace_back(new FracCuts::SeparationEnergy(triSoup[0]->avgEdgeLen * triSoup[0]->avgEdgeLen, delta));
+        energyTerms.emplace_back(new FracCuts::SeparationEnergy<DIM>(triSoup[0]->avgEdgeLen * triSoup[0]->avgEdgeLen, delta));
 //        energyTerms.emplace_back(new FracCuts::CohesiveEnergy(triSoup[0]->avgEdgeLen, delta));
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);

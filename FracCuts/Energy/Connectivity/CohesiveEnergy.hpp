@@ -12,7 +12,9 @@
 #include "Energy.hpp"
 
 namespace FracCuts {
-    class CohesiveEnergy : public Energy
+    
+    template<int dim>
+    class CohesiveEnergy : public Energy<dim>
     {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;

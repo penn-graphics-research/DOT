@@ -16,7 +16,8 @@ extern std::ofstream logFile;
 
 namespace FracCuts {
     
-    void SeparationEnergy::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    template<int dim>
+    void SeparationEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         const double normalizer_div = data.virtualRadius;
         
@@ -34,7 +35,8 @@ namespace FracCuts {
         }
     }
     
-    void SeparationEnergy::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    template<int dim>
+    void SeparationEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
         const double normalizer_div = data.virtualRadius;
         
@@ -60,12 +62,14 @@ namespace FracCuts {
         }
     }
     
-    void SeparationEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    template<int dim>
+    void SeparationEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         computeHessian(data, precondMtr, uniformWeight);
     }
     
-    void SeparationEnergy::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+    template<int dim>
+    void SeparationEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
                                              Eigen::VectorXi* I, Eigen::VectorXi* J, bool uniformWeight) const
     {
         const double normalizer_div = data.virtualRadius;
@@ -150,7 +154,8 @@ namespace FracCuts {
                                       fixedVertInd, 2, V, I, J);
     }
     
-    void SeparationEnergy::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    template<int dim>
+    void SeparationEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
         //TODO: use the sparsity structure from last compute
         
@@ -245,19 +250,22 @@ namespace FracCuts {
 //        std::cout << "det(hessian_ES) = " << det << std::endl;
     }
     
-    void SeparationEnergy::checkEnergyVal(const TriangleSoup& data) const
+    template<int dim>
+    void SeparationEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
     {
         
     }
     
-    SeparationEnergy::SeparationEnergy(double p_sigma_base, double p_sigma_param) :
-        sigma_base(p_sigma_base), sigma_param(p_sigma_param), Energy(true)
+    template<int dim>
+    SeparationEnergy<dim>::SeparationEnergy(double p_sigma_base, double p_sigma_param) :
+        sigma_base(p_sigma_base), sigma_param(p_sigma_param), Energy<dim>(true)
     {
         sigma = sigma_param * sigma_base;
         assert(sigma > 0);
     }
     
-    bool SeparationEnergy::decreaseSigma(void)
+    template<int dim>
+    bool SeparationEnergy<dim>::decreaseSigma(void)
     {
         if(sigma_param > 1.0e-4) {
             sigma_param /= 2.0;
@@ -274,18 +282,21 @@ namespace FracCuts {
         
     }
     
-    double SeparationEnergy::getSigmaParam(void) const
+    template<int dim>
+    double SeparationEnergy<dim>::getSigmaParam(void) const
     {
         return sigma_param;
     }
     
-    double SeparationEnergy::kernel(double t) const
+    template<int dim>
+    double SeparationEnergy<dim>::kernel(double t) const
     {
 //        return t * t / (t * t + sigma);
         return t / (t + sigma);
     }
     
-    double SeparationEnergy::kernelGradient(double t) const
+    template<int dim>
+    double SeparationEnergy<dim>::kernelGradient(double t) const
     {
 //        const double denom_sqrt = t * t + sigma;
 //        return 2 * t * sigma / (denom_sqrt * denom_sqrt);
@@ -293,12 +304,15 @@ namespace FracCuts {
         return sigma / (denom_sqrt * denom_sqrt);
     }
     
-    double SeparationEnergy::kernelHessian(double t) const
+    template<int dim>
+    double SeparationEnergy<dim>::kernelHessian(double t) const
     {
 //        const double t2 = t * t;
 //        return -2 * sigma * (3 * t2 - sigma) * (t2 + sigma) / std::pow(t2 + sigma, 4);
         const double tpsigma = t + sigma;
         return -2 * sigma / std::pow(tpsigma, 3);
     }
+    
+    template class SeparationEnergy<2>;
     
 }

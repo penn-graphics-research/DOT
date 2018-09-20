@@ -13,7 +13,8 @@
 
 namespace FracCuts {
     
-    class FixedCoRotEnergy : public Energy
+    template<int dim>
+    class FixedCoRotEnergy : public Energy<dim>
     {
     public:
         virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
