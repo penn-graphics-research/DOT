@@ -33,6 +33,7 @@ namespace FracCuts{
     // duplicate the vertices and edges of a mesh to separate its triangles,
     // adjacent triangles in the original mesh will have a cohesive edge structure to
     // indicate the connectivity
+    template<int dim>
     class TriangleSoup{
     public: // owned data
         Eigen::MatrixXd V_rest; // duplicated rest vertex coordinates in 3D

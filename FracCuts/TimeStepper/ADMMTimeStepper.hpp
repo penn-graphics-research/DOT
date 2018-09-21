@@ -27,7 +27,7 @@ namespace FracCuts {
         std::vector<std::map<int, double>> offset_fixVerts; // for modifying the linSys to fix vertices
         
     public:
-        ADMMTimeStepper(const TriangleSoup& p_data0,
+        ADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
                         const std::vector<Energy<DIM>*>& p_energyTerms,
                         const std::vector<double>& p_energyParams,
                         int p_propagateFracture = 1,

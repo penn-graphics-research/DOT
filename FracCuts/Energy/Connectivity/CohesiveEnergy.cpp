@@ -13,7 +13,7 @@ namespace FracCuts
 {
     
     template<int dim>
-    void CohesiveEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    void CohesiveEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         energyValPerElem.resize(data.cohE.rows());
         for(int cohI = 0; cohI < data.cohE.rows(); cohI++)
@@ -47,7 +47,7 @@ namespace FracCuts
     }
     
     template<int dim>
-    void CohesiveEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    void CohesiveEnergy<dim>::computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
         gradient.resize(data.V.rows() * 2);
         gradient.setZero();
@@ -111,7 +111,7 @@ namespace FracCuts
     }
     
     template<int dim>
-    void CohesiveEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    void CohesiveEnergy<dim>::computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
         precondMtr.resize(data.V.rows() * 2, data.V.rows() * 2);
         precondMtr.reserve(data.V.rows() * 5 * 4);
@@ -193,13 +193,13 @@ namespace FracCuts
     }
     
     template<int dim>
-    void CohesiveEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    void CohesiveEnergy<dim>::computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
         assert(0 && "no hessian computation for this energy");
     }
     
     template<int dim>
-    void CohesiveEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
+    void CohesiveEnergy<dim>::checkEnergyVal(const TriangleSoup<dim>& data) const
     {
         
     }

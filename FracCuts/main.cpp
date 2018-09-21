@@ -38,9 +38,9 @@
 // optimization
 FracCuts::Config config;
 FracCuts::MethodType methodType;
-std::vector<const FracCuts::TriangleSoup*> triSoup;
+std::vector<const FracCuts::TriangleSoup<DIM>*> triSoup;
 int vertAmt_input;
-FracCuts::TriangleSoup triSoup_backup;
+FracCuts::TriangleSoup<DIM> triSoup_backup;
 FracCuts::Optimizer* optimizer;
 std::vector<FracCuts::Energy<DIM>*> energyTerms;
 std::vector<double> energyParams;
@@ -755,7 +755,7 @@ bool updateLambda_stationaryV(bool cancelMomentum = true, bool checkConvergence 
     //TODO?: stop when first violates bounds from feasible, don't go to best feasible. check after each merge whether distortion is violated
     // oscillation detection
     static int iterNum_bestFeasible = -1;
-    static FracCuts::TriangleSoup triSoup_bestFeasible;
+    static FracCuts::TriangleSoup<DIM> triSoup_bestFeasible;
     static double E_se_bestFeasible = __DBL_MAX__;
     static int lastStationaryIterNum = 0; //!!! still necessary because boundary and interior query are with same iterNum
     static std::map<double, std::vector<std::pair<double, double>>> configs_stationaryV; //!!! better also include topology information
@@ -1333,7 +1333,7 @@ int main(int argc, char *argv[])
     else if(suffix == ".primitive") {
         loadSucceed = !config.loadFromFile(meshFilePath);
         if(loadSucceed) {
-            FracCuts::TriangleSoup primitive(config.shapeType, config.size, config.resolution, false);
+            FracCuts::TriangleSoup<DIM> primitive(config.shapeType, config.size, config.resolution, false);
             V = primitive.V_rest;
             UV = primitive.V;
             F = primitive.F;
@@ -1350,7 +1350,7 @@ int main(int argc, char *argv[])
     }
     vertAmt_input = V.rows();
 //    //DEBUG
-//    FracCuts::TriangleSoup squareMesh(FracCuts::P_SQUARE, 1.0, 0.1, false);
+//    FracCuts::TriangleSoup<DIM> squareMesh(FracCuts::P_SQUARE, 1.0, 0.1, false);
 //    V = squareMesh.V_rest;
 //    F = squareMesh.F;
     
@@ -1454,7 +1454,7 @@ int main(int argc, char *argv[])
 #endif
     
     // construct mesh data structure
-    FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, UV, FUV, startWithTriSoup);
+    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV, FUV, startWithTriSoup);
     // primitive test cases
     if(suffix == ".primitive") {
         temp->borderVerts_primitive = borderVerts_primitive;

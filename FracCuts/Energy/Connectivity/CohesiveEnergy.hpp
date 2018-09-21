@@ -17,12 +17,12 @@ namespace FracCuts {
     class CohesiveEnergy : public Energy<dim>
     {
     public:
-        virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
-        virtual void computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
-        virtual void computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
-        virtual void computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
+        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
+        virtual void computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
         
-        virtual void checkEnergyVal(const TriangleSoup& data) const;
+        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const;
         
     public:
         CohesiveEnergy(double avgEdgeLen, double p_tau_param = 1.0, double p_alpha = 0.5, double p_lambda = 1.0);

@@ -19,7 +19,7 @@ extern Timer timer_temp;
 namespace FracCuts {
     
     template<int dim>
-    void FixedCoRotEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    void FixedCoRotEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
         std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
         std::vector<Eigen::Matrix2d> F(data.F.rows());
@@ -74,7 +74,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void FixedCoRotEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const // check with isometric case
+    void FixedCoRotEnergy<dim>::checkEnergyVal(const TriangleSoup<dim>& data) const // check with isometric case
     {
         //TODO: move to super class, only provide a value
         

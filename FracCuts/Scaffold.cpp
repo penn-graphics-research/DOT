@@ -23,7 +23,7 @@ namespace FracCuts {
     {
     }
     
-    Scaffold::Scaffold(const TriangleSoup& mesh, Eigen::MatrixXd UV_bnds, Eigen::MatrixXi E, const Eigen::VectorXi& p_bnd)
+    Scaffold::Scaffold(const TriangleSoup<DIM>& mesh, Eigen::MatrixXd UV_bnds, Eigen::MatrixXi E, const Eigen::VectorXi& p_bnd)
     {
         assert(E.rows() == UV_bnds.rows());
 
@@ -129,7 +129,7 @@ namespace FracCuts {
                             }
                             localTriI++;
                         }
-                        TriangleSoup localMesh(localV_rest, localF, localV, Eigen::MatrixXi(), false);
+                        TriangleSoup<DIM> localMesh(localV_rest, localF, localV, Eigen::MatrixXi(), false);
                         // compute inward normal
                         Eigen::RowVector2d sepDir_oneV;
                         mesh.compute2DInwardNormal(vI, sepDir_oneV);

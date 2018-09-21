@@ -17,14 +17,14 @@ namespace FracCuts {
     class SeparationEnergy : public Energy<dim>
     {
     public:
-        virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
-        virtual void computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
-        virtual void computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
-        virtual void computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
+        virtual void computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL, bool uniformWeight = false) const;
-        virtual void computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
         
-        virtual void checkEnergyVal(const TriangleSoup& data) const;
+        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const;
         
     public:
         SeparationEnergy(double p_sigma_base, double p_sigma_param);

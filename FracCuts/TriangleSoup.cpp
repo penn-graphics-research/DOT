@@ -35,12 +35,14 @@ extern std::vector<Eigen::MatrixXd> newVertPoses_bSplit, newVertPoses_iSplit, ne
 
 namespace FracCuts {
     
-    TriangleSoup::TriangleSoup(void)
+    template<int dim>
+    TriangleSoup<dim>::TriangleSoup(void)
     {
         initSeamLen = 0.0;
     }
     
-    TriangleSoup::TriangleSoup(const Eigen::MatrixXd& V_mesh, const Eigen::MatrixXi& F_mesh,
+    template<int dim>
+    TriangleSoup<dim>::TriangleSoup(const Eigen::MatrixXd& V_mesh, const Eigen::MatrixXi& F_mesh,
                                const Eigen::MatrixXd& UV_mesh, const Eigen::MatrixXi& FUV_mesh,
                                bool separateTri, double p_initSeamLen, double p_areaThres_AM)
     {
@@ -278,7 +280,8 @@ namespace FracCuts {
         }
     }
     
-    TriangleSoup::TriangleSoup(Primitive primitive, double size, int elemAmt, bool separateTri)
+    template<int dim>
+    TriangleSoup<dim>::TriangleSoup(Primitive primitive, double size, int elemAmt, bool separateTri)
     {
         assert(size > 0.0);
         assert(elemAmt > 0);
@@ -549,7 +552,8 @@ namespace FracCuts {
         vertWeight = Eigen::VectorXd::Ones(V.rows());
     }
     
-    void TriangleSoup::computeLaplacianMtr(void)
+    template<int dim>
+    void TriangleSoup<dim>::computeLaplacianMtr(void)
     {
         Eigen::SparseMatrix<double> L;
         igl::cotmatrix(V_rest, F, L);
@@ -577,7 +581,8 @@ namespace FracCuts {
 //                    LaplacianMtr.insert(it.row() * 2 + 1, it.col() * 2 + 1) = -it.value();// * M.coeffRef(it.row(), it.row());
     }
     
-    void TriangleSoup::computeMassMatrix(const igl::MassMatrixType type)
+    template<int dim>
+    void TriangleSoup<dim>::computeMassMatrix(const igl::MassMatrixType type)
     {
         const Eigen::MatrixXd & V = V_rest;
         Eigen::SparseMatrix<double>& M = massMatrix;
@@ -725,7 +730,8 @@ namespace FracCuts {
         massMatrix *= density;
     }
     
-    void TriangleSoup::computeFeatures(bool multiComp, bool resetFixedV)
+    template<int dim>
+    void TriangleSoup<dim>::computeFeatures(bool multiComp, bool resetFixedV)
     {
         //TODO: if the mesh is multi-component, then fix more vertices
         if(resetFixedV) {
@@ -913,7 +919,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::updateFeatures(void)
+    template<int dim>
+    void TriangleSoup<dim>::updateFeatures(void)
     {
         // assumption: triangle shapes stay the same
         
@@ -937,7 +944,8 @@ namespace FracCuts {
 #endif
     }
     
-    void TriangleSoup::resetFixedVert(const std::set<int>& p_fixedVert)
+    template<int dim>
+    void TriangleSoup<dim>::resetFixedVert(const std::set<int>& p_fixedVert)
     {
         isFixedVert.resize(0);
         isFixedVert.resize(V.rows(), false);
@@ -949,13 +957,15 @@ namespace FracCuts {
         fixedVert = p_fixedVert;
         computeLaplacianMtr();
     }
-    void TriangleSoup::addFixedVert(int vI)
+    template<int dim>
+    void TriangleSoup<dim>::addFixedVert(int vI)
     {
         assert(vI < V.rows());
         fixedVert.insert(vI);
         isFixedVert[vI] = true;
     }
-    void TriangleSoup::addFixedVert(const std::vector<int>& p_fixedVert)
+    template<int dim>
+    void TriangleSoup<dim>::addFixedVert(const std::vector<int>& p_fixedVert)
     {
         for(const auto& vI : p_fixedVert) {
             assert(vI < V.rows());
@@ -966,7 +976,8 @@ namespace FracCuts {
         computeLaplacianMtr();
     }
     
-    bool TriangleSoup::separateTriangle(const Eigen::VectorXd& measure, double thres)
+    template<int dim>
+    bool TriangleSoup<dim>::separateTriangle(const Eigen::VectorXd& measure, double thres)
     {
         assert(measure.size() == F.rows());
         
@@ -1165,7 +1176,8 @@ namespace FracCuts {
         return changed;
     }
     
-    bool TriangleSoup::splitVertex(const Eigen::VectorXd& measure, double thres)
+    template<int dim>
+    bool TriangleSoup<dim>::splitVertex(const Eigen::VectorXd& measure, double thres)
     {
         assert(measure.rows() == V.rows());
         
@@ -1198,7 +1210,8 @@ namespace FracCuts {
         return modified;
     }
     
-    void TriangleSoup::querySplit(double lambda_t, bool propagate, bool splitInterior,
+    template<int dim>
+    void TriangleSoup<dim>::querySplit(double lambda_t, bool propagate, bool splitInterior,
                                   double& EwDec_max, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
                                   std::pair<double, double>& energyChanges_max) const
     {
@@ -1433,7 +1446,8 @@ namespace FracCuts {
         timer_step.stop();
     }
     
-    bool TriangleSoup::splitEdge(double lambda_t, double thres, bool propagate, bool splitInterior)
+    template<int dim>
+    bool TriangleSoup<dim>::splitEdge(double lambda_t, double thres, bool propagate, bool splitInterior)
     {
         double EwDec_max;
         std::vector<int> path_max;
@@ -1473,7 +1487,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::queryMerge(double lambda, bool propagate,
+    template<int dim>
+    void TriangleSoup<dim>::queryMerge(double lambda, bool propagate,
                                   double& localEwDec_max, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
                                   std::pair<double, double>& energyChanges_max)
     {
@@ -1625,7 +1640,8 @@ namespace FracCuts {
         timer_step.stop();
     }
     
-    bool TriangleSoup::mergeEdge(double lambda, double EDecThres, bool propagate)
+    template<int dim>
+    bool TriangleSoup<dim>::mergeEdge(double lambda, double EDecThres, bool propagate)
     {
         double localEwDec_max;
         std::vector<int> path_max;
@@ -1650,7 +1666,8 @@ namespace FracCuts {
         }
     }
     
-    bool TriangleSoup::splitOrMerge(double lambda_t, double EDecThres, bool propagate, bool splitInterior,
+    template<int dim>
+    bool TriangleSoup<dim>::splitOrMerge(double lambda_t, double EDecThres, bool propagate, bool splitInterior,
                                     bool& isMerge)
     {
         assert((!propagate) && "propagation is supported separately for split and merge!");
@@ -1726,7 +1743,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::onePointCut(int vI)
+    template<int dim>
+    void TriangleSoup<dim>::onePointCut(int vI)
     {
         assert((vI >= 0) && (vI < V_rest.rows()));
         std::vector<int> path(vNeighbor[vI].begin(), vNeighbor[vI].end());
@@ -1748,7 +1766,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::highCurvOnePointCut(void)
+    template<int dim>
+    void TriangleSoup<dim>::highCurvOnePointCut(void)
     {
         std::vector<double> gaussianCurv(V.rows(), 2.0 * M_PI);
         for(int triI = 0; triI < F.rows(); triI++) {
@@ -1923,7 +1942,8 @@ namespace FracCuts {
         std::reverse(path.begin(), path.end());
     }
     
-    void TriangleSoup::farthestPointCut(void)
+    template<int dim>
+    void TriangleSoup<dim>::farthestPointCut(void)
     {
         assert(vNeighbor.size() == V_rest.rows());
         
@@ -1955,7 +1975,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::geomImgCut(TriangleSoup& data_findExtrema)
+    template<int dim>
+    void TriangleSoup<dim>::geomImgCut(TriangleSoup& data_findExtrema)
     {
         // compute UV map for find extremal point (interior)
         data_findExtrema = *this;
@@ -2071,7 +2092,8 @@ namespace FracCuts {
 //        saveAsMesh("/Users/mincli/Desktop/meshes/test_mesh.obj");
     }
     
-    void TriangleSoup::cutPath(std::vector<int> path, bool makeCoh, int changePos,
+    template<int dim>
+    void TriangleSoup<dim>::cutPath(std::vector<int> path, bool makeCoh, int changePos,
                                const Eigen::MatrixXd& newVertPos, bool allowCutThrough)
     {
         assert(path.size() >= 2);
@@ -2188,7 +2210,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::computeSeamScore(Eigen::VectorXd& seamScore) const
+    template<int dim>
+    void TriangleSoup<dim>::computeSeamScore(Eigen::VectorXd& seamScore) const
     {
         seamScore.resize(cohE.rows());
         for(int cohI = 0; cohI < cohE.rows(); cohI++)
@@ -2202,7 +2225,8 @@ namespace FracCuts {
             }
         }
     }
-    void TriangleSoup::computeBoundaryLen(double& boundaryLen) const
+    template<int dim>
+    void TriangleSoup<dim>::computeBoundaryLen(double& boundaryLen) const
     {
         boundaryLen = 0.0;
         for(const auto& e : edge2Tri) {
@@ -2211,7 +2235,8 @@ namespace FracCuts {
             }
         }
     }
-    void TriangleSoup::computeSeamSparsity(double& sparsity, bool triSoup) const
+    template<int dim>
+    void TriangleSoup<dim>::computeSeamSparsity(double& sparsity, bool triSoup) const
     {
         const double thres = 1.0e-2;
         sparsity = 0.0;
@@ -2228,7 +2253,8 @@ namespace FracCuts {
         }
         sparsity += initSeamLen;
     }
-    void TriangleSoup::computeL2StretchPerElem(Eigen::VectorXd& L2StretchPerElem) const
+    template<int dim>
+    void TriangleSoup<dim>::computeL2StretchPerElem(Eigen::VectorXd& L2StretchPerElem) const
     {
         L2StretchPerElem.resize(F.rows());
         for(int triI = 0; triI < F.rows(); triI++)
@@ -2254,7 +2280,8 @@ namespace FracCuts {
             L2StretchPerElem[triI] = std::sqrt(t0 / 2.0);
         }
     }
-    void TriangleSoup::computeStandardStretch(double& stretch_l2, double& stretch_inf, double& stretch_shear, double& compress_inf) const
+    template<int dim>
+    void TriangleSoup<dim>::computeStandardStretch(double& stretch_l2, double& stretch_inf, double& stretch_shear, double& compress_inf) const
     {
         stretch_l2 = 0.0;
         stretch_inf = -__DBL_MAX__;
@@ -2322,13 +2349,15 @@ namespace FracCuts {
         compress_inf *= scaleFactor; // not meaningful now...
         // stretch_shear won't be affected by area scaling
     }
-    void TriangleSoup::outputStandardStretch(std::ofstream& file) const
+    template<int dim>
+    void TriangleSoup<dim>::outputStandardStretch(std::ofstream& file) const
     {
         double stretch_l2, stretch_inf, stretch_shear, compress_inf;
         computeStandardStretch(stretch_l2, stretch_inf, stretch_shear, compress_inf);
         file << stretch_l2 << " " << stretch_inf << " " << stretch_shear << " " << compress_inf << std::endl;
     }
-    void TriangleSoup::computeAbsGaussianCurv(double& absGaussianCurv) const
+    template<int dim>
+    void TriangleSoup<dim>::computeAbsGaussianCurv(double& absGaussianCurv) const
     {
         //!!! it's easy to optimize this way actually...
         std::vector<double> weights(V.rows(), 0.0);
@@ -2359,7 +2388,8 @@ namespace FracCuts {
         absGaussianCurv /= surfaceArea * 3.0;
     }
 
-    void TriangleSoup::initRigidUV(void)
+    template<int dim>
+    void TriangleSoup<dim>::initRigidUV(void)
     {
         V.resize(V_rest.rows(), 2);
         for(int triI = 0; triI < F.rows(); triI++)
@@ -2380,7 +2410,8 @@ namespace FracCuts {
         }
     }
     
-    bool TriangleSoup::checkInversion(int triI, bool mute) const
+    template<int dim>
+    bool TriangleSoup<dim>::checkInversion(int triI, bool mute) const
     {
         assert(triI < F.rows());
         
@@ -2406,7 +2437,8 @@ namespace FracCuts {
             return true;
         }
     }
-    bool TriangleSoup::checkInversion(bool mute, const std::vector<int>& triangles) const
+    template<int dim>
+    bool TriangleSoup<dim>::checkInversion(bool mute, const std::vector<int>& triangles) const
     {
         if(triangles.empty()) {
             for(int triI = 0; triI < F.rows(); triI++)
@@ -2428,7 +2460,8 @@ namespace FracCuts {
         return true;
     }
     
-    void TriangleSoup::save(const std::string& filePath, const Eigen::MatrixXd& V, const Eigen::MatrixXi& F,
+    template<int dim>
+    void TriangleSoup<dim>::save(const std::string& filePath, const Eigen::MatrixXd& V, const Eigen::MatrixXi& F,
                             const Eigen::MatrixXd UV, const Eigen::MatrixXi& FUV) const
     {
         std::ofstream out;
@@ -2466,12 +2499,14 @@ namespace FracCuts {
         out.close();
     }
     
-    void TriangleSoup::save(const std::string& filePath) const
+    template<int dim>
+    void TriangleSoup<dim>::save(const std::string& filePath) const
     {
         save(filePath, V_rest, F, V);
     }
     
-    void TriangleSoup::saveAsMesh(const std::string& filePath, bool scaleUV) const
+    template<int dim>
+    void TriangleSoup<dim>::saveAsMesh(const std::string& filePath, bool scaleUV) const
     {
         const double thres = 1.0e-2;
         std::vector<int> dupVI2GroupI(V.rows());
@@ -2602,7 +2637,8 @@ namespace FracCuts {
         save(filePath, V_mesh, F_mesh, UV_mesh, FUV_mesh);
     }
         
-    void TriangleSoup::constructSubmesh(const Eigen::VectorXi& triangles,
+    template<int dim>
+    void TriangleSoup<dim>::constructSubmesh(const Eigen::VectorXi& triangles,
                                         TriangleSoup& submesh,
                                         std::map<int, int>& globalVIToLocal,
                                         std::map<int, int>& globalTriIToLocal) const
@@ -2643,7 +2679,8 @@ namespace FracCuts {
         submesh.resetFixedVert(fixedVert_sub);
     }
     
-    bool TriangleSoup::findBoundaryEdge(int vI, const std::pair<int, int>& startEdge,
+    template<int dim>
+    bool TriangleSoup<dim>::findBoundaryEdge(int vI, const std::pair<int, int>& startEdge,
                                         std::pair<int, int>& boundaryEdge)
     {
         auto finder = edge2Tri.find(startEdge);
@@ -2673,7 +2710,8 @@ namespace FracCuts {
         }
     }
     
-    bool TriangleSoup::insideTri(int triI, const Eigen::RowVector2d& pos) const
+    template<int dim>
+    bool TriangleSoup<dim>::insideTri(int triI, const Eigen::RowVector2d& pos) const
     {
         const Eigen::RowVector3i& triVInd = F.row(triI);
         const Eigen::RowVector2d e01 = V.row(triVInd[1]) - V.row(triVInd[0]);
@@ -2693,8 +2731,9 @@ namespace FracCuts {
             return false;
         }
     }
-        
-    bool TriangleSoup::insideUVRegion(const std::vector<int>& triangles, const Eigen::RowVector2d& pos) const
+       
+    template<int dim>
+    bool TriangleSoup<dim>::insideUVRegion(const std::vector<int>& triangles, const Eigen::RowVector2d& pos) const
     {
         for(const auto& triI : triangles) {
             if(insideTri(triI, pos)) {
@@ -2704,7 +2743,8 @@ namespace FracCuts {
         return false;
     }
 
-    bool TriangleSoup::isBoundaryVert(int vI, int vI_neighbor,
+    template<int dim>
+    bool TriangleSoup<dim>::isBoundaryVert(int vI, int vI_neighbor,
                                       std::vector<int>& tri_toSep, std::pair<int, int>& boundaryEdge, bool toBound) const
     {
 //        const auto inputEdgeTri = edge2Tri.find(toBound ? std::pair<int, int>(vI, vI_neighbor) :
@@ -2745,7 +2785,8 @@ namespace FracCuts {
         } while(1);
     }
     
-    bool TriangleSoup::isBoundaryVert(int vI) const
+    template<int dim>
+    bool TriangleSoup<dim>::isBoundaryVert(int vI) const
     {
         assert(vNeighbor.size() == V.rows());
         assert(vI < vNeighbor.size());
@@ -2760,8 +2801,9 @@ namespace FracCuts {
         
         return false;
     }
-        
-    void TriangleSoup::compute2DInwardNormal(int vI, Eigen::RowVector2d& normal) const
+      
+    template<int dim>
+    void TriangleSoup<dim>::compute2DInwardNormal(int vI, Eigen::RowVector2d& normal) const
     {
         std::vector<int> incTris[2];
         std::pair<int, int> boundaryEdge[2];
@@ -2781,7 +2823,8 @@ namespace FracCuts {
         }
     }
     
-    double TriangleSoup::computeLocalEwDec(int vI, double lambda_t, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
+    template<int dim>
+    double TriangleSoup<dim>::computeLocalEwDec(int vI, double lambda_t, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
                                            std::pair<double, double>& energyChanges_max,
                                            const std::vector<int>& incTris, const Eigen::RowVector2d& initMergedPos) const
     {
@@ -2983,8 +3026,9 @@ namespace FracCuts {
             return EwDec_max;
         }
     }
-        
-    double TriangleSoup::computeLocalEDec_in(const std::vector<int>& triangles, const std::set<int>& freeVert,
+      
+    template<int dim>
+    double TriangleSoup<dim>::computeLocalEDec_in(const std::vector<int>& triangles, const std::set<int>& freeVert,
                                           const std::vector<int>& path, Eigen::MatrixXd& newVertPos, int maxIter) const
     {
         assert(triangles.size() && freeVert.size());
@@ -3116,7 +3160,8 @@ namespace FracCuts {
         return eDec;
     }
     
-    double TriangleSoup::computeLocalEDec(const std::vector<int>& path, const std::vector<int>& triangles,
+    template<int dim>
+    double TriangleSoup<dim>::computeLocalEDec(const std::vector<int>& path, const std::vector<int>& triangles,
                                           const std::set<int>& freeVert, std::map<int, Eigen::RowVector2d>& newVertPos,
                                           const std::map<int, int>& mergeVert, const Eigen::RowVector2d& initMergedPos,
                                           bool closeup, int maxIter) const
@@ -3239,8 +3284,9 @@ namespace FracCuts {
         
         return eDec;
     }
-        
-    double TriangleSoup::computeLocalEDec(const std::vector<int>& triangles, const std::set<int>& freeVert,
+      
+    template<int dim>
+    double TriangleSoup<dim>::computeLocalEDec(const std::vector<int>& triangles, const std::set<int>& freeVert,
                                           const std::vector<int>& splitPath, Eigen::MatrixXd& newVertPos,
                                           int maxIter) const
     {
@@ -3523,7 +3569,8 @@ namespace FracCuts {
         return eDec;
     }
     
-    double TriangleSoup::computeLocalEDec(const std::pair<int, int>& edge, Eigen::MatrixXd& newVertPos) const
+    template<int dim>
+    double TriangleSoup<dim>::computeLocalEDec(const std::pair<int, int>& edge, Eigen::MatrixXd& newVertPos) const
     {
         assert(vNeighbor.size() == V.rows());
         auto edgeTriIndFinder = edge2Tri.find(edge);
@@ -3635,7 +3682,8 @@ namespace FracCuts {
 //        }
     }
     
-    void TriangleSoup::splitEdgeOnBoundary(const std::pair<int, int>& edge,
+    template<int dim>
+    void TriangleSoup<dim>::splitEdgeOnBoundary(const std::pair<int, int>& edge,
                                            const Eigen::MatrixXd& newVertPos,
                                            bool changeVertPos, bool allowCutThrough)
     {
@@ -3810,7 +3858,8 @@ namespace FracCuts {
         }
     }
     
-    void TriangleSoup::mergeBoundaryEdges(const std::pair<int, int>& edge0, const std::pair<int, int>& edge1,
+    template<int dim>
+    void TriangleSoup<dim>::mergeBoundaryEdges(const std::pair<int, int>& edge0, const std::pair<int, int>& edge1,
                                           const Eigen::RowVectorXd& mergedPos)
     {
         assert(edge0.second == edge1.first);
@@ -3955,5 +4004,7 @@ namespace FracCuts {
         
         //TODO: locally update edge2Tri, vNeighbor, cohEIndex
     }
+        
+    template class TriangleSoup<2>;
     
 }

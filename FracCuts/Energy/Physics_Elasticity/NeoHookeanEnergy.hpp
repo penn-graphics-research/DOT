@@ -17,7 +17,7 @@ namespace FracCuts {
     class NeoHookeanEnergy : public Energy<dim>
     {
     public:
-        virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
+        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
         
         virtual void compute_E(const Eigen::Vector2d& singularValues,
                                double& E) const;
@@ -29,7 +29,7 @@ namespace FracCuts {
                                        const AutoFlipSVD<Eigen::Matrix2d>& svd,
                                        Eigen::Matrix2d& dE_div_dF) const;
         
-        virtual void checkEnergyVal(const TriangleSoup& data) const; // check with isometric case
+        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const; // check with isometric case
         
         virtual void getBulkModulus(double& bulkModulus);
         

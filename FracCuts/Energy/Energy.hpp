@@ -42,65 +42,65 @@ namespace FracCuts {
         void setVisRange_energyVal(double visRange_min, double visRange_max);
         
     public:
-        virtual void computeEnergyVal(const TriangleSoup& data, double& energyVal, bool uniformWeight = false) const;
-        virtual void getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const = 0;
-        virtual void getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight = false) const;
-        virtual void computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
-        virtual void computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
-        virtual void computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+        virtual void computeEnergyVal(const TriangleSoup<dim>& data, double& energyVal, bool uniformWeight = false) const;
+        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const = 0;
+        virtual void getEnergyValByElemID(const TriangleSoup<dim>& data, int elemI, double& energyVal, bool uniformWeight = false) const;
+        virtual void computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL, bool uniformWeight = false) const;
-        virtual void computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
         
-        virtual void checkEnergyVal(const TriangleSoup& data) const = 0;
+        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const = 0;
         
-        virtual void checkGradient(const TriangleSoup& data) const; // check with finite difference method, according to energyVal
-        virtual void checkHessian(const TriangleSoup& data, bool triplet = false) const; // check with finite difference method, according to gradient
+        virtual void checkGradient(const TriangleSoup<dim>& data) const; // check with finite difference method, according to energyVal
+        virtual void checkHessian(const TriangleSoup<dim>& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
-        virtual void getEnergyValPerElemBySVD(const TriangleSoup& data, bool redoSVD,
+        virtual void getEnergyValPerElemBySVD(const TriangleSoup<dim>& data, bool redoSVD,
                                               std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                               std::vector<Eigen::Matrix2d>& F,
                                               Eigen::VectorXd& energyValPerElem,
                                               bool uniformWeight = false) const;
-        virtual void computeEnergyValBySVD(const TriangleSoup& data, bool redoSVD,
+        virtual void computeEnergyValBySVD(const TriangleSoup<dim>& data, bool redoSVD,
                                            std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                            std::vector<Eigen::Matrix2d>& F,
                                            double& energyVal) const;
-        virtual void computeGradientBySVD(const TriangleSoup& data, Eigen::VectorXd& gradient) const;
-        virtual void computeHessianBySVD(const TriangleSoup& data, Eigen::VectorXd* V,
+        virtual void computeGradientBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient) const;
+        virtual void computeHessianBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
                                          Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL,
                                          bool projectSPD = true) const;
         
-        virtual void computeGradientByPK(const TriangleSoup& data, bool redoSVD,
+        virtual void computeGradientByPK(const TriangleSoup<dim>& data, bool redoSVD,
                                          std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                          std::vector<Eigen::Matrix2d>& F,
                                          Eigen::VectorXd& gradient) const;
-        virtual void computeHessianByPK(const TriangleSoup& data, bool redoSVD,
+        virtual void computeHessianByPK(const TriangleSoup<dim>& data, bool redoSVD,
                                         std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
                                         std::vector<Eigen::Matrix2d>& F,
                                         double coef,
                                         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                         bool projectSPD = true) const;
         
-        virtual void computeEnergyValBySVD(const TriangleSoup& data, int triI,
+        virtual void computeEnergyValBySVD(const TriangleSoup<dim>& data, int triI,
                                            const Eigen::VectorXd& x,
                                            double& energyVal,
                                            bool uniformWeight = false) const;
-        virtual void computeGradientBySVD(const TriangleSoup& data, int triI,
+        virtual void computeGradientBySVD(const TriangleSoup<dim>& data, int triI,
                                           const Eigen::VectorXd& x,
                                           Eigen::VectorXd& gradient) const;
-        virtual void computeHessianBySVD(const TriangleSoup& data, int triI,
+        virtual void computeHessianBySVD(const TriangleSoup<dim>& data, int triI,
                                          const Eigen::VectorXd& x,
                                          Eigen::MatrixXd& hessian,
                                          bool projectSPD = true) const;
         
-        virtual void computeEnergyValBySVD_F(const TriangleSoup& data, int triI,
+        virtual void computeEnergyValBySVD_F(const TriangleSoup<dim>& data, int triI,
                                              const Eigen::RowVectorXd& F,
                                              double& energyVal,
                                              bool uniformWeight = false) const;
-        virtual void computeGradientBySVD_F(const TriangleSoup& data, int triI,
+        virtual void computeGradientBySVD_F(const TriangleSoup<dim>& data, int triI,
                                             const Eigen::RowVectorXd& F,
                                             Eigen::VectorXd& gradient) const;
-        virtual void computeHessianBySVD_F(const TriangleSoup& data, int triI,
+        virtual void computeHessianBySVD_F(const TriangleSoup<dim>& data, int triI,
                                            const Eigen::RowVectorXd& F,
                                            Eigen::MatrixXd& hessian,
                                            bool projectSPD = true) const;
@@ -117,10 +117,10 @@ namespace FracCuts {
         
         virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
         
-        virtual void initStepSize(const TriangleSoup& data,
+        virtual void initStepSize(const TriangleSoup<dim>& data,
                                   const Eigen::VectorXd& searchDir,
                                   double& stepSize) const;
-        virtual void initStepSize_preventElemInv(const TriangleSoup& data,
+        virtual void initStepSize_preventElemInv(const TriangleSoup<dim>& data,
                                                  const Eigen::VectorXd& searchDir,
                                                  double& stepSize) const;
         

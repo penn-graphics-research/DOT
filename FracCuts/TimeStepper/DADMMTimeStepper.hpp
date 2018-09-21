@@ -23,7 +23,7 @@ namespace FracCuts {
         Eigen::MatrixXd D_mult_x;
         
     public:
-        DADMMTimeStepper(const TriangleSoup& p_data0,
+        DADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
                          const std::vector<Energy<DIM>*>& p_energyTerms,
                          const std::vector<double>& p_energyParams,
                          int p_propagateFracture = 1,

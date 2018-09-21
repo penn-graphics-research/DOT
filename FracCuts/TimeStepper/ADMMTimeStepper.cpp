@@ -16,7 +16,7 @@
 
 namespace FracCuts {
     
-    ADMMTimeStepper::ADMMTimeStepper(const TriangleSoup& p_data0,
+    ADMMTimeStepper::ADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
                                      const std::vector<Energy<DIM>*>& p_energyTerms,
                                      const std::vector<double>& p_energyParams,
                                      int p_propagateFracture,

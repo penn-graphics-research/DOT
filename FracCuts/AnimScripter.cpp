@@ -18,7 +18,7 @@ namespace FracCuts {
         animScriptType(p_animScriptType)
     {}
     
-    void AnimScripter::initAnimScript(TriangleSoup& mesh)
+    void AnimScripter::initAnimScript(TriangleSoup<DIM>& mesh)
     {
         switch (animScriptType) {
             case AST_NULL:
@@ -100,7 +100,7 @@ namespace FracCuts {
         }
     }
     
-    void AnimScripter::stepAnimScript(TriangleSoup& mesh, double dt)
+    void AnimScripter::stepAnimScript(TriangleSoup<DIM>& mesh, double dt)
     {
         switch (animScriptType) {
             case AST_NULL:

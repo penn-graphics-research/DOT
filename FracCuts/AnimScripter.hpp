@@ -45,8 +45,8 @@ namespace FracCuts {
         AnimScripter(AnimScriptType p_animScriptType = AST_NULL);
         
     public:
-        void initAnimScript(TriangleSoup& mesh);
-        void stepAnimScript(TriangleSoup& mesh, double dt);
+        void initAnimScript(TriangleSoup<DIM>& mesh);
+        void stepAnimScript(TriangleSoup<DIM>& mesh, double dt);
         
     public:
         void setAnimScriptType(AnimScriptType p_animScriptType);

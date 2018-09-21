@@ -33,7 +33,7 @@ extern GifWriter GIFWriter;
 extern uint32_t GIFDelay; //*10ms
 extern double GIFScale;
 
-extern std::vector<const FracCuts::TriangleSoup*> triSoup;
+extern std::vector<const FracCuts::TriangleSoup<DIM>*> triSoup;
 extern std::vector<FracCuts::Energy<DIM>*> energyTerms;
 extern std::vector<double> energyParams;
 extern FracCuts::Optimizer* optimizer;
@@ -99,8 +99,8 @@ namespace FracCuts{
                             Eigen::MatrixXd V, UV, N;
                             Eigen::MatrixXi F, FUV, FN;
                             igl::readOBJ(meshPath, V, UV, N, F, FUV, FN);
-                            TriangleSoup resultMesh(V, F, UV, FUV, false, 0.0);
-                            TriangleSoup originalMesh(V, F, Eigen::MatrixXd(), Eigen::MatrixXi(), false, 0.0);
+                            TriangleSoup<DIM> resultMesh(V, F, UV, FUV, false, 0.0);
+                            TriangleSoup<DIM> originalMesh(V, F, Eigen::MatrixXd(), Eigen::MatrixXi(), false, 0.0);
                             double absGaussianCurve, absGaussianCurve_original;
                             resultMesh.computeAbsGaussianCurv(absGaussianCurve);
                             originalMesh.computeAbsGaussianCurv(absGaussianCurve_original);
@@ -158,7 +158,7 @@ namespace FracCuts{
                             Eigen::MatrixXi F, FUV, FN;
                             igl::readOBJ(meshPath, V, UV, N, F, FUV, FN);
                             UV.conservativeResize(UV.rows(), 2);
-                            TriangleSoup resultMesh(V, F, UV, FUV, false, 0.0);
+                            TriangleSoup<DIM> resultMesh(V, F, UV, FUV, false, 0.0);
                             
                             std::ofstream file;
                             file.open(resultsFolderPath + '/' + std::string(buf) + "/info.txt");
@@ -239,7 +239,7 @@ namespace FracCuts{
                             Eigen::MatrixXi F, FUV, FN;
                             igl::readOBJ(meshPath, V, UV, N, F, FUV, FN);
                             UV.conservativeResize(UV.rows(), 2);
-                            TriangleSoup resultMesh(V, F, UV, FUV, false, 0.0);
+                            TriangleSoup<DIM> resultMesh(V, F, UV, FUV, false, 0.0);
                             
                             if(!resultMesh.checkInversion()) {
                                 std::cout << buf << " inverted" << std::endl;
@@ -361,7 +361,7 @@ namespace FracCuts{
                                           V_UV, FUV, Eigen::MatrixXd(), Eigen::MatrixXi(), UV, FUV);
                             
                             
-                            FracCuts::TriangleSoup temp(V, F, UV, FUV, false);
+                            FracCuts::TriangleSoup<DIM> temp(V, F, UV, FUV, false);
                             
                             std::vector<std::vector<int>> bnd_all;
                             igl::boundary_loop(temp.F, bnd_all);
@@ -612,7 +612,7 @@ namespace FracCuts{
                                           V_UV, FUV, Eigen::MatrixXd(), Eigen::MatrixXi(), UV, FUV);
                             
                             
-                            FracCuts::TriangleSoup temp(V, F, UV, FUV, false);
+                            FracCuts::TriangleSoup<DIM> temp(V, F, UV, FUV, false);
                             
                             std::vector<std::vector<int>> bnd_all;
                             igl::boundary_loop(temp.F, bnd_all);
@@ -719,7 +719,7 @@ namespace FracCuts{
                                     break;
                                 }
                                 std::cout << subdomainI << " subdomain meshes loaded" << std::endl;
-                                TriangleSoup resultMesh(V_, F_, UV_, FUV_, false, 0.0);
+                                TriangleSoup<DIM> resultMesh(V_, F_, UV_, FUV_, false, 0.0);
                                 
                                 triSoup[0] = triSoup[1] = &resultMesh;
                                 if(ADMMIterI == 0) {

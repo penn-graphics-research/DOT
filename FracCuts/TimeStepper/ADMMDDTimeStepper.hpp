@@ -19,7 +19,7 @@ namespace FracCuts {
     {
     protected:
         std::vector<Eigen::VectorXi> elemList_subdomain;
-        std::vector<TriangleSoup> mesh_subdomain;
+        std::vector<TriangleSoup<DIM>> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
         std::vector<std::vector<int>> localVIToGlobal_subdomain;
         std::vector<std::map<int, int>> globalTriIToLocal_subdomain;
@@ -43,7 +43,7 @@ namespace FracCuts {
         std::vector<std::vector<Eigen::Matrix2d>> F_subdomain;
         
     public:
-        ADMMDDTimeStepper(const TriangleSoup& p_data0,
+        ADMMDDTimeStepper(const TriangleSoup<DIM>& p_data0,
                           const std::vector<Energy<DIM>*>& p_energyTerms,
                           const std::vector<double>& p_energyParams,
                           int p_propagateFracture = 1,

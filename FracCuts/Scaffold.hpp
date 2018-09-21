@@ -15,18 +15,19 @@
 
 #include <cstdio>
 
-namespace FracCuts {
+namespace FracCuts
+{
     class Scaffold
     {
     public:
-        TriangleSoup airMesh; // tessellation of voided regions
+        TriangleSoup<DIM> airMesh; // tessellation of voided regions
         Eigen::VectorXi bnd, localVI2Global; // map between airMesh indices to augmented system indices
         std::map<int, int> meshVI2AirMesh; // the inverse map of bnd
         int wholeMeshSize; // augmented system size
         
     public:
         Scaffold(void);
-        Scaffold(const TriangleSoup& mesh, Eigen::MatrixXd UV_bnds = Eigen::MatrixXd(),
+        Scaffold(const TriangleSoup<DIM>& mesh, Eigen::MatrixXd UV_bnds = Eigen::MatrixXd(),
                 Eigen::MatrixXi E = Eigen::MatrixXi(), const Eigen::VectorXi& p_bnd = Eigen::VectorXi());
 
         // augment mesh gradient with air mesh gradient with parameter w_scaf

@@ -72,7 +72,7 @@ namespace FracCuts {
                                 std::cout << "UV coordinates not valid, will generate separate rigid mapping UV!" << std::endl;
                             }
                             
-                            FracCuts::TriangleSoup inputTriSoup(V, F, UV, Eigen::MatrixXi(), false);
+                            FracCuts::TriangleSoup<DIM> inputTriSoup(V, F, UV, Eigen::MatrixXi(), false);
                             if(argc > 4) {
                                 // input original model to get cohesive edge information
                                 Eigen::MatrixXd V0;
@@ -90,7 +90,7 @@ namespace FracCuts {
                                     return;
                                 }
                                 
-                                inputTriSoup.cohE = FracCuts::TriangleSoup(V0, F0, Eigen::MatrixXd()).cohE;
+                                inputTriSoup.cohE = FracCuts::TriangleSoup<DIM>(V0, F0, Eigen::MatrixXd()).cohE;
                                 inputTriSoup.computeFeatures();
                             }
                             inputTriSoup.saveAsMesh(outputFolderPath + meshName + "_processed.obj", true);
@@ -132,7 +132,7 @@ namespace FracCuts {
                                         exit(-1);
                                     }
                                     
-                                    FracCuts::TriangleSoup *temp = new FracCuts::TriangleSoup(V, F, Eigen::MatrixXd(), Eigen::MatrixXi(), false);
+                                    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, Eigen::MatrixXd(), Eigen::MatrixXi(), false);
                                     //            temp->farthestPointCut(); // open up a boundary for Tutte embedding
                                     //                temp->highCurvOnePointCut();
                                     temp->onePointCut();
@@ -215,7 +215,7 @@ namespace FracCuts {
                                           Eigen::MatrixXd(), Eigen::MatrixXi(), UV, FUV);
                             
                             
-                            FracCuts::TriangleSoup temp(V, F, UV, FUV, false);
+                            FracCuts::TriangleSoup<DIM> temp(V, F, UV, FUV, false);
                             
                             std::vector<std::vector<int>> bnd_all;
                             igl::boundary_loop(temp.F, bnd_all);

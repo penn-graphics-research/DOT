@@ -237,7 +237,7 @@ namespace FracCuts {
         static void saveMesh_Seamster(const std::string& filePath,
                                       const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
         
-        static void smoothVertField(const TriangleSoup& mesh, Eigen::VectorXd& field);
+        static void smoothVertField(const TriangleSoup<DIM>& mesh, Eigen::VectorXd& field);
         
         static void compute_dsigma_div_dx(const AutoFlipSVD<Eigen::MatrixXd>& svd,
                                           const Eigen::MatrixXd& A,

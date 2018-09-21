@@ -73,7 +73,7 @@ namespace FracCuts {
         std::vector<idx_t> epart, npart; // output partition info
         
     public: // constructor
-        METIS(const TriangleSoup& mesh)
+        METIS(const TriangleSoup<DIM>& mesh)
         {
             // construct METIS mesh representation
             eptr.resize(mesh.F.rows() + 1);

@@ -25,7 +25,7 @@ extern std::ofstream logFile;
 namespace FracCuts {
     
     template<int dim>
-    void SymStretchEnergy<dim>::getEnergyValPerElem(const TriangleSoup& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    void SymStretchEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -51,7 +51,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::getEnergyValByElemID(const TriangleSoup& data, int elemI, double& energyVal, bool uniformWeight) const
+    void SymStretchEnergy<dim>::getEnergyValByElemID(const TriangleSoup<dim>& data, int elemI, double& energyVal, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -75,7 +75,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::getEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& energyValPerVert) const
+    void SymStretchEnergy<dim>::getEnergyValPerVert(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerVert) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElem(data, energyValPerElem);
@@ -98,7 +98,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::getMaxUnweightedEnergyValPerVert(const TriangleSoup& data, Eigen::VectorXd& MaxUnweightedEnergyValPerVert) const
+    void SymStretchEnergy<dim>::getMaxUnweightedEnergyValPerVert(const TriangleSoup<dim>& data, Eigen::VectorXd& MaxUnweightedEnergyValPerVert) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElem(data, energyValPerElem, true);
@@ -115,7 +115,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computeDivGradPerVert(const TriangleSoup& data, Eigen::VectorXd& divGradPerVert) const
+    void SymStretchEnergy<dim>::computeDivGradPerVert(const TriangleSoup<dim>& data, Eigen::VectorXd& divGradPerVert) const
     {
         Eigen::MatrixXd localGradients;
         computeLocalGradient(data, localGradients);
@@ -204,7 +204,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::getDivGradPerElem(const TriangleSoup& data, Eigen::VectorXd& divGradPerElem) const
+    void SymStretchEnergy<dim>::getDivGradPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& divGradPerElem) const
     {
         Eigen::VectorXd divGrad_vert;
         computeDivGradPerVert(data, divGrad_vert);
@@ -225,7 +225,7 @@ namespace FracCuts {
     
     // doesn't work well for topology filtering
     template<int dim>
-    void SymStretchEnergy<dim>::computeLocalSearchDir(const TriangleSoup& data, Eigen::MatrixXd& localSearchDir) const
+    void SymStretchEnergy<dim>::computeLocalSearchDir(const TriangleSoup<dim>& data, Eigen::MatrixXd& localSearchDir) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -341,7 +341,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computeLocalGradient(const TriangleSoup& data, Eigen::MatrixXd& localGradients) const
+    void SymStretchEnergy<dim>::computeLocalGradient(const TriangleSoup<dim>& data, Eigen::MatrixXd& localGradients) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -386,7 +386,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computeGradient(const TriangleSoup& data, Eigen::VectorXd& gradient, bool uniformWeight) const
+    void SymStretchEnergy<dim>::computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -436,7 +436,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
+    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight) const
     {
 //        precondMtr = data.LaplacianMtr;
         computeHessian(data, precondMtr, uniformWeight);
@@ -452,7 +452,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup& data, Eigen::VectorXd* V,
+    void SymStretchEnergy<dim>::computePrecondMtr(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
                                    Eigen::VectorXi* I, Eigen::VectorXi* J, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
@@ -582,7 +582,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::computeHessian(const TriangleSoup& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    void SymStretchEnergy<dim>::computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
     {
 //        const double normalizer_div = data.surfaceArea;
         const double normalizer_div = 1.0;
@@ -754,7 +754,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::checkEnergyVal(const TriangleSoup& data) const
+    void SymStretchEnergy<dim>::checkEnergyVal(const TriangleSoup<dim>& data) const
     {
         logFile << "check energyVal computation..." << std::endl;
         
