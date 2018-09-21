@@ -1222,7 +1222,7 @@ namespace FracCuts {
         
         std::vector<int> bestCandVerts;
         if(!propagate) {
-            SymStretchEnergy<DIM> SD;
+            SymStretchEnergy<dim> SD;
             //            double energyVal;
             //            SD.computeEnergyVal(*this, energyVal);
             Eigen::VectorXd divGradPerVert;
@@ -3065,7 +3065,7 @@ namespace FracCuts {
         TriangleSoup localMesh(localV_rest, localF, localV, Eigen::MatrixXi(), false);
         localMesh.resetFixedVert(fixedVert);
         
-        SymStretchEnergy<DIM> SD;
+        SymStretchEnergy<dim> SD;
         double initE = 0.0;
         for(const auto& triI : triangles) {
             double energyValI;
@@ -3139,7 +3139,7 @@ namespace FracCuts {
         }
         
         // conduct optimization on local mesh
-        std::vector<FracCuts::Energy<DIM>*> energyTerms(1, &SD);
+        std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
         Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
         optimizer.precompute();
@@ -3235,7 +3235,7 @@ namespace FracCuts {
 //        localMesh.save("/Users/mincli/Desktop/meshes/test.obj");
 //        save("/Users/mincli/Desktop/meshes/test_full.obj");
         
-        SymStretchEnergy<DIM> SD;
+        SymStretchEnergy<dim> SD;
         double initE = 0.0;
         for(const auto& triI : triangles) {
             double energyValI;
@@ -3263,7 +3263,7 @@ namespace FracCuts {
         }
         
         // conduct optimization on local mesh
-        std::vector<FracCuts::Energy<DIM>*> energyTerms(1, &SD);
+        std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
         Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
         optimizer.precompute();
@@ -3325,7 +3325,7 @@ namespace FracCuts {
         localMesh.resetFixedVert(fixedVert);
         
         // compute initial symmetric Dirichlet Energy value
-        SymStretchEnergy<DIM> SD;
+        SymStretchEnergy<dim> SD;
         double initE = 0.0;
         for(const auto& triI : triangles) {
             double energyValI;
@@ -3541,7 +3541,7 @@ namespace FracCuts {
         }
         
         // conduct optimization on local mesh
-        std::vector<FracCuts::Energy<DIM>*> energyTerms(1, &SD);
+        std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
         Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, !!scaffold, UV_bnds, E, bnd);
         optimizer.precompute();
