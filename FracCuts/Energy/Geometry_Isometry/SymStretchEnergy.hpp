@@ -32,7 +32,7 @@ namespace FracCuts {
         virtual void computeDivGradPerVert(const TriangleSoup<dim>& data, Eigen::VectorXd& divGradPerVert) const;
         virtual void computeLocalSearchDir(const TriangleSoup<dim>& data, Eigen::MatrixXd& localSearchDir) const;
         
-        virtual void compute_E(const Eigen::Vector2d& singularValues,
+        virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
                                double& E) const;
         virtual void compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                            Eigen::Vector2d& dE_div_dsigma) const;

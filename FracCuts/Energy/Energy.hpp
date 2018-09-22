@@ -23,7 +23,8 @@ namespace FracCuts {
     
     // a class for energy terms in the objective of an optimization problem
     template<int dim>
-    class Energy {
+    class Energy
+    {
     protected:
         const bool needRefactorize;
         const bool needElemInvSafeGuard;
@@ -57,13 +58,13 @@ namespace FracCuts {
         virtual void checkHessian(const TriangleSoup<dim>& data, bool triplet = false) const; // check with finite difference method, according to gradient
         
         virtual void getEnergyValPerElemBySVD(const TriangleSoup<dim>& data, bool redoSVD,
-                                              std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                              std::vector<Eigen::Matrix2d>& F,
+                                              std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                              std::vector<Eigen::Matrix<double, dim, dim>>& F,
                                               Eigen::VectorXd& energyValPerElem,
                                               bool uniformWeight = false) const;
         virtual void computeEnergyValBySVD(const TriangleSoup<dim>& data, bool redoSVD,
-                                           std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                           std::vector<Eigen::Matrix2d>& F,
+                                           std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                           std::vector<Eigen::Matrix<double, dim, dim>>& F,
                                            double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
@@ -71,12 +72,12 @@ namespace FracCuts {
                                          bool projectSPD = true) const;
         
         virtual void computeGradientByPK(const TriangleSoup<dim>& data, bool redoSVD,
-                                         std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                         std::vector<Eigen::Matrix2d>& F,
+                                         std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                         std::vector<Eigen::Matrix<double, dim, dim>>& F,
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup<dim>& data, bool redoSVD,
-                                        std::vector<AutoFlipSVD<Eigen::Matrix2d>>& svd,
-                                        std::vector<Eigen::Matrix2d>& F,
+                                        std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                        std::vector<Eigen::Matrix<double, dim, dim>>& F,
                                         double coef,
                                         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                                         bool projectSPD = true) const;
@@ -105,15 +106,15 @@ namespace FracCuts {
                                            Eigen::MatrixXd& hessian,
                                            bool projectSPD = true) const;
         
-        virtual void compute_E(const Eigen::Vector2d& singularValues,
+        virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
                                double& E) const;
         virtual void compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
                                            Eigen::Vector2d& dE_div_dsigma) const;
         virtual void compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
                                              Eigen::Matrix2d& d2E_div_dsigma2) const;
-        virtual void compute_dE_div_dF(const Eigen::Matrix2d& F,
-                                       const AutoFlipSVD<Eigen::Matrix2d>& svd,
-                                       Eigen::Matrix2d& dE_div_dF) const;
+        virtual void compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
+                                       const AutoFlipSVD<Eigen::Matrix<double, dim, dim>>& svd,
+                                       Eigen::Matrix<double, dim, dim>& dE_div_dF) const;
         
         virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
         

@@ -19,18 +19,21 @@ extern Timer timer_temp;
 namespace FracCuts {
     
     template<int dim>
-    void FixedCoRotEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    void FixedCoRotEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data,
+                                                    Eigen::VectorXd& energyValPerElem,
+                                                    bool uniformWeight) const
     {
-        std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd(data.F.rows());
-        std::vector<Eigen::Matrix2d> F(data.F.rows());
+        std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>> svd(data.F.rows());
+        std::vector<Eigen::Matrix<double, dim, dim>> F(data.F.rows());
         Energy<dim>::getEnergyValPerElemBySVD(data, true, svd, F, energyValPerElem, uniformWeight);
     }
     
     template<int dim>
-    void FixedCoRotEnergy<dim>::compute_E(const Eigen::Vector2d& singularValues,
-                                     double& E) const
+    void FixedCoRotEnergy<dim>::compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                          double& E) const
     {
-        const double sigmam12Sum = (singularValues - Eigen::Vector2d::Ones()).squaredNorm();
+        const double sigmam12Sum = (singularValues -
+                                    Eigen::Matrix<double, dim, 1>::Ones()).squaredNorm();
         const double sigmaProdm1 = singularValues.prod() - 1.0;
         
         E = u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1;
@@ -60,15 +63,12 @@ namespace FracCuts {
             lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
     }
     template<int dim>
-    void FixedCoRotEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix2d& F,
-                                             const AutoFlipSVD<Eigen::Matrix2d>& svd,
-                                             Eigen::Matrix2d& dE_div_dF) const
+    void FixedCoRotEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
+                                                  const AutoFlipSVD<Eigen::Matrix<double, dim, dim>>& svd,
+                                                  Eigen::Matrix<double, dim, dim>& dE_div_dF) const
     {
-        Eigen::Matrix2d JFInvT;
-        JFInvT(0, 0) = F(1, 1);
-        JFInvT(0, 1) = -F(1, 0);
-        JFInvT(1, 0) = -F(0, 1);
-        JFInvT(1, 1) = F(0, 0);
+        Eigen::Matrix<double, dim, dim> JFInvT;
+        IglUtils::computeCofactorMtr(F, JFInvT);
         dE_div_dF = (_2u * (F - svd.matrixU() * svd.matrixV().transpose()) +
                      lambda * (svd.singularValues().prod() - 1) * JFInvT);
     }

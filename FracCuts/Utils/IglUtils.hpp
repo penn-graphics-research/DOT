@@ -337,6 +337,35 @@ namespace FracCuts {
         static void dF_div_dx_mult(const Eigen::Matrix2d& right,
                                    const Eigen::Matrix2d& A,
                                    Eigen::Matrix<double, 6, 1>& result);
+        template<int dim>
+        static void computeCofactorMtr(const Eigen::Matrix<double, dim, dim>& F,
+                                       Eigen::Matrix<double, dim, dim>& A)
+        {
+            switch(dim) {
+                case 2:
+                    A(0, 0) = F(1, 1);
+                    A(0, 1) = -F(1, 0);
+                    A(1, 0) = -F(0, 1);
+                    A(1, 1) = F(0, 0);
+                    break;
+                    
+                case 3:
+                    A(0, 0) = F(1, 1) * F(2, 2) - F(1, 2) * F(2, 1);
+                    A(0, 1) = F(1, 2) * F(2, 0) - F(1, 0) * F(2, 2);
+                    A(0, 2) = F(1, 0) * F(2, 1) - F(1, 1) * F(2, 0);
+                    A(1, 0) = F(0, 2) * F(2, 1) - F(0, 1) * F(2, 2);
+                    A(1, 1) = F(0, 0) * F(2, 2) - F(0, 2) * F(2, 0);
+                    A(1, 2) = F(0, 1) * F(2, 0) - F(0, 0) * F(2, 1);
+                    A(2, 0) = F(0, 1) * F(1, 2) - F(0, 2) * F(1, 1);
+                    A(2, 1) = F(0, 2) * F(1, 0) - F(0, 0) * F(1, 2);
+                    A(2, 2) = F(0, 0) * F(1, 1) - F(0, 1) * F(1, 0);
+                    break;
+                    
+                default:
+                    assert(0 && "dim not 2 or 3");
+                    break;
+            }
+        }
         
         static void sampleSegment(const Eigen::RowVectorXd& vs,
                                   const Eigen::RowVectorXd& ve,

@@ -791,12 +791,12 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void SymStretchEnergy<dim>::compute_E(const Eigen::Vector2d& singularValues,
-                                     double& E) const
+    void SymStretchEnergy<dim>::compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                          double& E) const
     {
         E = 0.0;
-        Eigen::VectorXd sigma2 = singularValues.cwiseProduct(singularValues);
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
+        Eigen::Matrix<double, dim, 1> sigma2 = singularValues.cwiseProduct(singularValues);
+        for(int sigmaI = 0; sigmaI < dim; sigmaI++) {
             E += sigma2[sigmaI] + 1.0 / sigma2[sigmaI];
         }
     }

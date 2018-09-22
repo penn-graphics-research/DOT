@@ -773,6 +773,9 @@ namespace FracCuts {
             vFLoc[triVInd[0]].insert(std::pair<int, int>(triI, 0));
             vFLoc[triVInd[1]].insert(std::pair<int, int>(triI, 1));
             vFLoc[triVInd[2]].insert(std::pair<int, int>(triI, 2));
+            if(dim == 3) {
+                vFLoc[triVInd[3]].insert(std::pair<int, int>(triI, 3));
+            }
             
             const Eigen::Vector3d& P1 = V_rest.row(triVInd[0]);
             const Eigen::Vector3d& P2 = V_rest.row(triVInd[1]);
