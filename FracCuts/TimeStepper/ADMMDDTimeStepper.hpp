@@ -15,11 +15,14 @@
 
 namespace FracCuts {
     
-    class ADMMDDTimeStepper : public Optimizer
+    template<int dim>
+    class ADMMDDTimeStepper : public Optimizer<dim>
     {
+        typedef Optimizer<dim> Base;
+        
     protected:
         std::vector<Eigen::VectorXi> elemList_subdomain;
-        std::vector<TriangleSoup<DIM>> mesh_subdomain;
+        std::vector<TriangleSoup<dim>> mesh_subdomain;
         std::vector<std::map<int, int>> globalVIToLocal_subdomain;
         std::vector<std::vector<int>> localVIToGlobal_subdomain;
         std::vector<std::map<int, int>> globalTriIToLocal_subdomain;
@@ -43,8 +46,8 @@ namespace FracCuts {
         std::vector<std::vector<Eigen::Matrix2d>> F_subdomain;
         
     public:
-        ADMMDDTimeStepper(const TriangleSoup<DIM>& p_data0,
-                          const std::vector<Energy<DIM>*>& p_energyTerms,
+        ADMMDDTimeStepper(const TriangleSoup<dim>& p_data0,
+                          const std::vector<Energy<dim>*>& p_energyTerms,
                           const std::vector<double>& p_energyParams,
                           int p_propagateFracture = 1,
                           bool p_mute = false,

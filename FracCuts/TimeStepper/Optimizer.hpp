@@ -21,12 +21,13 @@
 namespace FracCuts {
     
     // a class for solving an optimization problem
+    template<int dim>
     class Optimizer {
-        friend class TriangleSoup<DIM>;
+        friend class TriangleSoup<dim>;
         
     protected: // referenced data
-        const TriangleSoup<DIM>& data0; // initial guess
-        const std::vector<Energy<DIM>*>& energyTerms; // E_0, E_1, E_2, ...
+        const TriangleSoup<dim>& data0; // initial guess
+        const std::vector<Energy<dim>*>& energyTerms; // E_0, E_1, E_2, ...
         const std::vector<double>& energyParams; // a_0, a_1, a_2, ...
         // E = \Sigma_i a_i E_i
         
@@ -41,8 +42,8 @@ namespace FracCuts {
         int topoIter;
         double relGL2Tol, energyParamSum;
         double sqnorm_H_rest, sqnorm_l;
-        TriangleSoup<DIM> result; // intermediate results of each iteration
-        TriangleSoup<DIM> data_findExtrema; // intermediate results for deciding the cuts in each topology step
+        TriangleSoup<dim> result; // intermediate results of each iteration
+        TriangleSoup<dim> data_findExtrema; // intermediate results for deciding the cuts in each topology step
         bool scaffolding; // whether to enable bijectivity parameterization
         double w_scaf;
         Scaffold scaffold; // air meshes to enforce bijectivity
@@ -89,7 +90,7 @@ namespace FracCuts {
         std::vector<Eigen::Matrix2d> F;
         
     public: // constructor and destructor
-        Optimizer(const TriangleSoup<DIM>& p_data0, const std::vector<Energy<DIM>*>& p_energyTerms, const std::vector<double>& p_energyParams,
+        Optimizer(const TriangleSoup<dim>& p_data0, const std::vector<Energy<dim>*>& p_energyTerms, const std::vector<double>& p_energyParams,
                   int p_propagateFracture = 1, bool p_mute = false, bool p_scaffolding = false,
                   const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                   const Eigen::MatrixXi& E = Eigen::MatrixXi(),
@@ -114,7 +115,7 @@ namespace FracCuts {
         virtual bool createFracture(double stressThres, int propType,
                             bool allowPropagate = true, bool allowInSplit = false);
         virtual bool createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate);
-        virtual void setConfig(const TriangleSoup<DIM>& config, int iterNum, int p_topoIter);
+        virtual void setConfig(const TriangleSoup<dim>& config, int iterNum, int p_topoIter);
         virtual void setPropagateFracture(bool p_prop);
         virtual void setScaffolding(bool p_scaffolding);
         
@@ -123,11 +124,11 @@ namespace FracCuts {
         virtual void getGradientVisual(Eigen::MatrixXd& arrowVec) const;
         virtual void getFaceFieldForVis(Eigen::VectorXd& field) const;
         virtual void getSharedVerts(Eigen::VectorXi& sharedVerts) const;
-        virtual TriangleSoup<DIM>& getResult(void);
+        virtual TriangleSoup<dim>& getResult(void);
         virtual const Scaffold& getScaffold(void) const;
-        virtual const TriangleSoup<DIM>& getAirMesh(void) const;
+        virtual const TriangleSoup<dim>& getAirMesh(void) const;
         virtual bool isScaffolding(void) const;
-        virtual const TriangleSoup<DIM>& getData_findExtrema(void) const;
+        virtual const TriangleSoup<dim>& getData_findExtrema(void) const;
         virtual int getIterNum(void) const;
         virtual int getTopoIter(void) const;
         virtual int getInnerIterAmt(void) const;
@@ -153,21 +154,21 @@ namespace FracCuts {
         virtual bool lineSearch(void);
 
         virtual void stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
-                         TriangleSoup<DIM>& data, Scaffold& scaffoldData, double stepSize) const;
+                         TriangleSoup<dim>& data, Scaffold& scaffoldData, double stepSize) const;
         
         virtual void updateTargetGRes(void);
         
-        virtual void computeEnergyVal(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+        virtual void computeEnergyVal(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                       bool redoSVD, double& energyVal, bool excludeScaffold = false);
-        virtual void computeGradient(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+        virtual void computeGradient(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                      bool redoSVD, Eigen::VectorXd& gradient,
                                      bool excludeScaffold = false);
-        virtual void computePrecondMtr(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+        virtual void computePrecondMtr(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                        bool redoSVD,
                                        LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver);
-        virtual void computeHessian(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const;
         
-        virtual void initStepSize(const TriangleSoup<DIM>& data, double& stepSize) const;
+        virtual void initStepSize(const TriangleSoup<dim>& data, double& stepSize) const;
         
         virtual void writeEnergyValToFile(bool flush);
         virtual void writeGradL2NormToFile(bool flush);

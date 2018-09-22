@@ -36,8 +36,9 @@ extern std::string outputFolderPath;
 
 namespace FracCuts {
     
-    ADMMDDTimeStepper::ADMMDDTimeStepper(const TriangleSoup<DIM>& p_data0,
-                                         const std::vector<Energy<DIM>*>& p_energyTerms,
+    template<int dim>
+    ADMMDDTimeStepper<dim>::ADMMDDTimeStepper(const TriangleSoup<dim>& p_data0,
+                                         const std::vector<Energy<dim>*>& p_energyTerms,
                                          const std::vector<double>& p_energyParams,
                                          int p_propagateFracture,
                                          bool p_mute,
@@ -46,9 +47,9 @@ namespace FracCuts {
                                          const Eigen::MatrixXi& E,
                                          const Eigen::VectorXi& bnd,
                                          const Config& animConfig) :
-    Optimizer(p_data0, p_energyTerms, p_energyParams,
-              p_propagateFracture, p_mute, p_scaffolding,
-              UV_bnds, E, bnd, animConfig)
+        Base(p_data0, p_energyTerms, p_energyParams,
+             p_propagateFracture, p_mute, p_scaffolding,
+             UV_bnds, E, bnd, animConfig)
     {
         // divide domain
         const int partitionAmt = animConfig.partitionAmt;
@@ -63,7 +64,7 @@ namespace FracCuts {
         F_subdomain.resize(mesh_subdomain.size());
         
 #ifdef USE_METIS
-        METIS partitions(result);
+        METIS partitions(Base::result);
         partitions.partMesh(partitionAmt);
 #endif
         
@@ -106,9 +107,9 @@ namespace FracCuts {
 //                }
 //            }
 #endif
-            result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
-                                    globalVIToLocal_subdomain[subdomainI],
-                                    globalTriIToLocal_subdomain[subdomainI]);
+            Base::result.constructSubmesh(elemList_subdomain[subdomainI], mesh_subdomain[subdomainI],
+                                          globalVIToLocal_subdomain[subdomainI],
+                                          globalTriIToLocal_subdomain[subdomainI]);
             
             localVIToGlobal_subdomain[subdomainI].resize(globalVIToLocal_subdomain[subdomainI].size());
             for(const auto& g2lI : globalVIToLocal_subdomain[subdomainI]) {
@@ -134,10 +135,10 @@ namespace FracCuts {
         weights_subdomain.resize(mesh_subdomain.size());
         weightMtr_subdomain.resize(mesh_subdomain.size());
         weightMtrFixed_subdomain.resize(mesh_subdomain.size());
-        weightSum.resize(result.V.rows(), 2);
+        weightSum.resize(Base::result.V.rows(), 2);
         weightSum.setZero();
         isSharedVert.resize(0);
-        isSharedVert.resize(result.V.rows(), false);
+        isSharedVert.resize(Base::result.V.rows(), false);
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             int sharedVertexAmt = 0;
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
@@ -183,7 +184,7 @@ namespace FracCuts {
         
         // find shared elements
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+        tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
         for(int triI = 0; triI < result.F.rows(); triI++)
 #endif
@@ -233,14 +234,16 @@ namespace FracCuts {
         }
     }
     
-    ADMMDDTimeStepper::~ADMMDDTimeStepper(void)
+    template<int dim>
+    ADMMDDTimeStepper<dim>::~ADMMDDTimeStepper(void)
     {
         for(int subdomainI = 0; subdomainI < linSysSolver_subdomain.size(); subdomainI++) {
             delete linSysSolver_subdomain[subdomainI];
         }
     }
     
-    void ADMMDDTimeStepper::precompute(void)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::precompute(void)
     {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
@@ -258,28 +261,31 @@ namespace FracCuts {
 #endif
         
         // for weights computation
-        linSysSolver->set_type(1, 2);
-        linSysSolver->set_pattern(result.vNeighbor, result.fixedVert);
+        Base::linSysSolver->set_type(1, 2);
+        Base::linSysSolver->set_pattern(Base::result.vNeighbor, Base::result.fixedVert);
         
         initWeights();
         initConsensusSolver();
     }
     
-    void ADMMDDTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::getFaceFieldForVis(Eigen::VectorXd& field) const
     {
-        field.resize(result.F.rows());
+        field.resize(Base::result.F.rows());
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             for(int elemII = 0; elemII < elemList_subdomain[subdomainI].size(); elemII++) {
                 field[elemList_subdomain[subdomainI][elemII]] = subdomainI;
             }
         }
     }
-    void ADMMDDTimeStepper::getSharedVerts(Eigen::VectorXi& sharedVerts) const
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::getSharedVerts(Eigen::VectorXi& sharedVerts) const
     {
         sharedVerts = this->sharedVerts;
     }
     
-    void ADMMDDTimeStepper::writeMeshToFile(const std::string& filePath_pre) const
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::writeMeshToFile(const std::string& filePath_pre) const
     {
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             Eigen::MatrixXd V(mesh_subdomain[subdomainI].V.rows(), 3);
@@ -287,12 +293,13 @@ namespace FracCuts {
             igl::writeOBJ(filePath_pre + "_subdomain" + std::to_string(subdomainI) + ".obj",
                           V, mesh_subdomain[subdomainI].F);
         }
-        Eigen::MatrixXd V(result.V.rows(), 3);
-        V << result.V, Eigen::VectorXd::Zero(V.rows());
-        igl::writeOBJ(filePath_pre + ".obj", V, result.F);
+        Eigen::MatrixXd V(Base::result.V.rows(), 3);
+        V << Base::result.V, Eigen::VectorXd::Zero(V.rows());
+        igl::writeOBJ(filePath_pre + ".obj", V, Base::result.F);
     }
     
-    bool ADMMDDTimeStepper::fullyImplicit(void)
+    template<int dim>
+    bool ADMMDDTimeStepper<dim>::fullyImplicit(void)
     {
         initPrimal(1);
 //        writeMeshToFile(outputFolderPath + "init");
@@ -300,8 +307,8 @@ namespace FracCuts {
         
         int outputTimestepAmt = 100;
         std::string curOutputFolderPath;
-        if(globalIterNum == outputTimestepAmt) {
-            curOutputFolderPath = outputFolderPath + "timestep" + std::to_string(globalIterNum);
+        if(Base::globalIterNum == outputTimestepAmt) {
+            curOutputFolderPath = outputFolderPath + "timestep" + std::to_string(Base::globalIterNum);
             mkdir(curOutputFolderPath.c_str(), 0777);
             curOutputFolderPath += '/';
         }
@@ -310,27 +317,27 @@ namespace FracCuts {
         //TODO: adaptive tolerances
         int ADMMIterAmt = __INT_MAX__, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
-            file_iterStats << globalIterNum << " ";
+            Base::file_iterStats << Base::globalIterNum << " ";
             
             subdomainSolve();
             checkRes();
             boundaryConsensusSolve();
             
-            computeGradient(result, scaffold, true, gradient);
-            double sqn_g = gradient.squaredNorm();
-            std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
+            Base::computeGradient(Base::result, Base::scaffold, true, Base::gradient);
+            double sqn_g = Base::gradient.squaredNorm();
+            std::cout << "Step" << Base::globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
-            file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes) {
+            Base::file_iterStats << sqn_g << std::endl;
+            if(sqn_g < Base::targetGRes) {
                 break;
             }
             
-            if((globalIterNum == outputTimestepAmt) && (ADMMIterI < 100)) {
+            if((Base::globalIterNum == outputTimestepAmt) && (ADMMIterI < 100)) {
                 std::string filePath_pre = curOutputFolderPath + std::to_string(ADMMIterI);
                 writeMeshToFile(filePath_pre);
             }
         }
-        innerIterAmt += ADMMIterI + 1;
+        Base::innerIterAmt += ADMMIterI + 1;
         
         initWeights();
         initConsensusSolver();
@@ -338,10 +345,11 @@ namespace FracCuts {
         return (ADMMIterI == ADMMIterAmt);
     }
     
-    void ADMMDDTimeStepper::initPrimal(int option)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::initPrimal(int option)
     {
         // global:
-        initX(option);
+        Base::initX(option);
         
         // local:
 #ifdef USE_TBB
@@ -355,24 +363,25 @@ namespace FracCuts {
                 if(mesh_subdomain[subdomainI].fixedVert.find(mapperI.second) ==
                    mesh_subdomain[subdomainI].fixedVert.end())
                 {
-                    xHat_subdomain[subdomainI].row(mapperI.second) = resultV_n.row(mapperI.first) + dt * velocity.segment(mapperI.first * 2, 2).transpose() + dtSq * gravity.transpose();
+                    xHat_subdomain[subdomainI].row(mapperI.second) = Base::resultV_n.row(mapperI.first) + Base::dt * Base::velocity.segment(mapperI.first * 2, 2).transpose() + Base::dtSq * Base::gravity.transpose();
                 }
                 else {
                     // scripted
-                    xHat_subdomain[subdomainI].row(mapperI.second) = result.V.row(mapperI.first);
+                    xHat_subdomain[subdomainI].row(mapperI.second) = Base::result.V.row(mapperI.first);
                 }
-                mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
+                mesh_subdomain[subdomainI].V.row(mapperI.second) = Base::result.V.row(mapperI.first);
             }
         }
 #ifdef USE_TBB
         );
 #endif
     }
-    void ADMMDDTimeStepper::initDual(void)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::initDual(void)
     {
         Eigen::VectorXd g;
-        computeGradient(result, scaffold, true, g); //TODO: only need to compute for shared vertices
-        file_iterStats << globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
+        Base::computeGradient(Base::result, Base::scaffold, true, g); //TODO: only need to compute for shared vertices
+        Base::file_iterStats << Base::globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
         
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
@@ -405,7 +414,7 @@ namespace FracCuts {
             for(const auto& entryI : weightMtr_subdomain[subdomainI]) {
                 coefMtr(entryI.first.first, entryI.first.second) = entryI.second;
             }
-            for(const auto& fVI : result.fixedVert) {
+            for(const auto& fVI : Base::result.fixedVert) {
                 const auto dualFinder = globalVIToDual_subdomain[subdomainI].find(fVI);
                 if(dualFinder != globalVIToDual_subdomain[subdomainI].end()) {
                     coefMtr.block(dualFinder->second * 2, dualFinder->second * 2, 2, 2).setIdentity();
@@ -421,16 +430,16 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
-                              
     }
-    void ADMMDDTimeStepper::initWeights(void)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::initWeights(void)
     {
-        computePrecondMtr(result, scaffold, true, linSysSolver); //TODO: only need to compute for shared vertices
+        Base::computePrecondMtr(Base::result, Base::scaffold, true, Base::linSysSolver); //TODO: only need to compute for shared vertices
         
         double multiplier = 1.0;
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
-                mesh_subdomain[subdomainI].V.row(mapperI.second) = result.V.row(mapperI.first);
+                mesh_subdomain[subdomainI].V.row(mapperI.second) = Base::result.V.row(mapperI.first);
             }
             computeHessianProxy_subdomain(subdomainI, true);
             
@@ -456,8 +465,8 @@ namespace FracCuts {
                 }
                 for(int rowI = 0; rowI < 2; rowI++) {
                     for(int colI = 0; colI < 2; colI++) {
-                        double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
-                                                                dualMapperI.first * 2 + colI) -
+                        double offset = (Base::linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
+                                                                      dualMapperI.first * 2 + colI) -
                                          linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
                                                                                       localI * 2 + colI));
                         // fill with dual index
@@ -472,7 +481,7 @@ namespace FracCuts {
                                       mesh_subdomain[subdomainI].fixedVert.end());
                         for(int rowI = 0; rowI < 2; rowI++) {
                             for(int colI = 0; colI < 2; colI++) {
-                                double offset = (linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
+                                double offset = (Base::linSysSolver->coeffMtr(dualMapperI.first * 2 + rowI,
                                                                         nbVI_global * 2 + colI) -
                                                  linSysSolver_subdomain[subdomainI]->coeffMtr(localI * 2 + rowI,
                                                                                               nbVI_local * 2 + colI));
@@ -495,7 +504,8 @@ namespace FracCuts {
 //                                              weightMtr_subdomain[subdomainI], true);
         }
     }
-    void ADMMDDTimeStepper::initConsensusSolver(void)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::initConsensusSolver(void)
     {
 #ifdef USE_GW
         //TODO: consider using sparse matrix
@@ -507,7 +517,7 @@ namespace FracCuts {
                         dualIndIToShared_subdomain[subdomainI][entryI.first.second]) += entryI.second;
             }
         }
-        for(const auto& fVI : result.fixedVert) {
+        for(const auto& fVI : Base::result.fixedVert) {
             auto finder = globalVIToShared.find(fVI);
             if(finder != globalVIToShared.end()) {
                 consensusMtr.block(finder->second * 2, finder->second * 2, 2, 2).setIdentity();
@@ -517,10 +527,11 @@ namespace FracCuts {
 #endif
     }
     
-    void ADMMDDTimeStepper::subdomainSolve(void) // local solve
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::subdomainSolve(void) // local solve
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / mesh_subdomain.size() / 100.0; //TODO: needs to be more adaptive to global tol
+        double localTol = Base::targetGRes / mesh_subdomain.size() / 100.0; //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)mesh_subdomain.size(), 1, [&](int subdomainI)
 #else
@@ -547,7 +558,7 @@ namespace FracCuts {
                 
                 // line search init
                 double alpha = 1.0;
-                energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
+                Base::energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
                 alpha *= 0.99;
                 
                 // Armijo's rule:
@@ -577,7 +588,7 @@ namespace FracCuts {
                 int localI = globalVIToLocal_subdomain[subdomainI][dualMapperI.first];
                 dz_subdomain[subdomainI].row(dualMapperI.second) = mesh_subdomain[subdomainI].V.row(localI) - V0_ADMM.row(localI);
                 du_subdomain[subdomainI].row(dualMapperI.second) =
-                    0.5 * (mesh_subdomain[subdomainI].V.row(localI) - result.V.row(dualMapperI.first));
+                    0.5 * (mesh_subdomain[subdomainI].V.row(localI) - Base::result.V.row(dualMapperI.first));
                 u_subdomain[subdomainI].row(dualMapperI.second) += du_subdomain[subdomainI].row(dualMapperI.second);
             }
         }
@@ -585,7 +596,8 @@ namespace FracCuts {
         );
 #endif
     }
-    void ADMMDDTimeStepper::checkRes(void)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::checkRes(void)
     {
         double sqn_r = 0.0, sqn_s = 0.0;;
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
@@ -599,9 +611,10 @@ namespace FracCuts {
             sqn_s += sI.squaredNorm();
         }
         std::cout << "||s||^2 = " << sqn_s << ", ||r||^2 = " << sqn_r << ", ";
-        file_iterStats << sqn_s << " " << sqn_r << " ";
+        Base::file_iterStats << sqn_s << " " << sqn_r << " ";
     }
-    void ADMMDDTimeStepper::boundaryConsensusSolve(void) // global solve
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::boundaryConsensusSolve(void) // global solve
     {
 #ifndef USE_GW
         result.V.setZero();
@@ -641,10 +654,10 @@ namespace FracCuts {
             }
         }
         
-        for(const auto& fVI : result.fixedVert) {
+        for(const auto& fVI : Base::result.fixedVert) {
             auto finder = globalVIToShared.find(fVI);
             if(finder != globalVIToShared.end()) {
-                rhs.segment(finder->second * 2, 2) = result.V.row(fVI).transpose();
+                rhs.segment(finder->second * 2, 2) = Base::result.V.row(fVI).transpose();
             }
         }
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
@@ -656,12 +669,12 @@ namespace FracCuts {
         
         Eigen::VectorXd solvedSharedVerts = consensusSolver.solve(rhs); //TODO: prefactor in each time step
         for(int svI = 0; svI < sharedVerts.size(); svI++) {
-            result.V.row(sharedVerts[svI]) = solvedSharedVerts.segment(svI * 2, 2).transpose();
+            Base::result.V.row(sharedVerts[svI]) = solvedSharedVerts.segment(svI * 2, 2).transpose();
         }
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
             for(const auto& mapperI : globalVIToLocal_subdomain[subdomainI]) {
                 if(!isSharedVert[mapperI.first]) {
-                    result.V.row(mapperI.first) = mesh_subdomain[subdomainI].V.row(mapperI.second);
+                    Base::result.V.row(mapperI.first) = mesh_subdomain[subdomainI].V.row(mapperI.second);
                 }
             }
         }
@@ -669,13 +682,14 @@ namespace FracCuts {
     }
     
     // subdomain energy computation
-    void ADMMDDTimeStepper::computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei)
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei)
     {
         // incremental potential:
-        energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
+        Base::energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
                                               svd_subdomain[subdomainI],
                                               F_subdomain[subdomainI], Ei);
-        Ei *= dtSq;
+        Ei *= Base::dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
             Ei += (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).squaredNorm() * massI / 2.0;
@@ -699,7 +713,7 @@ namespace FracCuts {
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
             augVec.segment(dualMapperI.second * 2, 2) =
                 (mesh_subdomain[subdomainI].V.row(localVIFinder->second) -
-                 result.V.row(dualMapperI.first) +
+                 Base::result.V.row(dualMapperI.first) +
                  u_subdomain[subdomainI].row(dualMapperI.second)).transpose();
         }
         Eigen::VectorXd g(globalVIToDual_subdomain[subdomainI].size() * 2);
@@ -710,15 +724,16 @@ namespace FracCuts {
         Ei += g.dot(augVec) / 2.0;
 #endif
     }
-    void ADMMDDTimeStepper::computeGradient_subdomain(int subdomainI,
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::computeGradient_subdomain(int subdomainI,
                                                       bool redoSVD,
                                                       Eigen::VectorXd& g)
     {
         // incremental potential:
-        energyTerms[0]->computeGradientByPK(mesh_subdomain[subdomainI], redoSVD,
+        Base::energyTerms[0]->computeGradientByPK(mesh_subdomain[subdomainI], redoSVD,
                                             svd_subdomain[subdomainI],
                                             F_subdomain[subdomainI], g);
-        g *= dtSq;
+        g *= Base::dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
             g.segment(vI * 2, 2) += massI * (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).transpose();
@@ -742,7 +757,7 @@ namespace FracCuts {
             assert(localVIFinder != globalVIToLocal_subdomain[subdomainI].end());
             augVec.segment(dualMapperI.second * 2, 2) =
                 (mesh_subdomain[subdomainI].V.row(localVIFinder->second) -
-                 result.V.row(dualMapperI.first) +
+                 Base::result.V.row(dualMapperI.first) +
                  u_subdomain[subdomainI].row(dualMapperI.second)).transpose();
         }
         for(const auto& entryI : weightMtr_subdomain[subdomainI]) {
@@ -751,15 +766,16 @@ namespace FracCuts {
         }
 #endif
     }
-    void ADMMDDTimeStepper::computeHessianProxy_subdomain(int subdomainI,
+    template<int dim>
+    void ADMMDDTimeStepper<dim>::computeHessianProxy_subdomain(int subdomainI,
                                                           bool redoSVD)
     {
         // incremental potential:
         linSysSolver_subdomain[subdomainI]->setZero();
-        energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
-                                           svd_subdomain[subdomainI],
-                                           F_subdomain[subdomainI], dtSq,
-                                           linSysSolver_subdomain[subdomainI]);
+        Base::energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
+                                                 svd_subdomain[subdomainI],
+                                                 F_subdomain[subdomainI], Base::dtSq,
+                                                 linSysSolver_subdomain[subdomainI]);
         
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -789,5 +805,7 @@ namespace FracCuts {
         }
 #endif
     }
+    
+    template class ADMMDDTimeStepper<2>;
     
 }

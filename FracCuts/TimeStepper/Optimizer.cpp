@@ -42,8 +42,9 @@ extern Timer timer, timer_step, timer_temp;
 
 namespace FracCuts {
     
-    Optimizer::Optimizer(const TriangleSoup<DIM>& p_data0,
-                         const std::vector<Energy<DIM>*>& p_energyTerms, const std::vector<double>& p_energyParams,
+    template<int dim>
+    Optimizer<dim>::Optimizer(const TriangleSoup<dim>& p_data0,
+                         const std::vector<Energy<dim>*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
                          const Config& animConfig) :
@@ -152,7 +153,8 @@ namespace FracCuts {
         }
     }
     
-    Optimizer::~Optimizer(void)
+    template<int dim>
+    Optimizer<dim>::~Optimizer(void)
     {
         if(file_energyValPerIter.is_open()) {
             file_energyValPerIter.close();
@@ -166,64 +168,78 @@ namespace FracCuts {
         delete linSysSolver;
     }
     
-    void Optimizer::computeLastEnergyVal(void)
+    template<int dim>
+    void Optimizer<dim>::computeLastEnergyVal(void)
     {
         computeEnergyVal(result, scaffold, true, lastEnergyVal);
     }
     
-    TriangleSoup<DIM>& Optimizer::getResult(void) {
+    template<int dim>
+    TriangleSoup<dim>& Optimizer<dim>::getResult(void) {
         return result;
     }
     
-    const Scaffold& Optimizer::getScaffold(void) const {
+    template<int dim>
+    const Scaffold& Optimizer<dim>::getScaffold(void) const {
         return scaffold;
     }
     
-    const TriangleSoup<DIM>& Optimizer::getAirMesh(void) const {
+    template<int dim>
+    const TriangleSoup<dim>& Optimizer<dim>::getAirMesh(void) const {
         return scaffold.airMesh;
     }
     
-    bool Optimizer::isScaffolding(void) const {
+    template<int dim>
+    bool Optimizer<dim>::isScaffolding(void) const {
         return scaffolding;
     }
     
-    const TriangleSoup<DIM>& Optimizer::getData_findExtrema(void) const {
+    template<int dim>
+    const TriangleSoup<dim>& Optimizer<dim>::getData_findExtrema(void) const {
         return data_findExtrema;
     }
     
-    int Optimizer::getIterNum(void) const {
+    template<int dim>
+    int Optimizer<dim>::getIterNum(void) const {
         return globalIterNum;
     }
-    int Optimizer::getTopoIter(void) const {
+    template<int dim>
+    int Optimizer<dim>::getTopoIter(void) const {
         return topoIter;
     }
-    int Optimizer::getInnerIterAmt(void) const {
+    template<int dim>
+    int Optimizer<dim>::getInnerIterAmt(void) const {
         return innerIterAmt;
     }
     
-    void Optimizer::setRelGL2Tol(double p_relTol)
+    template<int dim>
+    void Optimizer<dim>::setRelGL2Tol(double p_relTol)
     {
         assert(p_relTol > 0.0);
         relGL2Tol = p_relTol;
         updateTargetGRes();
     }
     
-    void Optimizer::setAllowEDecRelTol(bool p_allowEDecRelTol)
+    template<int dim>
+    void Optimizer<dim>::setAllowEDecRelTol(bool p_allowEDecRelTol)
     {
         allowEDecRelTol = p_allowEDecRelTol;
     }
     
-    double Optimizer::getDt(void) const
+    template<int dim>
+    double Optimizer<dim>::getDt(void) const
     {
         return dt;
     }
     
-    void Optimizer::setAnimScriptType(AnimScriptType animScriptType)
+    template<int dim>
+    void Optimizer<dim>::setAnimScriptType(AnimScriptType animScriptType)
     {
         animScripter.setAnimScriptType(animScriptType);
     }
     
-    void Optimizer::setTime(double duration, double dt)
+    template<int dim>
+    void Optimizer<dim>::setTime(double duration, double dt)
     {
         this->dt = dt;
         dtSq = dt * dt;
@@ -232,7 +248,7 @@ namespace FracCuts {
         gravityDtSq = dtSq * gravity;
     }
     
-//    void Optimizer::fixDirection(void)
+//    void Optimizer<dim>::fixDirection(void)
 //    {
 //        assert(result.V.rows() == result.V_rest.rows());
 //        
@@ -257,7 +273,8 @@ namespace FracCuts {
 //        }
 //    }
     
-    void Optimizer::precompute(void)
+    template<int dim>
+    void Optimizer<dim>::precompute(void)
     {
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
@@ -285,7 +302,8 @@ namespace FracCuts {
         }
     }
     
-    int Optimizer::solve(int maxIter)
+    template<int dim>
+    int Optimizer<dim>::solve(int maxIter)
     {
         static bool lastPropagate = false;
         int returnFlag = 0;
@@ -374,7 +392,8 @@ namespace FracCuts {
         return returnFlag;
     }
     
-    void Optimizer::updatePrecondMtrAndFactorize(void)
+    template<int dim>
+    void Optimizer<dim>::updatePrecondMtrAndFactorize(void)
     {
         if(needRefactorize) {
             // don't need to call this function
@@ -391,7 +410,8 @@ namespace FracCuts {
         if(!mute) { timer_step.stop(); }
     }
     
-    void Optimizer::setConfig(const TriangleSoup<DIM>& config, int iterNum, int p_topoIter)
+    template<int dim>
+    void Optimizer<dim>::setConfig(const TriangleSoup<dim>& config, int iterNum, int p_topoIter)
     {
         topoIter = p_topoIter;
         globalIterNum = iterNum;
@@ -406,12 +426,14 @@ namespace FracCuts {
         updateEnergyData();
     }
     
-    void Optimizer::setPropagateFracture(bool p_prop)
+    template<int dim>
+    void Optimizer<dim>::setPropagateFracture(bool p_prop)
     {
         propagateFracture = p_prop;
     }
     
-    void Optimizer::setScaffolding(bool p_scaffolding)
+    template<int dim>
+    void Optimizer<dim>::setScaffolding(bool p_scaffolding)
     {
         scaffolding = p_scaffolding;
         if(scaffolding) {
@@ -422,7 +444,8 @@ namespace FracCuts {
         }
     }
     
-    void Optimizer::updateEnergyData(bool updateEVal, bool updateGradient, bool updateHessian)
+    template<int dim>
+    void Optimizer<dim>::updateEnergyData(bool updateEVal, bool updateGradient, bool updateHessian)
     {
         energyParamSum = 0.0;
         for(const auto& ePI : energyParams) {
@@ -468,7 +491,8 @@ namespace FracCuts {
         }
     }
     
-    bool Optimizer::createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate)
+    template<int dim>
+    bool Optimizer<dim>::createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate)
     {
         assert(methodType == MT_OURS);
         
@@ -548,7 +572,8 @@ namespace FracCuts {
         return true;
     }
     
-    bool Optimizer::createFracture(double stressThres, int propType, bool allowPropagate, bool allowInSplit)
+    template<int dim>
+    bool Optimizer<dim>::createFracture(double stressThres, int propType, bool allowPropagate, bool allowInSplit)
     {
         if(propType == 0) {
             topoIter++;
@@ -638,7 +663,8 @@ namespace FracCuts {
         return changed;
     }
     
-    void Optimizer::initX(int option)
+    template<int dim>
+    void Optimizer<dim>::initX(int option)
     {
         // global:
         searchDir.resize(result.V.rows() * 2);
@@ -792,7 +818,8 @@ namespace FracCuts {
         stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);
     }
     
-    void Optimizer::computeXTilta(void)
+    template<int dim>
+    void Optimizer<dim>::computeXTilta(void)
     {
         xTilta.conservativeResize(result.V.rows(), 2);
 #ifdef USE_TBB
@@ -815,7 +842,8 @@ namespace FracCuts {
 #endif
     }
     
-    bool Optimizer::fullyImplicit(void)
+    template<int dim>
+    bool Optimizer<dim>::fullyImplicit(void)
     {
         initX(0);
         
@@ -841,7 +869,8 @@ namespace FracCuts {
         return false;
     }
     
-    bool Optimizer::solve_oneStep(void)
+    template<int dim>
+    bool Optimizer<dim>::solve_oneStep(void)
     {
         if(needRefactorize) {
             // for the changing hessian
@@ -906,7 +935,8 @@ namespace FracCuts {
         return stopped;
     }
     
-    bool Optimizer::lineSearch(void)
+    template<int dim>
+    bool Optimizer<dim>::lineSearch(void)
     {
         bool stopped = false;
         double stepSize = 1.0;
@@ -920,7 +950,7 @@ namespace FracCuts {
         const double m = searchDir.dot(gradient);
         const double c1m = 1.0e-4 * m;
         Eigen::MatrixXd resultV0 = result.V;
-//        TriangleSoup<DIM> temp = result; //TEST
+//        TriangleSoup<dim> temp = result; //TEST
         Eigen::MatrixXd scaffoldV0;
         if(scaffolding) {
 //            Scaffold tempp = scaffold;
@@ -1000,8 +1030,9 @@ namespace FracCuts {
         return stopped;
     }
     
-    void Optimizer::stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
-                                TriangleSoup<DIM>& data, Scaffold& scaffoldData, double stepSize) const
+    template<int dim>
+    void Optimizer<dim>::stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
+                                TriangleSoup<dim>& data, Scaffold& scaffoldData, double stepSize) const
     {
         assert(dataV0.rows() == data.V.rows());
         if(scaffolding) {
@@ -1020,7 +1051,8 @@ namespace FracCuts {
         }
     }
     
-    void Optimizer::updateTargetGRes(void)
+    template<int dim>
+    void Optimizer<dim>::updateTargetGRes(void)
     {
 //        targetGRes = energyParamSum * (data0.V_rest.rows() - data0.fixedVert.size()) * relGL2Tol * data0.avgEdgeLen * data0.avgEdgeLen;
 //        targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
@@ -1041,7 +1073,8 @@ namespace FracCuts {
         targetGRes = 1.0e-10;
     }
     
-    void Optimizer::getGradientVisual(Eigen::MatrixXd& arrowVec) const
+    template<int dim>
+    void Optimizer<dim>::getGradientVisual(Eigen::MatrixXd& arrowVec) const
     {
         assert(result.V.rows() * 2 == gradient.size());
         arrowVec.resize(result.V.rows(), result.V.cols());
@@ -1052,17 +1085,20 @@ namespace FracCuts {
         }
         arrowVec *= igl::avg_edge_length(result.V, result.F);
     }
-            
-    void Optimizer::getFaceFieldForVis(Eigen::VectorXd& field) const
+     
+    template<int dim>
+    void Optimizer<dim>::getFaceFieldForVis(Eigen::VectorXd& field) const
     {
         field = Eigen::VectorXd::Zero(result.F.rows());
     }
-    void Optimizer::getSharedVerts(Eigen::VectorXi& sharedVerts) const
+    template<int dim>
+    void Optimizer<dim>::getSharedVerts(Eigen::VectorXi& sharedVerts) const
     {
         sharedVerts.resize(0);
     }
     
-    void Optimizer::initStepSize(const TriangleSoup<DIM>& data, double& stepSize) const
+    template<int dim>
+    void Optimizer<dim>::initStepSize(const TriangleSoup<dim>& data, double& stepSize) const
     {
         for(int eI = 0; eI < energyTerms.size(); eI++) {
             energyTerms[eI]->initStepSize(data, searchDir, stepSize);
@@ -1071,12 +1107,13 @@ namespace FracCuts {
         if(scaffolding) {
             Eigen::VectorXd searchDir_scaffold;
             scaffold.wholeSearchDir2airMesh(searchDir, searchDir_scaffold);
-            SymStretchEnergy<DIM> SD;
+            SymStretchEnergy<dim> SD;
             SD.initStepSize(scaffold.airMesh, searchDir_scaffold, stepSize);
         }
     }
     
-    void Optimizer::writeEnergyValToFile(bool flush)
+    template<int dim>
+    void Optimizer<dim>::writeEnergyValToFile(bool flush)
     {
         double E_se;
         result.computeSeamSparsity(E_se, !fractureMode);
@@ -1099,7 +1136,8 @@ namespace FracCuts {
             flushEnergyFileOutput();
         }
     }
-    void Optimizer::writeGradL2NormToFile(bool flush)
+    template<int dim>
+    void Optimizer<dim>::writeGradL2NormToFile(bool flush)
     {
         buffer_gradientPerIter << gradient.squaredNorm();
         for(int eI = 0; eI < energyTerms.size(); eI++) {
@@ -1111,30 +1149,35 @@ namespace FracCuts {
             flushGradFileOutput();
         }
     }
-    void Optimizer::flushEnergyFileOutput(void)
+    template<int dim>
+    void Optimizer<dim>::flushEnergyFileOutput(void)
     {
         file_energyValPerIter << buffer_energyValPerIter.str();
         file_energyValPerIter.flush();
         clearEnergyFileOutputBuffer();
     }
-    void Optimizer::flushGradFileOutput(void)
+    template<int dim>
+    void Optimizer<dim>::flushGradFileOutput(void)
     {
         file_gradientPerIter << buffer_gradientPerIter.str();
         file_gradientPerIter.flush();
         clearGradFileOutputBuffer();
     }
-    void Optimizer::clearEnergyFileOutputBuffer(void)
+    template<int dim>
+    void Optimizer<dim>::clearEnergyFileOutputBuffer(void)
     {
         buffer_energyValPerIter.str("");
         buffer_energyValPerIter.clear();
     }
-    void Optimizer::clearGradFileOutputBuffer(void)
+    template<int dim>
+    void Optimizer<dim>::clearGradFileOutputBuffer(void)
     {
         buffer_gradientPerIter.str("");
         buffer_gradientPerIter.clear();
     }
     
-    void Optimizer::computeEnergyVal(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+    template<int dim>
+    void Optimizer<dim>::computeEnergyVal(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                      bool redoSVD, double& energyVal, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
@@ -1147,7 +1190,7 @@ namespace FracCuts {
         }
         
         if(scaffolding && (!excludeScaffold)) {
-            SymStretchEnergy<DIM> SD;
+            SymStretchEnergy<dim> SD;
             SD.computeEnergyVal(scaffoldData.airMesh, energyVal_scaffold, true);
             energyVal_scaffold *= w_scaf / scaffold.airMesh.F.rows();
             energyVal += energyVal_scaffold;
@@ -1177,7 +1220,8 @@ namespace FracCuts {
 #endif
         if(!mute) { timer_step.stop(); }
     }
-    void Optimizer::computeGradient(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+    template<int dim>
+    void Optimizer<dim>::computeGradient(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                     bool redoSVD, Eigen::VectorXd& gradient, bool excludeScaffold)
     {
         if(!mute) { timer_step.start(0); }
@@ -1190,7 +1234,7 @@ namespace FracCuts {
         }
         
         if(scaffolding) {
-            SymStretchEnergy<DIM> SD;
+            SymStretchEnergy<dim> SD;
             SD.computeGradient(scaffoldData.airMesh, gradient_scaffold, true);
             scaffoldData.augmentGradient(gradient, gradient_scaffold, (excludeScaffold ? 0.0 : (w_scaf / scaffold.airMesh.F.rows())));
         }
@@ -1216,7 +1260,8 @@ namespace FracCuts {
 #endif
         if(!mute) { timer_step.stop(); }
     }
-    void Optimizer::computePrecondMtr(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData,
+    template<int dim>
+    void Optimizer<dim>::computePrecondMtr(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                       bool redoSVD,
                                       LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver)
     {
@@ -1262,7 +1307,8 @@ namespace FracCuts {
 #endif
         if(!mute) { timer_step.stop(); }
     }
-    void Optimizer::computeHessian(const TriangleSoup<DIM>& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const
+    template<int dim>
+    void Optimizer<dim>::computeHessian(const TriangleSoup<dim>& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const
     {
         energyTerms[0]->computeHessian(data, hessian);
         hessian *= energyParams[0];
@@ -1275,10 +1321,13 @@ namespace FracCuts {
         //TODO: SCAFFOLDING
     }
     
-    double Optimizer::getLastEnergyVal(bool excludeScaffold) const
+    template<int dim>
+    double Optimizer<dim>::getLastEnergyVal(bool excludeScaffold) const
     {
         return ((excludeScaffold && scaffolding) ?
                 (lastEnergyVal - energyVal_scaffold) :
                 lastEnergyVal);
     }
+            
+    template class Optimizer<2>;
 }

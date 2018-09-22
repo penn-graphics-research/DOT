@@ -16,8 +16,9 @@
 
 namespace FracCuts {
     
-    ADMMTimeStepper::ADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
-                                     const std::vector<Energy<DIM>*>& p_energyTerms,
+    template<int dim>
+    ADMMTimeStepper<dim>::ADMMTimeStepper(const TriangleSoup<dim>& p_data0,
+                                     const std::vector<Energy<dim>*>& p_energyTerms,
                                      const std::vector<double>& p_energyParams,
                                      int p_propagateFracture,
                                      bool p_mute,
@@ -26,41 +27,41 @@ namespace FracCuts {
                                      const Eigen::MatrixXi& E,
                                      const Eigen::VectorXi& bnd,
                                      const Config& animConfig) :
-        Optimizer(p_data0, p_energyTerms, p_energyParams,
-                  p_propagateFracture, p_mute, p_scaffolding,
-                  UV_bnds, E, bnd, animConfig)
+        Optimizer<dim>(p_data0, p_energyTerms, p_energyParams,
+                       p_propagateFracture, p_mute, p_scaffolding,
+                       UV_bnds, E, bnd, animConfig)
     {
-        z.resize(result.F.rows(), 4);
-        u.resize(result.F.rows(), 4);
-        dz.resize(result.F.rows(), 4);
-        rhs_xUpdate.resize(result.V.rows() * 2);
-        M_mult_xHat.resize(result.V.rows() * 2);
-        D_mult_x.resize(result.F.rows(), 4);
+        z.resize(Base::result.F.rows(), 4);
+        u.resize(Base::result.F.rows(), 4);
+        dz.resize(Base::result.F.rows(), 4);
+        rhs_xUpdate.resize(Base::result.V.rows() * 2);
+        M_mult_xHat.resize(Base::result.V.rows() * 2);
+        D_mult_x.resize(Base::result.F.rows(), 4);
         
         // initialize weights
         double bulkModulus;
-        energyTerms[0]->getBulkModulus(bulkModulus);
+        Base::energyTerms[0]->getBulkModulus(bulkModulus);
 //        std::cout << bulkModulus << std::endl;
 //        Eigen::MatrixXd d2E_div_dF2_rest;
 //        energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
 //        bulkModulus = d2E_div_dF2_rest.norm();
 //        std::cout << bulkModulus << std::endl;
-        double wi = dt * std::sqrt(bulkModulus);
-        weights.resize(result.F.rows());
-        for(int triI = 0; triI < result.F.rows(); triI++) {
-            weights[triI] = wi * std::sqrt(result.triArea[triI]) * 2;
+        double wi = Base::dt * std::sqrt(bulkModulus);
+        weights.resize(Base::result.F.rows());
+        for(int triI = 0; triI < Base::result.F.rows(); triI++) {
+            weights[triI] = wi * std::sqrt(Base::result.triArea[triI]) * 2;
         }
         weights2 = weights.cwiseProduct(weights);
         
         // initialize D_array
-        D_array.resize(result.F.rows());
-        for(int triI = 0; triI < result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+        D_array.resize(Base::result.F.rows());
+        for(int triI = 0; triI < Base::result.F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
             
             Eigen::Vector3d x0_3D[3] = {
-                result.V_rest.row(triVInd[0]),
-                result.V_rest.row(triVInd[1]),
-                result.V_rest.row(triVInd[2])
+                Base::result.V_rest.row(triVInd[0]),
+                Base::result.V_rest.row(triVInd[1]),
+                Base::result.V_rest.row(triVInd[2])
             };
             Eigen::Vector2d x0[3];
             IglUtils::mapTriangleTo2D(x0_3D, x0);
@@ -80,12 +81,13 @@ namespace FracCuts {
         }
     }
     
-    void ADMMTimeStepper::precompute(void)
+    template<int dim>
+    void ADMMTimeStepper<dim>::precompute(void)
     {
         // construct and prefactorize the linear system
-        std::vector<Eigen::Triplet<double>> triplet(result.F.rows() * 4 * 3);
-        for(int triI = 0; triI < result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+        std::vector<Eigen::Triplet<double>> triplet(Base::result.F.rows() * 4 * 3);
+        for(int triI = 0; triI < Base::result.F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
             for(int FRowI = 0; FRowI < 2; FRowI++) {
                 for(int localVI = 0; localVI < 3; localVI++) {
                     triplet.emplace_back(triI * 4 + FRowI * 2, triVInd[localVI] * 2 + FRowI,
@@ -96,22 +98,24 @@ namespace FracCuts {
             }
         }
         Eigen::SparseMatrix<double> WD;
-        WD.resize(result.F.rows() * 4, result.V.rows() * 2);
+        WD.resize(Base::result.F.rows() * 4, Base::result.V.rows() * 2);
         WD.setFromTriplets(triplet.begin(), triplet.end());
         
         Eigen::SparseMatrix<double> coefMtr = WD.transpose() * WD;
-        for(int vI = 0; vI < result.V.rows(); vI++) {
-            double massI = result.massMatrix.coeffRef(vI, vI);
+        for(int vI = 0; vI < Base::result.V.rows(); vI++) {
+            double massI = Base::result.massMatrix.coeffRef(vI, vI);
             coefMtr.coeffRef(vI * 2, vI * 2) += massI;
             coefMtr.coeffRef(vI * 2 + 1, vI * 2 + 1) += massI;
         }
         offset_fixVerts.resize(0);
-        offset_fixVerts.resize(result.V.rows() * 2);
+        offset_fixVerts.resize(Base::result.V.rows() * 2);
         for (int k = 0; k < coefMtr.outerSize(); ++k) {
             for (Eigen::SparseMatrix<double>::InnerIterator it(coefMtr, k); it; ++it)
             {
-                bool fixed_rowV = (result.fixedVert.find(it.row() / 2) != result.fixedVert.end());
-                bool fixed_colV = (result.fixedVert.find(it.col() / 2) != result.fixedVert.end());
+                bool fixed_rowV = (Base::result.fixedVert.find(it.row() / 2) !=
+                                   Base::result.fixedVert.end());
+                bool fixed_colV = (Base::result.fixedVert.find(it.col() / 2) !=
+                                   Base::result.fixedVert.end());
                 if(fixed_rowV || fixed_colV) {
                     if(!fixed_rowV) {
                         offset_fixVerts[it.row()][it.col()] = it.value();
@@ -120,42 +124,46 @@ namespace FracCuts {
                 }
             }
         }
-        for(const auto& fVI : result.fixedVert) {
+        for(const auto& fVI : Base::result.fixedVert) {
             coefMtr.coeffRef(fVI * 2, fVI * 2) = 1.0;
             coefMtr.coeffRef(fVI * 2 + 1, fVI * 2 + 1) = 1.0;
         }
         coefMtr.makeCompressed();
         
-        linSysSolver->set_type(1, 2);
-        linSysSolver->set_pattern(coefMtr);
-        linSysSolver->analyze_pattern();
-        linSysSolver->factorize(); //TODO: error check
+        Base::linSysSolver->set_type(1, 2);
+        Base::linSysSolver->set_pattern(coefMtr);
+        Base::linSysSolver->analyze_pattern();
+        Base::linSysSolver->factorize(); //TODO: error check
     }
     
-    void ADMMTimeStepper::getFaceFieldForVis(Eigen::VectorXd& field) const
+    template<int dim>
+    void ADMMTimeStepper<dim>::getFaceFieldForVis(Eigen::VectorXd& field) const
     {
-        field = Eigen::VectorXd::LinSpaced(result.F.rows(), 0, result.F.rows() - 1);
+        field = Eigen::VectorXd::LinSpaced(Base::result.F.rows(), 0, Base::result.F.rows() - 1);
     }
     
-    bool ADMMTimeStepper::fullyImplicit(void)
+    template<int dim>
+    bool ADMMTimeStepper<dim>::fullyImplicit(void)
     {
         // initialize x with xHat
-        initX(2);
+        Base::initX(2);
         
         // initialize M_mult_xHat
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+        tbb::parallel_for(0, (int)Base::result.V.rows(), 1, [&](int vI)
 #else
         for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
         {
-            if(result.fixedVert.find(vI) == result.fixedVert.end()) {
-                M_mult_xHat.segment(vI * 2, 2) = (result.massMatrix.coeffRef(vI, vI) *
-                                                  (resultV_n.row(vI).transpose() + dt * velocity.segment(vI * 2, 2) + dtSq * gravity));
+            if(Base::result.fixedVert.find(vI) == Base::result.fixedVert.end()) {
+                M_mult_xHat.segment(vI * 2, 2) = (Base::result.massMatrix.coeffRef(vI, vI) *
+                                                  (Base::resultV_n.row(vI).transpose() +
+                                                   Base::dt * Base::velocity.segment(vI * 2, 2) +
+                                                   Base::dtSq * Base::gravity));
             }
             else {
-                M_mult_xHat.segment(vI * 2, 2) = (result.massMatrix.coeffRef(vI, vI) *
-                                                  resultV_n.row(vI).transpose());
+                M_mult_xHat.segment(vI * 2, 2) = (Base::result.massMatrix.coeffRef(vI, vI) *
+                                                  Base::resultV_n.row(vI).transpose());
             }
         }
 #ifdef USE_TBB
@@ -166,9 +174,9 @@ namespace FracCuts {
         
         // initialize D_mult_x and z with Dx
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+        tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
-        for(int triI = 0; triI < result.F.rows(); triI++)
+        for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
             compute_Di_mult_xi(triI);
@@ -181,33 +189,34 @@ namespace FracCuts {
         // ADMM iterations
         int ADMMIterAmt = 300, ADMMIterI = 0;
         for(; ADMMIterI < ADMMIterAmt; ADMMIterI++) {
-            file_iterStats << globalIterNum << " ";
+            Base::file_iterStats << Base::globalIterNum << " ";
             
             zuUpdate();
             checkRes();
             xUpdate();
             
-            computeGradient(result, scaffold, true, gradient);
-            double sqn_g = gradient.squaredNorm();
-            std::cout << "Step" << globalIterNum << "-" << ADMMIterI <<
+            Base::computeGradient(Base::result, Base::scaffold, true, Base::gradient);
+            double sqn_g = Base::gradient.squaredNorm();
+            std::cout << "Step" << Base::globalIterNum << "-" << ADMMIterI <<
                 " ||gradient||^2 = " << sqn_g << std::endl;
-            file_iterStats << sqn_g << std::endl;
-            if(sqn_g < targetGRes) {
+            Base::file_iterStats << sqn_g << std::endl;
+            if(sqn_g < Base::targetGRes) {
                 break;
             }
         }
-        innerIterAmt += ADMMIterI + 1;
+        Base::innerIterAmt += ADMMIterI + 1;
         
         return (ADMMIterI == ADMMIterAmt);
     }
     
-    void ADMMTimeStepper::zuUpdate(void)
+    template<int dim>
+    void ADMMTimeStepper<dim>::zuUpdate(void)
     {
         int localMaxIter = __INT_MAX__;
-        double localTol = targetGRes / result.F.rows() / 1000.0; //TODO: needs to be more adaptive to global tol
+        double localTol = Base::targetGRes / Base::result.F.rows() / 1000.0; //TODO: needs to be more adaptive to global tol
         //TODO: needs to be in F space!!!
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+        tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
         for(int triI = 0; triI < result.F.rows(); triI++)
 #endif
@@ -232,7 +241,7 @@ namespace FracCuts {
                 
                 // line search init
                 double alpha = 1.0;
-                energyTerms[0]->initStepSize(zi, p, alpha); //TODO: different in F space
+                Base::energyTerms[0]->initStepSize(zi, p, alpha); //TODO: different in F space
                 alpha *= 0.99;
                 
                 // Armijo's rule:
@@ -260,13 +269,14 @@ namespace FracCuts {
         );
 #endif
     }
-    void ADMMTimeStepper::checkRes(void)
+    template<int dim>
+    void ADMMTimeStepper<dim>::checkRes(void)
     {
-        Eigen::VectorXd s = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        Eigen::VectorXd s = Eigen::VectorXd::Zero(Base::result.V.rows() * 2);
         double sqn_r = 0.0;
-        for(int triI = 0; triI < result.F.rows(); triI++) {
+        for(int triI = 0; triI < Base::result.F.rows(); triI++) {
             const Eigen::VectorXd& s_triI = D_array[triI].transpose() * (dz.row(triI) * weights2[triI]).transpose();
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
             s.segment(triVInd[0] * 2, 2) += s_triI.segment(0, 2);
             s.segment(triVInd[1] * 2, 2) += s_triI.segment(2, 2);
             s.segment(triVInd[2] * 2, 2) += s_triI.segment(4, 2);
@@ -275,15 +285,16 @@ namespace FracCuts {
         }
         double sqn_s = s.squaredNorm();
         std::cout << "||s||^2 = " << sqn_s << ", ||r||^2 = " << sqn_r << ", ";
-        file_iterStats << sqn_s << " " << sqn_r << " ";
+        Base::file_iterStats << sqn_s << " " << sqn_r << " ";
     }
-    void ADMMTimeStepper::xUpdate(void)
+    template<int dim>
+    void ADMMTimeStepper<dim>::xUpdate(void)
     {
         // compute rhs
         rhs_xUpdate = M_mult_xHat;
-        for(int triI = 0; triI < result.F.rows(); triI++) {
+        for(int triI = 0; triI < Base::result.F.rows(); triI++) {
             const Eigen::VectorXd& rhs_right_triI = D_array[triI].transpose() * ((z.row(triI) - u.row(triI)) * weights2[triI]).transpose();
-            const Eigen::RowVector3i& triVInd = result.F.row(triI);
+            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
             rhs_xUpdate.segment(triVInd[0] * 2, 2) += rhs_right_triI.segment(0, 2);
             rhs_xUpdate.segment(triVInd[1] * 2, 2) += rhs_right_triI.segment(2, 2);
             rhs_xUpdate.segment(triVInd[2] * 2, 2) += rhs_right_triI.segment(4, 2);
@@ -297,32 +308,32 @@ namespace FracCuts {
             for(const auto& entryI : offset_fixVerts[rowI]) {
                 int vI = entryI.first / 2;
                 int dimI = entryI.first % 2;
-                rhs_xUpdate[rowI] -= entryI.second * result.V(vI, dimI);
+                rhs_xUpdate[rowI] -= entryI.second * Base::result.V(vI, dimI);
             }
         }
 #ifdef USE_TBB
         );
 #endif
-        for(const auto& fVI : result.fixedVert) {
-            rhs_xUpdate.segment(fVI * 2, 2) = result.V.row(fVI).transpose();
+        for(const auto& fVI : Base::result.fixedVert) {
+            rhs_xUpdate.segment(fVI * 2, 2) = Base::result.V.row(fVI).transpose();
         }
         
         // solve linear system with pre-factorized info and update x
-        linSysSolver->solve(rhs_xUpdate, x_solved); //TODO: error check
+        Base::linSysSolver->solve(rhs_xUpdate, x_solved); //TODO: error check
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
+        tbb::parallel_for(0, (int)Base::result.V.rows(), 1, [&](int vI)
 #else
         for(int vI = 0; vI < result.V.rows(); vI++)
 #endif
         {
-            result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
+            Base::result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
         }
 #ifdef USE_TBB
         );
 #endif
         
 #ifdef USE_TBB
-        tbb::parallel_for(0, (int)result.F.rows(), 1, [&](int triI)
+        tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
         for(int triI = 0; triI < result.F.rows(); triI++)
 #endif
@@ -334,45 +345,51 @@ namespace FracCuts {
 #endif
     }
     
-    void ADMMTimeStepper::compute_Di_mult_xi(int triI)
+    template<int dim>
+    void ADMMTimeStepper<dim>::compute_Di_mult_xi(int triI)
     {
-        assert(triI < result.F.rows());
+        assert(triI < Base::result.F.rows());
         
-        const Eigen::RowVector3i& triVInd = result.F.row(triI);
+        const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
         
         Eigen::VectorXd Xt;
         Xt.resize(6);
         Xt <<
-            result.V.row(triVInd[0]).transpose(),
-            result.V.row(triVInd[1]).transpose(),
-            result.V.row(triVInd[2]).transpose();
+            Base::result.V.row(triVInd[0]).transpose(),
+            Base::result.V.row(triVInd[1]).transpose(),
+            Base::result.V.row(triVInd[2]).transpose();
         
         D_mult_x.row(triI) = (D_array[triI] * Xt).transpose();
     }
     
-    void ADMMTimeStepper::computeEnergyVal_zUpdate(int triI,
+    template<int dim>
+    void ADMMTimeStepper<dim>::computeEnergyVal_zUpdate(int triI,
                                                    const Eigen::RowVectorXd& zi,
                                                    double& Ei) const
     {
-        energyTerms[0]->computeEnergyValBySVD_F(result, triI, zi, Ei);
-        Ei *= dtSq;
+        Base::energyTerms[0]->computeEnergyValBySVD_F(Base::result, triI, zi, Ei);
+        Ei *= Base::dtSq;
         Ei += (D_mult_x.row(triI) - zi + u.row(triI)).squaredNorm() * weights2[triI] / 2.0;
     }
-    void ADMMTimeStepper::computeGradient_zUpdate(int triI,
+    template<int dim>
+    void ADMMTimeStepper<dim>::computeGradient_zUpdate(int triI,
                                                   const Eigen::RowVectorXd& zi,
                                                   Eigen::VectorXd& g) const
     {
-        energyTerms[0]->computeGradientBySVD_F(result, triI, zi, g);
-        g *= dtSq;
+        Base::energyTerms[0]->computeGradientBySVD_F(Base::result, triI, zi, g);
+        g *= Base::dtSq;
         g -= ((D_mult_x.row(triI) - zi + u.row(triI)) * weights2[triI]).transpose() ;
     }
-    void ADMMTimeStepper::computeHessianProxy_zUpdate(int triI,
+    template<int dim>
+    void ADMMTimeStepper<dim>::computeHessianProxy_zUpdate(int triI,
                                                       const Eigen::RowVectorXd& zi,
                                                       Eigen::MatrixXd& P) const
     {
-        energyTerms[0]->computeHessianBySVD_F(result, triI, zi, P);
-        P *= dtSq;
+        Base::energyTerms[0]->computeHessianBySVD_F(Base::result, triI, zi, P);
+        P *= Base::dtSq;
         P.diagonal().array() += weights2[triI];
     }
+    
+    template class ADMMTimeStepper<2>;
     
 }

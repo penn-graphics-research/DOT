@@ -15,8 +15,11 @@
 
 namespace FracCuts {
     
-    class ADMMTimeStepper : public Optimizer
+    template<int dim>
+    class ADMMTimeStepper : public Optimizer<dim>
     {
+        typedef Optimizer<dim> Base;
+        
     protected:
         Eigen::MatrixXd z, u, dz;
         Eigen::VectorXd weights, weights2;
@@ -27,8 +30,8 @@ namespace FracCuts {
         std::vector<std::map<int, double>> offset_fixVerts; // for modifying the linSys to fix vertices
         
     public:
-        ADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
-                        const std::vector<Energy<DIM>*>& p_energyTerms,
+        ADMMTimeStepper(const TriangleSoup<dim>& p_data0,
+                        const std::vector<Energy<dim>*>& p_energyTerms,
                         const std::vector<double>& p_energyParams,
                         int p_propagateFracture = 1,
                         bool p_mute = false,

@@ -41,7 +41,7 @@ FracCuts::MethodType methodType;
 std::vector<const FracCuts::TriangleSoup<DIM>*> triSoup;
 int vertAmt_input;
 FracCuts::TriangleSoup<DIM> triSoup_backup;
-FracCuts::Optimizer* optimizer;
+FracCuts::Optimizer<DIM>* optimizer;
 std::vector<FracCuts::Energy<DIM>*> energyTerms;
 std::vector<double> energyParams;
 bool bijectiveParam = false;
@@ -1552,19 +1552,19 @@ int main(int argc, char *argv[])
     
     switch (config.timeStepperType) {
         case FracCuts::TST_NEWTON:
-            optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::Optimizer<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_ADMM:
-            optimizer = new FracCuts::ADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::ADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_DADMM:
-            optimizer = new FracCuts::DADMMTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::DADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_ADMMDD:
-            optimizer = new FracCuts::ADMMDDTimeStepper(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::ADMMDDTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
     }
     optimizer->setTime(config.duration, config.dt);

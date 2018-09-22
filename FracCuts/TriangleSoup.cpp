@@ -3141,7 +3141,7 @@ namespace FracCuts {
         // conduct optimization on local mesh
         std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
-        Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
+        Optimizer<dim> optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
         optimizer.precompute();
         //        optimizer.result.save("/Users/mincli/Desktop/meshes/test" + std::to_string(splitPath[0]) + "-" + std::to_string(splitPath[1]) + "_optimized.obj");
         //        optimizer.scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test0_AM.obj");
@@ -3265,7 +3265,7 @@ namespace FracCuts {
         // conduct optimization on local mesh
         std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
-        Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
+        Optimizer<dim> optimizer(localMesh, energyTerms, energyParams, 0, true, isBijective, UV_bnds, E, bnd);
         optimizer.precompute();
         //        optimizer.result.save("/Users/mincli/Desktop/meshes/test" + std::to_string(splitPath[0]) + "-" + std::to_string(splitPath[1]) + "_optimized.obj");
         //        optimizer.scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test0_AM.obj");
@@ -3543,7 +3543,7 @@ namespace FracCuts {
         // conduct optimization on local mesh
         std::vector<FracCuts::Energy<dim>*> energyTerms(1, &SD);
         std::vector<double> energyParams(1, 1.0);
-        Optimizer optimizer(localMesh, energyTerms, energyParams, 0, true, !!scaffold, UV_bnds, E, bnd);
+        Optimizer<dim> optimizer(localMesh, energyTerms, energyParams, 0, true, !!scaffold, UV_bnds, E, bnd);
         optimizer.precompute();
 //        optimizer.scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test" + std::to_string(splitPath[0]) + "-" + std::to_string(splitPath[1]) + "_separated_AM.obj");
         optimizer.setRelGL2Tol(1.0e-4);

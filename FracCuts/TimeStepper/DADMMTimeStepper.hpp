@@ -13,8 +13,11 @@
 
 namespace FracCuts {
     
-    class DADMMTimeStepper : public Optimizer
+    template<int dim>
+    class DADMMTimeStepper : public Optimizer<dim>
     {
+        typedef Optimizer<dim> Base;
+        
     protected:
         Eigen::MatrixXd z, u, dz;
         Eigen::VectorXd weights, weights2;
@@ -23,8 +26,8 @@ namespace FracCuts {
         Eigen::MatrixXd D_mult_x;
         
     public:
-        DADMMTimeStepper(const TriangleSoup<DIM>& p_data0,
-                         const std::vector<Energy<DIM>*>& p_energyTerms,
+        DADMMTimeStepper(const TriangleSoup<dim>& p_data0,
+                         const std::vector<Energy<dim>*>& p_energyTerms,
                          const std::vector<double>& p_energyParams,
                          int p_propagateFracture = 1,
                          bool p_mute = false,

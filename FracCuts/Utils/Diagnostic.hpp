@@ -36,7 +36,7 @@ extern double GIFScale;
 extern std::vector<const FracCuts::TriangleSoup<DIM>*> triSoup;
 extern std::vector<FracCuts::Energy<DIM>*> energyTerms;
 extern std::vector<double> energyParams;
-extern FracCuts::Optimizer* optimizer;
+extern FracCuts::Optimizer<DIM>* optimizer;
 
 extern void updateViewerData(void);
 extern bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier);
@@ -191,7 +191,7 @@ namespace FracCuts{
                             viewUV = true;
                             showTexture = false;
                             showDistortion = true;
-                            optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, false);
+                            optimizer = new FracCuts::Optimizer<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, false);
                             updateViewerData();
                             viewer.launch_rendering(false);
                             saveScreenshot(resultsFolderPath + '/' + std::string(buf) + "/finalResult.png",
@@ -726,7 +726,7 @@ namespace FracCuts{
                                     texScale = 10.0 / (triSoup[0]->bbox.row(1) -
                                                        triSoup[0]->bbox.row(0)).maxCoeff();
                                 }
-                                optimizer = new FracCuts::Optimizer(*triSoup[0], energyTerms, energyParams, 0, false, false);
+                                optimizer = new FracCuts::Optimizer<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, false);
                                 igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, faceLabel, true, faceColors_default);
                                 updateViewerData();
                                 viewer.launch_rendering(false);
