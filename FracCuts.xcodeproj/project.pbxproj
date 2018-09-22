@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
+		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
 		986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */; };
 		987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 987382CF2076F49A0040BBCE /* Scaffold.cpp */; };
 		988D81A720AA7FFE0037737D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988ED1271F57211500B21181 /* OpenGL.framework */; };
@@ -59,6 +60,7 @@
 		982CE6121F5DB358004176A8 /* Energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Energy.cpp; sourceTree = "<group>"; };
 		983E7DB3202240D900412128 /* Diagnostic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Diagnostic.hpp; sourceTree = "<group>"; };
 		983E7DB62022421400412128 /* MeshProcessing.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MeshProcessing.hpp; sourceTree = "<group>"; };
+		98444EBA2156C72B004446B1 /* libtetgen.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtetgen.a; path = ../../../../usr/local/lib/libtetgen.a; sourceTree = "<group>"; };
 		986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMDDTimeStepper.cpp; sourceTree = "<group>"; };
 		986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMDDTimeStepper.hpp; sourceTree = "<group>"; };
 		987382CB202902590040BBCE /* Types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Types.hpp; sourceTree = "<group>"; };
@@ -124,6 +126,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */,
 				9894E5E32118BFC300FB0F46 /* libmetis.dylib in Frameworks */,
 				98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */,
 				988D81BF20AA99120037737D /* libglfw3.a in Frameworks */,
@@ -197,6 +200,7 @@
 		988ED1261F57211500B21181 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				98444EBA2156C72B004446B1 /* libtetgen.a */,
 				9894E5E22118BFC300FB0F46 /* libmetis.dylib */,
 				9894E5DD2113B7EC00FB0F46 /* libmetis.a */,
 				98E6E69420DDB07900130500 /* libcholmod.3.0.12.dylib */,
@@ -475,6 +479,7 @@
 					/Users/mincli/Documents/libigl/external/triangle,
 					/Users/mincli/Documents/libigl/external/glad/include,
 					/Users/mincli/Documents/SuiteSparse/include,
+					/Users/mincli/Documents/libigl/external/tetgen,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				OTHER_LDFLAGS = "";
@@ -494,6 +499,7 @@
 					/Users/mincli/Documents/libigl/external/triangle,
 					/Users/mincli/Documents/libigl/external/glad/include,
 					/Users/mincli/Documents/SuiteSparse/include,
+					/Users/mincli/Documents/libigl/external/tetgen,
 				);
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				OTHER_LDFLAGS = "";

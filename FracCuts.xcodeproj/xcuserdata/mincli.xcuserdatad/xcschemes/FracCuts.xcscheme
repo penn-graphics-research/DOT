@@ -232,6 +232,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "1 9 /Users/mincli/Desktop/OptCuts_dynamic/output/ 99"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "1 10 /Users/mincli/Downloads/meshes/closed/bunny.obj"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
