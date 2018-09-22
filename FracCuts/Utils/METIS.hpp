@@ -65,6 +65,7 @@ namespace FracCuts {
         size_t maxmemory;
     } params_t;
     
+    template<int dim>
     class METIS
     {
     protected: // data
@@ -73,7 +74,7 @@ namespace FracCuts {
         std::vector<idx_t> epart, npart; // output partition info
         
     public: // constructor
-        METIS(const TriangleSoup<DIM>& mesh)
+        METIS(const TriangleSoup<dim>& mesh)
         {
             // construct METIS mesh representation
             eptr.resize(mesh.F.rows() + 1);

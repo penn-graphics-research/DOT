@@ -64,7 +64,7 @@ namespace FracCuts {
         F_subdomain.resize(mesh_subdomain.size());
         
 #ifdef USE_METIS
-        METIS partitions(Base::result);
+        METIS<dim> partitions(Base::result);
         partitions.partMesh(partitionAmt);
 #endif
         
