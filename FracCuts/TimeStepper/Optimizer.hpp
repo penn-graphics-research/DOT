@@ -112,9 +112,6 @@ namespace FracCuts {
         virtual void updatePrecondMtrAndFactorize(void);
         
         virtual void updateEnergyData(bool updateEVal = true, bool updateGradient = true, bool updateHessian = true);
-        virtual bool createFracture(double stressThres, int propType,
-                            bool allowPropagate = true, bool allowInSplit = false);
-        virtual bool createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate);
         virtual void setConfig(const TriangleSoup<dim>& config, int iterNum, int p_topoIter);
         virtual void setPropagateFracture(bool p_prop);
         virtual void setScaffolding(bool p_scaffolding);

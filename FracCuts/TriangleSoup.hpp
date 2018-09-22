@@ -104,19 +104,6 @@ namespace FracCuts{
         void addFixedVert(int vI);
         void addFixedVert(const std::vector<int>& p_fixedVert);
         
-        bool separateTriangle(const Eigen::VectorXd& measure, double thres);
-        bool splitVertex(const Eigen::VectorXd& measure, double thres);
-        void querySplit(double lambda_t, bool propagate, bool splitInterior,
-                        double& EwDec_max, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
-                        std::pair<double, double>& energyChanges_max) const;
-        bool splitEdge(double lambda_t, double EDecThres = 0.0, bool propagate = false, bool splitInterior = false);
-        void queryMerge(double lambda, bool propagate,
-                        double& EwDec_max, std::vector<int>& path_max, Eigen::MatrixXd& newVertPos_max,
-                        std::pair<double, double>& energyChanges_max);
-        bool mergeEdge(double lambda, double EDecThres, bool propagate);
-        bool splitOrMerge(double lambda_t, double EDecThres, bool propagate, bool splitInterior,
-                          bool& isMerge);
-        
         void onePointCut(int vI = 0);
         void highCurvOnePointCut(void);
         void farthestPointCut(void);
@@ -168,27 +155,6 @@ namespace FracCuts{
                                 bool changeVertPos = true, bool allowCutThrough = true);
         void mergeBoundaryEdges(const std::pair<int, int>& edge0, const std::pair<int, int>& edge1,
                                 const Eigen::RowVectorXd& mergedPos);
-        
-        // query vertex candidate for either split or merge
-        double computeLocalEwDec(int vI, double lambda_t, std::vector<int>& path, Eigen::MatrixXd& newVertPos,
-                                 std::pair<double, double>& energyChanges,
-                                 const std::vector<int>& incTris = std::vector<int>(),
-                                 const Eigen::RowVector2d& initMergedPos = Eigen::RowVector2d()) const;
-        // query interior incident edge of a boundary vertex candidate
-        double computeLocalEDec(const std::pair<int, int>& edge, Eigen::MatrixXd& newVertPos) const; //TODO: write this in a new class
-        // boundary split
-        double computeLocalEDec(const std::vector<int>& triangles, const std::set<int>& freeVert,
-                                const std::vector<int>& splitPath, Eigen::MatrixXd& newVertPos,
-                                int maxIter = 100) const;
-        // interior split
-        double computeLocalEDec_in(const std::vector<int>& triangles, const std::set<int>& freeVert,
-                                const std::vector<int>& path, Eigen::MatrixXd& newVertPos, int maxIter = 100) const;
-        //TODO: sort all computeLocalEDec, and separate vert routine
-        // minimize SD on the local stencil (merge)
-        double computeLocalEDec(const std::vector<int>& path, const std::vector<int>& triangles,
-                                const std::set<int>& freeVert, std::map<int, Eigen::RowVector2d>& newVertPos,
-                                const std::map<int, int>& mergeVert, const Eigen::RowVector2d& initMergedPos,
-                                bool closeup = false, int maxIter = 100) const;
     };
     
 }

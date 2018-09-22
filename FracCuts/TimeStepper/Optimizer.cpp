@@ -35,7 +35,6 @@
 
 extern FracCuts::MethodType methodType;
 extern const std::string outputFolderPath;
-extern const bool fractureMode;
 
 extern std::ofstream logFile;
 extern Timer timer, timer_step, timer_temp;
@@ -356,37 +355,12 @@ namespace FracCuts {
 //                scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_afterPN_AM.obj");
 //            }
             
-            if(propagateFracture > 0) {
-                if(!createFracture(lastEDec, propagateFracture)) {
-//                    propagateFracture = 0;
-                    // always perform the one decreasing E_w more
-                    if(scaffolding) {
-                        scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
-                        result.scaffold = &scaffold;
-                        scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
-                        scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
-                    }
-                    
-                    if(lastPropagate) {
-                        lastPropagate = false;
-                        return 2; // for saving screenshots
-                    }
-                }
-                else {
-                    lastPropagate = true;
-                }
-                // for alternating propagation with lambda updates
-//                if(createFracture(lastEDec, propagateFracture)) {
-//                    return 2;
-//                }
-            }
-            else {
-                if(scaffolding) {
-                    scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
-                    result.scaffold = &scaffold;
-                    scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
-                    scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
-                }
+            assert(propagateFracture == 0);
+            if(scaffolding) {
+                scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
+                result.scaffold = &scaffold;
+                scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
+                scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
             }
         }
         return returnFlag;
@@ -489,178 +463,6 @@ namespace FracCuts {
                 if(!mute) { timer_step.stop(); }
             }
         }
-    }
-    
-    template<int dim>
-    bool Optimizer<dim>::createFracture(int opType, const std::vector<int>& path, const Eigen::MatrixXd& newVertPos, bool allowPropagate)
-    {
-        assert(methodType == MT_OURS);
-        
-        topoIter++;
-//        //DEBUG
-//        if(globalIterNum > 520) {
-//            result.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_preTopo.obj");
-//            scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_preTopo_AM.obj");
-//        }
-        
-        timer.start(0);
-        bool isMerge = false;
-        data_findExtrema = result; // potentially time-consuming
-        switch(opType) {
-            case 0: // boundary split
-                std::cout << "boundary split without querying again" << std::endl;
-                result.splitEdgeOnBoundary(std::pair<int, int>(path[0], path[1]), newVertPos);
-                logFile << "boundary edge splitted without querying again" << std::endl;
-                //TODO: process fractail here!
-                result.updateFeatures();
-                break;
-                
-            case 1: // interior split
-                std::cout << "Interior split without querying again" << std::endl;
-                result.cutPath(path, true, 1, newVertPos);
-                logFile << "interior edge splitted without querying again" << std::endl;
-                result.fracTail.insert(path[0]);
-                result.fracTail.insert(path[2]);
-                result.curInteriorFracTails.first = path[0];
-                result.curInteriorFracTails.second = path[2];
-                result.curFracTail = -1;
-                break;
-                
-            case 2: // merge
-                std::cout << "corner edge merged without querying again" << std::endl;
-                result.mergeBoundaryEdges(std::pair<int, int>(path[0], path[1]),
-                                          std::pair<int, int>(path[1], path[2]), newVertPos.row(0));
-                logFile << "corner edge merged without querying again" << std::endl;
-                
-                result.computeFeatures(); //TODO: only update locally
-                isMerge = true;
-                break;
-                
-            default:
-                assert(0);
-                break;
-        }
-        timer.stop();
-//        logFile << result.V.rows() << std::endl;
-//        logFile << result.F << std::endl; //DEBUG
-//        logFile << result.cohE << std::endl; //DEBUG
-        
-        if(scaffolding) {
-            scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
-            result.scaffold = &scaffold;
-            scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
-            scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
-        }
-//            //DEBUG
-//            if(globalIterNum > 10) {
-//                result.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_postTopo.obj");
-//                scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_postTopo_AM.obj");
-//            }
-        
-        timer.start(3);
-        updateEnergyData(true, false, true);
-        timer.stop();
-        fractureInitiated = true;
-        if(!mute) {
-            writeEnergyValToFile(false);
-        }
-        
-        if(allowPropagate) {
-            propagateFracture = 1 + isMerge;
-        }
-
-        return true;
-    }
-    
-    template<int dim>
-    bool Optimizer<dim>::createFracture(double stressThres, int propType, bool allowPropagate, bool allowInSplit)
-    {
-        if(propType == 0) {
-            topoIter++;
-        }
-//        //DEBUG
-//        if(globalIterNum > 520) {
-//            result.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_preTopo.obj");
-//            scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_preTopo_AM.obj");
-//        }
-        
-        timer.start(0);
-        bool changed = false;
-        bool isMerge = false;
-        switch(methodType) {
-            case MT_OURS_FIXED:
-            case MT_OURS: {
-                data_findExtrema = result;
-                switch(propType) {
-                    case 0: // initiation
-                        changed = result.splitOrMerge(1.0 - energyParams[0], stressThres, false, allowInSplit, isMerge);
-//                        //DEBUG:
-//                        if(allowInSplit) {
-//                            changed = false;
-//                        }
-//                        else {
-//                            changed = result.splitOrMerge(1.0 - energyParams[0], stressThres, false, allowInSplit, isMerge);
-//                        }
-                        break;
-                        
-                    case 1: // propagate split
-                        changed = result.splitEdge(1.0 - energyParams[0], stressThres, true, allowInSplit);
-                        break;
-                        
-                    case 2: // propagate merge
-                        changed = result.mergeEdge(1.0 - energyParams[0], stressThres, true);
-//                        changed = false;
-                        isMerge = true;
-                        break;
-                }
-                break;
-            }
-                
-            case MT_GEOMIMG:
-                result.geomImgCut(data_findExtrema);
-                allowPropagate = false;
-                changed = true;
-                break;
-                
-            default:
-                assert(0 && "Fracture forbiddened for current method type!");
-                break;
-        }
-        timer.stop();
-//        logFile << result.V.rows() << std::endl;
-        if(changed) {
-            // In fact currently it will always change
-            // because we are doing it anyway and roll back
-            // if it increase E_w
-//            logFile << result.F << std::endl; //DEBUG
-//            logFile << result.cohE << std::endl; //DEBUG
-            
-            if(scaffolding) {
-                scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
-                result.scaffold = &scaffold;
-                scaffold.mergeVNeighbor(result.vNeighbor, vNeighbor_withScaf);
-                scaffold.mergeFixedV(result.fixedVert, fixedV_withScaf);
-            }
-//            //DEBUG
-//            if(globalIterNum > 10) {
-//                result.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_postTopo.obj");
-//                scaffold.airMesh.save("/Users/mincli/Desktop/meshes/test"+std::to_string(globalIterNum)+"_postTopo_AM.obj");
-//            }
-            
-            timer.start(3);
-            updateEnergyData(true, false, true);
-            timer.stop();
-            fractureInitiated = true;
-            if((!mute) && (propType == 0)) {
-                writeEnergyValToFile(false);
-            }
-            
-            if(allowPropagate && (propType == 0)) {
-//                solve(1);
-                propagateFracture = 1 + isMerge;
-            }
-        }
-        return changed;
     }
     
     template<int dim>
@@ -1116,15 +918,10 @@ namespace FracCuts {
     void Optimizer<dim>::writeEnergyValToFile(bool flush)
     {
         double E_se;
-        result.computeSeamSparsity(E_se, !fractureMode);
+        result.computeSeamSparsity(E_se, false);
         E_se /= result.virtualRadius;
         
-        if(fractureMode) {
-            buffer_energyValPerIter << lastEnergyVal + (1.0 - energyParams[0]) * E_se;
-        }
-        else {
-            buffer_energyValPerIter << lastEnergyVal;
-        }
+        buffer_energyValPerIter << lastEnergyVal + (1.0 - energyParams[0]) * E_se;
         
         for(int eI = 0; eI < energyTerms.size(); eI++) {
             buffer_energyValPerIter << " " << energyVal_ET[eI];

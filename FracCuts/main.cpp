@@ -9,8 +9,6 @@
 #include "ARAPEnergy.hpp"
 #include "NeoHookeanEnergy.hpp"
 #include "FixedCoRotEnergy.hpp"
-#include "SeparationEnergy.hpp"
-#include "CohesiveEnergy.hpp"
 #include "GIF.hpp"
 #include "Timer.hpp"
 
@@ -18,15 +16,8 @@
 #include "MeshProcessing.hpp"
 
 #include <igl/readOFF.h>
-#include <igl/boundary_loop.h>
-#include <igl/map_vertices_to_circle.h>
-#include <igl/harmonic.h>
-#include <igl/arap.h>
-#include <igl/avg_edge_length.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/png/writePNG.h>
-#include <igl/euler_characteristic.h>
-#include <igl/edge_lengths.h>
 
 #include <sys/stat.h> // for mkdir
 
@@ -35,39 +26,22 @@
 #include <ctime>
 
 
-// optimization
+// optimization/simulation
 FracCuts::Config config;
 FracCuts::MethodType methodType;
 std::vector<const FracCuts::TriangleSoup<DIM>*> triSoup;
 int vertAmt_input;
-FracCuts::TriangleSoup<DIM> triSoup_backup;
 FracCuts::Optimizer<DIM>* optimizer;
 std::vector<FracCuts::Energy<DIM>*> energyTerms;
 std::vector<double> energyParams;
-bool bijectiveParam = false;
-//bool bijectiveParam = true; //TODO: set as arguments!
-bool rand1PInitCut = false;
-//bool rand1PInitCut = true; //!!! for fast prototyping
+bool offlineMode = false;
+bool autoSwitch = false;
+bool contactHandling = false;
 double lambda_init;
 bool optimization_on = false;
 int iterNum = 0;
-int iterNum_lastTopo = 0;
 int converged = 0;
-bool autoHomotopy = true;
-std::ofstream homoTransFile;
-bool fractureMode = false;
-double fracThres = 0.0;
-bool altBase = false;
 bool outerLoopFinished = false;
-const int boundMeasureType = 0; // 0: E_SD, 1: L2 Stretch
-double upperBound = 4.1;
-const double convTol_upperBound = 1.0e-3; //TODO!!! related to avg edge len or upperBound?
-std::vector<std::pair<double, double>> energyChanges_bSplit, energyChanges_iSplit, energyChanges_merge;
-std::vector<std::vector<int>> paths_bSplit, paths_iSplit, paths_merge;
-std::vector<Eigen::MatrixXd> newVertPoses_bSplit, newVertPoses_iSplit, newVertPoses_merge;
-int opType_queried = -1;
-std::vector<int> path_queried;
-Eigen::MatrixXd newVertPos_queried;
 
 std::ofstream logFile;
 std::string outputFolderPath = "output/";
@@ -92,18 +66,20 @@ bool isLighting = false;
 bool showFracTail = true; //!!! frac tail info not initialized correctly
 bool showFixedVerts = true; //TODO: add key control
 float fracTailSize = 20.0f;
-double secPast = 0.0;
-time_t lastStart_world;
-Timer timer, timer_step, timer_temp, timer_temp2;
-bool offlineMode = false;
-bool autoSwitch = false;
+
 bool saveInfo_postDraw = false;
 std::string infoName = "";
 bool isCapture3D = false;
 int capture3DI = 0;
+
 GifWriter GIFWriter;
 uint32_t GIFDelay = 10; //*10ms
 double GIFScale = 0.4;
+
+// timer
+double secPast = 0.0;
+time_t lastStart_world;
+Timer timer, timer_step, timer_temp, timer_temp2;
 
 
 void saveInfo(bool writePNG = true, bool writeGIF = true, bool writeMesh = true);
@@ -431,23 +407,10 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
         " grad_dE_div_dx" << timer_temp2.timing(7) <<
         " grad_add" << timer_temp2.timing(8) << std::endl;
     
-    double seamLen;
-    if(energyParams[0] == 1.0) {
-        // pure distortion minimization mode for models with initial cuts also reflected on the surface as boundary edges...
-        triSoup[channel_result]->computeBoundaryLen(seamLen);
-        seamLen /= 2.0;
-    }
-    else {
-        triSoup[channel_result]->computeSeamSparsity(seamLen, !fractureMode);
-//        // for models with initial cuts also reflected on the surface as boundary edges...
-//        double boundaryLen;
-//        triSoup[channel_result]->computeBoundaryLen(boundaryLen);
-//        seamLen += boundaryLen;
-    }
     double distortion;
     energyTerms[0]->computeEnergyVal(*triSoup[channel_result], distortion);
     file << distortion << " " <<
-        seamLen / triSoup[channel_result]->virtualRadius << std::endl;
+        0.0 << std::endl;
     
     triSoup[channel_result]->outputStandardStretch(file);
     
@@ -471,8 +434,6 @@ void toggleOptimization(void)
                          GIFScale * (viewer.core.viewport[2] - viewer.core.viewport[0]),
                          GIFScale * (viewer.core.viewport[3] - viewer.core.viewport[1]), GIFDelay);
                 
-                homoTransFile.open(outputFolderPath + "homotopyTransition.txt");
-                assert(homoTransFile.is_open());
                 saveScreenshot(outputFolderPath + "0.png", 0.5, true);
             }
             std::cout << "start/resume optimization, press again to pause." << std::endl;
@@ -550,48 +511,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
                 break;
             }
                 
-            case 'h':
-            case 'H': { //!!!needsUpdate mannual homotopy optimization
-                FracCuts::SeparationEnergy<DIM> *sepE = NULL;
-                for(const auto eTermI : energyTerms) {
-                    sepE = dynamic_cast<FracCuts::SeparationEnergy<DIM>*>(eTermI);
-                    if(sepE != NULL) {
-                        break;
-                    }
-                }
-                
-                if(sepE != NULL) {
-                    saveScreenshot(outputFolderPath + "homotopyFS_" + std::to_string(sepE->getSigmaParam()) + ".png", 0.5);
-                    triSoup[channel_result]->save(outputFolderPath + "homotopyFS_" + std::to_string(sepE->getSigmaParam()) + ".obj");
-                    triSoup[channel_result]->saveAsMesh(outputFolderPath + "homotopyFS_" + std::to_string(sepE->getSigmaParam()) + "_mesh.obj");
-                    
-                    if(sepE->decreaseSigma())
-                    {
-                        homoTransFile << iterNum << std::endl;
-                        optimizer->computeLastEnergyVal();
-                        converged = false;
-                        optimizer->updatePrecondMtrAndFactorize();
-                        if(fractureMode) {
-                            // won't be called now since we are using standard AutoCuts
-                            assert(0);
-                            optimizer->createFracture(fracThres, false, !altBase);
-                        }
-                    }
-                    else {
-                        triSoup[channel_result]->saveAsMesh(outputFolderPath + "result_mesh_01UV.obj", true);
-                        
-                        optimization_on = false;
-                        viewer.core.is_animating = false;
-                        std::cout << "optimization converged." << std::endl;
-                        homoTransFile.close();
-                    }
-                }
-                else {
-                    std::cout << "No homotopy settings!" << std::endl;
-                }
-                break;
-            }
-                
             case 'o':
             case 'O': {
                 infoName = std::to_string(iterNum);
@@ -662,344 +581,6 @@ bool postDrawFunc(igl::opengl::glfw::Viewer& viewer)
     return false;
 }
 
-int computeOptPicked(const std::vector<std::pair<double, double>>& energyChanges0,
-                     const std::vector<std::pair<double, double>>& energyChanges1,
-                     double lambda)
-{
-    assert(!energyChanges0.empty());
-    assert(!energyChanges1.empty());
-    assert((lambda >= 0.0) && (lambda <= 1.0));
-    
-    double minEChange0 = __DBL_MAX__;
-    for(int ecI = 0; ecI < energyChanges0.size(); ecI++) {
-        if((energyChanges0[ecI].first == __DBL_MAX__) || (energyChanges0[ecI].second == __DBL_MAX__)) {
-            continue;
-        }
-        double EwChange = energyChanges0[ecI].first * (1.0 - lambda) + energyChanges0[ecI].second * lambda;
-        if(EwChange < minEChange0) {
-            minEChange0 = EwChange;
-        }
-    }
-    
-    double minEChange1 = __DBL_MAX__;
-    for(int ecI = 0; ecI < energyChanges1.size(); ecI++) {
-        if((energyChanges1[ecI].first == __DBL_MAX__) || (energyChanges1[ecI].second == __DBL_MAX__)) {
-            continue;
-        }
-        double EwChange = energyChanges1[ecI].first * (1.0 - lambda) + energyChanges1[ecI].second * lambda;
-        if(EwChange < minEChange1) {
-            minEChange1 = EwChange;
-        }
-    }
-    
-    assert((minEChange0 != __DBL_MAX__) || (minEChange1 != __DBL_MAX__));
-    return (minEChange0 > minEChange1);
-}
-
-int computeBestCand(const std::vector<std::pair<double, double>>& energyChanges, double lambda,
-                    double& bestEChange)
-{
-    assert(!energyChanges.empty());
-    assert((lambda >= 0.0) && (lambda <= 1.0));
-    
-    bestEChange = __DBL_MAX__;
-    int id_minEChange = -1;
-    for(int ecI = 0; ecI < energyChanges.size(); ecI++) {
-        if((energyChanges[ecI].first == __DBL_MAX__) || (energyChanges[ecI].second == __DBL_MAX__)) {
-            continue;
-        }
-        double EwChange = energyChanges[ecI].first * (1.0 - lambda) + energyChanges[ecI].second * lambda;
-        if(EwChange < bestEChange) {
-            bestEChange = EwChange;
-            id_minEChange = ecI;
-        }
-    }
-//    assert(id_minEChange >= 0);
-    
-    return id_minEChange;
-}
-
-double updateLambda(double measure_bound, double lambda_SD = energyParams[0], double kappa = 1.0, double kappa2 = 1.0)
-{
-    lambda_SD = std::max(0.0, kappa * (measure_bound - (upperBound - convTol_upperBound / 2.0)) + kappa2 * lambda_SD / (1.0 - lambda_SD));
-    return lambda_SD / (1.0 + lambda_SD);
-}
-
-bool updateLambda_stationaryV(bool cancelMomentum = true, bool checkConvergence = false)
-{
-    Eigen::MatrixXd edgeLengths; igl::edge_lengths(triSoup[channel_result]->V_rest, triSoup[channel_result]->F, edgeLengths);
-    const double eps_E_se = 1.0e-3 * edgeLengths.minCoeff() / triSoup[channel_result]->virtualRadius;
-    
-    // measurement and energy value computation
-    const double E_SD = optimizer->getLastEnergyVal(true) / energyParams[0];
-    double E_se; triSoup[channel_result]->computeSeamSparsity(E_se);
-    E_se /= triSoup[channel_result]->virtualRadius;
-    double stretch_l2, stretch_inf, stretch_shear, compress_inf;
-    triSoup[channel_result]->computeStandardStretch(stretch_l2, stretch_inf, stretch_shear, compress_inf);
-    double measure_bound;
-    switch(boundMeasureType) {
-        case 0:
-            measure_bound = E_SD;
-            break;
-            
-        case 1:
-            measure_bound = stretch_l2;
-            break;
-            
-        default:
-            assert(0 && "invalid bound measure type");
-            break;
-    }
-    const double eps_lambda = std::min(1.0e-3, std::abs(updateLambda(measure_bound) - energyParams[0]));
-    
-    //TODO?: stop when first violates bounds from feasible, don't go to best feasible. check after each merge whether distortion is violated
-    // oscillation detection
-    static int iterNum_bestFeasible = -1;
-    static FracCuts::TriangleSoup<DIM> triSoup_bestFeasible;
-    static double E_se_bestFeasible = __DBL_MAX__;
-    static int lastStationaryIterNum = 0; //!!! still necessary because boundary and interior query are with same iterNum
-    static std::map<double, std::vector<std::pair<double, double>>> configs_stationaryV; //!!! better also include topology information
-    if(iterNum != lastStationaryIterNum) {
-        // not a roll back config
-        const double lambda = 1.0 - energyParams[0];
-        bool oscillate = false;
-        const auto low = configs_stationaryV.lower_bound(E_se);
-        if(low == configs_stationaryV.end()) {
-            // all less than E_se
-            if(!configs_stationaryV.empty()) {
-                // use largest element
-                if(std::abs(configs_stationaryV.rbegin()->first - E_se) < eps_E_se)
-                {
-                    for(const auto& lambdaI : configs_stationaryV.rbegin()->second) {
-                        if((std::abs(lambdaI.first - lambda) < eps_lambda) &&
-                           (std::abs(lambdaI.second - E_SD) < eps_E_se))
-                        {
-                            oscillate = true;
-                            logFile << configs_stationaryV.rbegin()->first << ", " << lambdaI.second << std::endl;
-                            logFile << E_se << ", " << lambda << ", " << E_SD << std::endl;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        else if(low == configs_stationaryV.begin()) {
-            // all not less than E_se
-            if(std::abs(low->first - E_se) < eps_E_se)
-            {
-                for(const auto& lambdaI : low->second) {
-                    if((std::abs(lambdaI.first - lambda) < eps_lambda) &&
-                       (std::abs(lambdaI.second - E_SD) < eps_E_se))
-                    {
-                        oscillate = true;
-                        logFile << low->first << ", " << lambdaI.first << ", " << lambdaI.second << std::endl;
-                        logFile << E_se << ", " << lambda << ", " << E_SD << std::endl;
-                        break;
-                    }
-                }
-            }
-            
-        }
-        else {
-            const auto prev = std::prev(low);
-            if(std::abs(low->first - E_se) < eps_E_se) {
-                for(const auto& lambdaI : low->second) {
-                    if((std::abs(lambdaI.first - lambda) < eps_lambda) &&
-                       (std::abs(lambdaI.second - E_SD) < eps_E_se))
-                    {
-                        oscillate = true;
-                        logFile << low->first << ", " << lambdaI.first << ", " << lambdaI.second << std::endl;
-                        logFile << E_se << ", " << lambda << ", " << E_SD << std::endl;
-                        break;
-                    }
-                }
-            }
-            if((!oscillate) && (std::abs(prev->first - E_se) < eps_E_se)) {
-                for(const auto& lambdaI : prev->second) {
-                    if((std::abs(lambdaI.first - lambda) < eps_lambda) &&
-                       (std::abs(lambdaI.second - E_SD) < eps_E_se))
-                    {
-                        oscillate = true;
-                        logFile << prev->first << ", " << lambdaI.first << ", " << lambdaI.second << std::endl;
-                        logFile << E_se << ", " << lambda << ", " << E_SD << std::endl;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // record best feasible UV map
-        if((measure_bound <= upperBound) && (E_se < E_se_bestFeasible)) {
-            iterNum_bestFeasible = iterNum;
-            triSoup_bestFeasible = *triSoup[channel_result];
-            E_se_bestFeasible = E_se;
-        }
-        
-        if(oscillate && (iterNum_bestFeasible >= 0)) {
-            // arrive at the best feasible config again
-            logFile << "oscillation detected at measure = " << measure_bound << ", b = " << upperBound <<
-                "lambda = " << energyParams[0] << std::endl;
-            logFile << lastStationaryIterNum << ", " << iterNum << std::endl;
-            if(iterNum_bestFeasible != iterNum) {
-                homoTransFile << iterNum_bestFeasible << std::endl;
-                optimizer->setConfig(triSoup_bestFeasible, iterNum, optimizer->getTopoIter());
-                logFile << "rolled back to best feasible in iter " << iterNum_bestFeasible << std::endl;
-            }
-            return false;
-        }
-        else {
-            configs_stationaryV[E_se].emplace_back(std::pair<double, double>(lambda, E_SD));
-        }
-    }
-    lastStationaryIterNum = iterNum;
-    
-    // convergence check
-    if(checkConvergence) {
-        if(measure_bound <= upperBound) {
-            // save info at first feasible stationaryVT for comparison
-            static bool saved = false;
-            if(!saved) {
-                logFile << "saving firstFeasibleS..." << std::endl;
-//                saveScreenshot(outputFolderPath + "firstFeasibleS.png", 0.5, false, true); //TODO: saved is before roll back...
-//                triSoup[channel_result]->saveAsMesh(outputFolderPath + "firstFeasibleS_mesh.obj");
-                secPast += difftime(time(NULL), lastStart_world);
-                saveInfoForPresent("info_firstFeasibleS.txt");
-                time(&lastStart_world);
-                saved = true;
-                logFile << "firstFeasibleS saved" << std::endl;
-            }
-            
-            if(measure_bound >= upperBound - convTol_upperBound) {
-                logFile << "all converged at measure = " << measure_bound << ", b = " << upperBound <<
-                    " lambda = " << energyParams[0] << std::endl;
-                if(iterNum_bestFeasible != iterNum) {
-                    assert(iterNum_bestFeasible >= 0);
-                    homoTransFile << iterNum_bestFeasible << std::endl;
-                    optimizer->setConfig(triSoup_bestFeasible, iterNum, optimizer->getTopoIter());
-                    logFile << "rolled back to best feasible in iter " << iterNum_bestFeasible << std::endl;
-                }
-                return false;
-            }
-        }
-    }
-    
-    // lambda update (dual update)
-    energyParams[0] = updateLambda(measure_bound);
-    //!!! needs to be careful on lambda update space
-    
-    // critical lambda scheme
-    if(checkConvergence) {
-        // update lambda until feasible update on T might be triggered
-        if(measure_bound > upperBound) {
-            // need to cut further, increase energyParams[0]
-            logFile << "curUpdated = " << energyParams[0] << ", increase" << std::endl;
-            
-//            std::cout << "iSplit:" << std::endl;
-//            for(const auto& i : energyChanges_iSplit) {
-//                std::cout << i.first << "," << i.second << std::endl;
-//            }
-//            std::cout << "bSplit:" << std::endl;
-//            for(const auto& i : energyChanges_bSplit) {
-//                std::cout << i.first << "," << i.second << std::endl;
-//            }
-//            std::cout << "merge:" << std::endl;
-//            for(const auto& i : energyChanges_merge) {
-//                std::cout << i.first << "," << i.second << std::endl;
-//            }
-            //!!!DEBUG: with bijectivity, sometimes there might be no valid bSplit that could decrease E_SD
-            if((!energyChanges_merge.empty()) &&
-               (computeOptPicked(energyChanges_bSplit, energyChanges_merge, 1.0 - energyParams[0]) == 1)){// &&
-//               (computeOptPicked(energyChanges_iSplit, energyChanges_merge, 1.0 - energyParams[0]) == 1)) {
-                // still picking merge
-                do {
-                    energyParams[0] = updateLambda(measure_bound);
-                } while((computeOptPicked(energyChanges_bSplit, energyChanges_merge, 1.0 - energyParams[0]) == 1));// &&
-//                        (computeOptPicked(energyChanges_iSplit, energyChanges_merge, 1.0 - energyParams[0]) == 1));
-                
-                logFile << "iterativelyUpdated = " << energyParams[0] << ", increase for switch" << std::endl;
-            }
-            
-            double eDec_b, eDec_i;
-            int id_pickingBSplit = computeBestCand(energyChanges_bSplit, 1.0 - energyParams[0], eDec_b);
-            int id_pickingISplit = computeBestCand(energyChanges_iSplit, 1.0 - energyParams[0], eDec_i);
-            while((eDec_b > 0.0) && (eDec_i > 0.0)) {
-                energyParams[0] = updateLambda(measure_bound);
-                id_pickingBSplit = computeBestCand(energyChanges_bSplit, 1.0 - energyParams[0], eDec_b);
-                id_pickingISplit = computeBestCand(energyChanges_iSplit, 1.0 - energyParams[0], eDec_i);
-            }
-            if(eDec_b <= 0.0) {
-                opType_queried = 0;
-                path_queried = paths_bSplit[id_pickingBSplit];
-                newVertPos_queried = newVertPoses_bSplit[id_pickingBSplit];
-            }
-            else {
-                opType_queried = 1;
-                path_queried = paths_iSplit[id_pickingISplit];
-                newVertPos_queried = newVertPoses_iSplit[id_pickingISplit];
-            }
-            
-            logFile << "iterativelyUpdated = " << energyParams[0] << ", increased, current eDec = " <<
-                eDec_b << ", " << eDec_i << "; id: " << id_pickingBSplit << ", " << id_pickingISplit << std::endl;
-        }
-        else {
-            bool noOp = true;
-            for(const auto ecI : energyChanges_merge) {
-                if(ecI.first != __DBL_MAX__) {
-                    noOp = false;
-                    break;
-                }
-            }
-            if(noOp) {
-                logFile << "No merge operation available, end process!" << std::endl;
-                energyParams[0] = 1.0 - eps_lambda;
-                optimizer->updateEnergyData(true, false, false);
-                if(iterNum_bestFeasible != iterNum) {
-                    homoTransFile << iterNum_bestFeasible << std::endl;
-                    optimizer->setConfig(triSoup_bestFeasible, iterNum, optimizer->getTopoIter());
-                }
-                return false;
-            }
-            
-            logFile << "curUpdated = " << energyParams[0] << ", decrease" << std::endl;
-            
-            //!!! also account for iSplit for this switch?
-            if(computeOptPicked(energyChanges_bSplit, energyChanges_merge, 1.0 - energyParams[0]) == 0) {
-                // still picking split
-                do {
-                    energyParams[0] = updateLambda(measure_bound);
-                } while(computeOptPicked(energyChanges_bSplit, energyChanges_merge, 1.0 - energyParams[0]) == 0);
-                
-                logFile << "iterativelyUpdated = " << energyParams[0] << ", decrease for switch" << std::endl;
-            }
-            
-            double eDec_m;
-            int id_pickingMerge = computeBestCand(energyChanges_merge, 1.0 - energyParams[0], eDec_m);
-            while(eDec_m > 0.0) {
-                energyParams[0] = updateLambda(measure_bound);
-                id_pickingMerge = computeBestCand(energyChanges_merge, 1.0 - energyParams[0], eDec_m);
-            }
-            opType_queried = 2;
-            path_queried = paths_merge[id_pickingMerge];
-            newVertPos_queried = newVertPoses_merge[id_pickingMerge];
-            
-            logFile << "iterativelyUpdated = " << energyParams[0] << ", decreased, current eDec = " << eDec_m << std::endl;
-        }
-    }
-    
-    // lambda value sanity check
-    if(energyParams[0] > 1.0 - eps_lambda) {
-        energyParams[0] = 1.0 - eps_lambda;
-    }
-    if(energyParams[0] < eps_lambda) {
-        energyParams[0] = eps_lambda;
-    }
-    
-    optimizer->updateEnergyData(true, false, false);
-    
-    logFile << "measure = " << measure_bound << ", b = " << upperBound << ", updated lambda = " << energyParams[0] << std::endl;
-    return true;
-}
-
 void converge_preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 {
     infoName = "finalResult";
@@ -1016,7 +597,6 @@ void converge_preDrawFunc(igl::opengl::glfw::Viewer& viewer)
         " inner iterations in " << secPast << "s." << std::endl;
     logFile << "optimization converged, with " << optimizer->getInnerIterAmt() <<
         " inner iterations in " << secPast << "s." << std::endl;
-    homoTransFile.close();
     outerLoopFinished = true;
 }
 
@@ -1042,190 +622,10 @@ bool preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 //        viewChannel = channel_result;
         updateViewerData();
         
-        FracCuts::SeparationEnergy<DIM> *sepE = NULL;
-        for(const auto eTermI : energyTerms) {
-            sepE = dynamic_cast<FracCuts::SeparationEnergy<DIM>*>(eTermI);
-            if(sepE != NULL) {
-                break;
-            }
-        }
-        
-        if(methodType == FracCuts::MT_AUTOCUTS) {
-            assert(sepE != NULL);
-            if((iterNum < 10) || (iterNum % 10 == 0)) {
-//                saveScreenshot(outputFolderPath + std::to_string(iterNum) + ".png", 1.0);
-                saveInfo_postDraw = true;
-            }
-        }
-        
         if(converged) {
             saveInfo_postDraw = true;
             
-            double stretch_l2, stretch_inf, stretch_shear, compress_inf;
-            triSoup[channel_result]->computeStandardStretch(stretch_l2, stretch_inf, stretch_shear, compress_inf);
-            double measure_bound;
-            switch(boundMeasureType) {
-                case 0:
-                    measure_bound = optimizer->getLastEnergyVal(true) / energyParams[0];
-                    break;
-                    
-                case 1:
-                    measure_bound = stretch_l2;
-                    break;
-                    
-                default:
-                    assert(0 && "invalid bound measure type");
-                    break;
-            }
-            
             switch(methodType) {
-                case FracCuts::MT_AUTOCUTS: {
-                    infoName = "homotopy_" + std::to_string(sepE->getSigmaParam());
-                    if(autoHomotopy && sepE->decreaseSigma()) {
-                        homoTransFile << iterNum << std::endl;
-                        optimizer->computeLastEnergyVal();
-                        converged = false;
-                    }
-                    else {
-                        infoName = "finalResult";
-
-                        // perform exact solve
-//                        optimizer->setRelGL2Tol(1.0e-8);
-                        optimizer->setAllowEDecRelTol(false);
-                        converged = false;
-                        while(!converged) {
-                            proceedOptimization(1000);
-                        }
-                        secPast += difftime(time(NULL), lastStart_world);
-                        updateViewerData();
-                        
-                        optimization_on = false;
-                        viewer.core.is_animating = false;
-                        std::cout << "optimization converged, with " << secPast << "s." << std::endl;
-                        logFile << "optimization converged, with " << secPast << "s." << std::endl;
-                        homoTransFile.close();
-                        outerLoopFinished = true;
-                    }
-                    //!!!TODO: energy and grad file output!
-                    // flush
-                    // decrease delta will change E_s thus E_w
-                    break;
-                }
-                    
-                case FracCuts::MT_GEOMIMG: {
-                    if(measure_bound <= upperBound) {
-                        logFile << "measure reaches user specified upperbound " << upperBound << std::endl;
-                        
-                        infoName = "finalResult";
-                        // perform exact solve
-//                        optimizer->setRelGL2Tol(1.0e-10);
-                        optimizer->setAllowEDecRelTol(false);
-                        converged = false;
-                        while(!converged) {
-                            proceedOptimization(1000);
-                        }
-                        secPast += difftime(time(NULL), lastStart_world);
-                        updateViewerData();
-                        
-                        optimization_on = false;
-                        viewer.core.is_animating = false;
-                        std::cout << "optimization converged, with " << secPast << "s." << std::endl;
-                        logFile << "optimization converged, with " << secPast << "s." << std::endl;
-                        homoTransFile.close();
-                        outerLoopFinished = true;
-                    }
-                    else {
-                        infoName = std::to_string(iterNum);
-                        
-                        // continue to make geometry image cuts
-                        homoTransFile << iterNum << std::endl;
-                        assert(optimizer->createFracture(fracThres, false, false));
-                        converged = false;
-                    }
-                    optimizer->flushEnergyFileOutput();
-                    optimizer->flushGradFileOutput();
-                    break;
-                }
-                    
-                case FracCuts::MT_OURS_FIXED:
-                case FracCuts::MT_OURS: {
-                    infoName = std::to_string(iterNum);
-                    if(converged == 2) {
-                        converged = 0;
-                        return false;
-                    }
-                    
-                    if((methodType == FracCuts::MT_OURS) && (measure_bound <= upperBound)) {
-                        // save info once bound is reached for comparison
-                        static bool saved = false;
-                        if(!saved) {
-//                            saveScreenshot(outputFolderPath + "firstFeasible.png", 0.5, false, true);
-                            //                            triSoup[channel_result]->save(outputFolderPath + infoName + "_triSoup.obj");
-//                            triSoup[channel_result]->saveAsMesh(outputFolderPath + "firstFeasible_mesh.obj");
-                            secPast += difftime(time(NULL), lastStart_world);
-                            saveInfoForPresent("info_firstFeasible.txt");
-                            time(&lastStart_world);
-                            saved = true;
-                        }
-                    }
-                    
-                    // if necessary, turn on scaffolding for random one point initial cut
-                    if(!optimizer->isScaffolding() && bijectiveParam && rand1PInitCut) {
-                        optimizer->setScaffolding(true);
-                        //TODO: other mode?
-                    }
-                    
-                    double E_se; triSoup[channel_result]->computeSeamSparsity(E_se);
-                    E_se /= triSoup[channel_result]->virtualRadius;
-                    const double E_SD = optimizer->getLastEnergyVal(true) / energyParams[0];
-                    const double E_w = optimizer->getLastEnergyVal(true) +
-                        (1.0 - energyParams[0]) * E_se;
-                    std::cout << iterNum << ": " << E_SD << " " << E_se << " " << triSoup[channel_result]->V_rest.rows() << std::endl;
-                    logFile << iterNum << ": " << E_SD << " " << E_se << " " << triSoup[channel_result]->V_rest.rows() << std::endl;
-                    optimizer->flushEnergyFileOutput();
-                    optimizer->flushGradFileOutput();
-                    homoTransFile << iterNum_lastTopo << std::endl;
-                    
-                    // continue to split boundary
-                    if((methodType == FracCuts::MT_OURS) &&
-                       (!updateLambda_stationaryV()))
-                    {
-                        // oscillation detected
-                        converge_preDrawFunc(viewer);
-                    }
-                    else {
-                        logFile << "boundary op V " << triSoup[channel_result]->V_rest.rows() << std::endl;
-                        if(optimizer->createFracture(fracThres, false, !altBase)) {
-                            converged = false;
-                        }
-                        else {
-                            // if no boundary op, try interior split if split is the current best boundary op
-                            if((measure_bound > upperBound) &&
-                               optimizer->createFracture(fracThres, false, !altBase, true))
-                            {
-                                logFile << "interior split " << triSoup[channel_result]->V_rest.rows() << std::endl;
-                                converged = false;
-                            }
-                            else {
-                                homoTransFile << iterNum << std::endl; // mark stationaryVT
-                                if((methodType == FracCuts::MT_OURS_FIXED) ||
-                                   (!updateLambda_stationaryV(false, true)))
-                                {
-                                    // all converged
-                                    converge_preDrawFunc(viewer);
-                                }
-                                else {
-                                    // split or merge after lambda update
-                                    optimizer->createFracture(opType_queried, path_queried, newVertPos_queried, !altBase);
-                                    opType_queried = -1;
-                                    converged = false;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                }
-                    
                 case FracCuts::MT_NOCUT: {
                     converge_preDrawFunc(viewer);
                     break;
@@ -1349,31 +749,6 @@ int main(int argc, char *argv[])
         return -1;
     }
     vertAmt_input = V.rows();
-//    //DEBUG
-//    FracCuts::TriangleSoup<DIM> squareMesh(FracCuts::P_SQUARE, 1.0, 0.1, false);
-//    V = squareMesh.V_rest;
-//    F = squareMesh.F;
-    
-//    //!!! for AutoCuts comparison
-//    std::ifstream distFile(outputFolderPath + "distortion.txt");
-//    assert(distFile.is_open());
-//    std::string resultName; double resultDistortion;
-//    bool distFound = false;
-//    while(!distFile.eof()) {
-//        distFile >> resultName >> resultDistortion;
-//        if(resultName.find(meshName) != std::string::npos) {
-//            distFound = true;
-//            upperBound = resultDistortion;
-//            break;
-//        }
-//    }
-//    distFile.close();
-//    if(distFound) {
-//        std::cout << "AutoCuts comparison: reset distortion bound to " << upperBound << std::endl;
-//    }
-//    else {
-//        exit(0);
-//    }
     
     // Set lambda
     double lambda = 0.5;
@@ -1408,39 +783,17 @@ int main(int argc, char *argv[])
     else {
         std::cout << "Use default method: ours." << std::endl;
     }
-    bool startWithTriSoup = (methodType == FracCuts::MT_AUTOCUTS);
+    
     std::string startDS;
     switch (methodType) {
-        case FracCuts::MT_OURS_FIXED:
-            assert(lambda < 1.0);
-            startDS = "OptCutsFixed";
-            break;
-            
-        case FracCuts::MT_OURS:
-            assert(lambda < 1.0);
-            startDS = "OptCuts";
-            break;
-            
-        case FracCuts::MT_GEOMIMG:
-            assert(lambda < 1.0);
-            startDS = "EBCuts";
-            bijectiveParam = false;
-            break;
-            
-        case FracCuts::MT_AUTOCUTS:
-            assert(lambda > 0.0);
-            assert(delta > 0.0);
-            startDS = "AutoCuts";
-            bijectiveParam = false;
-            break;
-            
         case FracCuts::MT_NOCUT:
             lambda = 0.0;
             startDS = "Sim";
             break;
             
         default:
-            assert(0 && "method type not valid!");
+            std::cout << "method type not valid!" << std::endl;
+            exit(-1);
             break;
     }
     
@@ -1454,7 +807,7 @@ int main(int argc, char *argv[])
 #endif
     
     // construct mesh data structure
-    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV, FUV, startWithTriSoup);
+    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV, FUV, false);
     // primitive test cases
     if(suffix == ".primitive") {
         temp->borderVerts_primitive = borderVerts_primitive;
@@ -1516,7 +869,6 @@ int main(int argc, char *argv[])
     timer_temp2.new_activity("grad_add");
     
     // * Our approach
-//    texScale = 10.0 / (triSoup[0]->bbox.row(1) - triSoup[0]->bbox.row(0)).maxCoeff();
     if(lambda != 1.0) {
         energyParams.emplace_back(1.0 - lambda);
         switch(config.energyType) {
@@ -1540,31 +892,23 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkGradient(*triSoup[0]);
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
-    if((lambda != 0.0) && startWithTriSoup) {
-        //DEBUG alternating framework
-        energyParams.emplace_back(lambda);
-        energyTerms.emplace_back(new FracCuts::SeparationEnergy<DIM>(triSoup[0]->avgEdgeLen * triSoup[0]->avgEdgeLen, delta));
-//        energyTerms.emplace_back(new FracCuts::CohesiveEnergy(triSoup[0]->avgEdgeLen, delta));
-//        energyTerms.back()->checkEnergyVal(*triSoup[0]);
-//        energyTerms.back()->checkGradient(*triSoup[0]);
-//        energyTerms.back()->checkHessian(*triSoup[0]);
-    }
     
+    assert(lambda == 0.0);
     switch (config.timeStepperType) {
         case FracCuts::TST_NEWTON:
-            optimizer = new FracCuts::Optimizer<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::Optimizer<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, contactHandling, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_ADMM:
-            optimizer = new FracCuts::ADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::ADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, contactHandling, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_DADMM:
-            optimizer = new FracCuts::DADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::DADMMTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, contactHandling, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
             
         case FracCuts::TST_ADMMDD:
-            optimizer = new FracCuts::ADMMDDTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, bijectiveParam && !rand1PInitCut, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
+            optimizer = new FracCuts::ADMMDDTimeStepper<DIM>(*triSoup[0], energyTerms, energyParams, 0, false, contactHandling, Eigen::MatrixXd(), Eigen::MatrixXi(), Eigen::VectorXi(), config);
             break;
     }
     optimizer->setTime(config.duration, config.dt);
@@ -1576,57 +920,34 @@ int main(int argc, char *argv[])
     GIFDelay = optimizer->getDt() * 100;
 #endif
     triSoup.emplace_back(&optimizer->getResult());
-    triSoup_backup = optimizer->getResult();
     triSoup.emplace_back(&optimizer->getData_findExtrema()); // for visualizing UV map for finding extrema
-    if((lambda > 0.0) && (!startWithTriSoup)) {
-        //!!!TODO: put into switch(methodType)
-        // fracture mode
-        fractureMode = true;
-        
-        if(delta == 0.0) {
-            altBase = true;
-        }
-    }
     
-//    //TEST: regional seam placement
-//    std::ifstream vWFile("/Users/mincli/Desktop/output_FracCuts/" + meshName + "_selected.txt");
+//    //TEST: regional seam placement, Zhongshi
+//    std::ifstream vWFile("/Users/mincli/Desktop/output_FracCuts/" + meshName + "_RSP.txt");
 //    if(vWFile.is_open()) {
-//        while(!vWFile.eof()) {
-//            int selected;
-//            vWFile >> selected;
-//            if(selected < optimizer->getResult().vertWeight.size()) {
-//                optimizer->getResult().vertWeight[selected] = 100.0;
+//        double revLikelihood;
+//        for(int vI = 0; vI < optimizer->getResult().vertWeight.size(); vI++) {
+//            if(vWFile.eof()) {
+//                std::cout << "# of weights less than # of V for regional seam placement, " <<
+//                    "reset vertWeight to all 1.0" << std::endl;
+//                optimizer->getResult().vertWeight = Eigen::VectorXd::Ones(optimizer->getResult().V.rows());
+//                vWFile.close();
+//                break;
+//            }
+//            else {
+//                vWFile >> revLikelihood;
+//                if(revLikelihood < 0.0) {
+//                    revLikelihood = 0.0;
+//                }
+//                else if(revLikelihood > 1.0) {
+//                    revLikelihood = 1.0;
+//                }
+//                optimizer->getResult().vertWeight[vI] = 1.0 + 10.0 * revLikelihood;
 //            }
 //        }
 //        vWFile.close();
+//        std::cout << "regional seam placement weight loaded" << std::endl;
 //    }
-//    FracCuts::IglUtils::smoothVertField(optimizer->getResult(), optimizer->getResult().vertWeight);
-    //TEST: regional seam placement, Zhongshi
-    std::ifstream vWFile("/Users/mincli/Desktop/output_FracCuts/" + meshName + "_RSP.txt");
-    if(vWFile.is_open()) {
-        double revLikelihood;
-        for(int vI = 0; vI < optimizer->getResult().vertWeight.size(); vI++) {
-            if(vWFile.eof()) {
-                std::cout << "# of weights less than # of V for regional seam placement, " <<
-                    "reset vertWeight to all 1.0" << std::endl;
-                optimizer->getResult().vertWeight = Eigen::VectorXd::Ones(optimizer->getResult().V.rows());
-                vWFile.close();
-                break;
-            }
-            else {
-                vWFile >> revLikelihood;
-                if(revLikelihood < 0.0) {
-                    revLikelihood = 0.0;
-                }
-                else if(revLikelihood > 1.0) {
-                    revLikelihood = 1.0;
-                }
-                optimizer->getResult().vertWeight[vI] = 1.0 + 10.0 * revLikelihood;
-            }
-        }
-        vWFile.close();
-        std::cout << "regional seam placement weight loaded" << std::endl;
-    }
     
     if(offlineMode) {
         while(true) {
