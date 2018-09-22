@@ -283,22 +283,22 @@ namespace FracCuts {
                 const double _2010 = right(2, 0) * A(1, 0);
                 const double _3001 = right(3, 0) * A(0, 1);
                 const double _3011 = right(3, 0) * A(1, 1);
-                result(0, 0) = -_0000 - _0010 - _1001 - _1011;
-                result(1, 0) = result(0, 1) = -_2000 - _2010 - _3001 - _3011;
                 result(2, 0) = result(0, 2) = _0000 + _1001;
                 result(3, 0) = result(0, 3) = _2000 + _3001;
                 result(4, 0) = result(0, 4) = _0010 + _1011;
                 result(5, 0) = result(0, 5) = _2010 + _3011;
+                result(0, 0) = -result(2, 0) - result(4, 0);
+                result(1, 0) = result(0, 1) = -result(3, 0) - result(5, 0);
                 // colI = 1;
                 const double _2100 = right(2, 1) * A(0, 0);
                 const double _2110 = right(2, 1) * A(1, 0);
                 const double _3101 = right(3, 1) * A(0, 1);
                 const double _3111 = right(3, 1) * A(1, 1);
-                result(1, 1) = -_2100 - _2110 - _3101 - _3111;
                 result(2, 1) = result(1, 2) = right(0, 1) * A(0, 0) + right(1, 1) * A(0, 1);
                 result(3, 1) = result(1, 3) = _2100 + _3101;
                 result(4, 1) = result(1, 4) = right(0, 1) * A(1, 0) + right(1, 1) * A(1, 1);
                 result(5, 1) = result(1, 5) = _2110 + _3111;
+                result(1, 1) = -result(3, 1) - result(5, 1);
                 // colI = 2;
                 result(2, 2) = right(0, 2) * A(0, 0) + right(1, 2) * A(0, 1);
                 result(3, 2) = result(2, 3) = right(2, 2) * A(0, 0) + right(3, 2) * A(0, 1);
@@ -324,12 +324,13 @@ namespace FracCuts {
                     const double _210 = right(2, colI) * A(1, 0);
                     const double _301 = right(3, colI) * A(0, 1);
                     const double _311 = right(3, colI) * A(1, 1);
-                    result(0, colI) = -_000 - _010 - _101 - _111;
-                    result(1, colI) = -_200 - _210 - _301 - _311;
+                    
                     result(2, colI) = _000 + _101;
                     result(3, colI) = _200 + _301;
                     result(4, colI) = _010 + _111;
                     result(5, colI) = _210 + _311;
+                    result(0, colI) = -result(2, colI) - result(4, colI);
+                    result(1, colI) = -result(3, colI) - result(5, colI);
                 }
             }
         }

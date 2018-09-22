@@ -880,12 +880,12 @@ namespace FracCuts {
         const double _1101 = right(1, 1) * A(0, 1);
         const double _1111 = right(1, 1) * A(1, 1);
         
-        result[0] = -_0000 - _0010 - _0101 - _0111;
-        result[1] = -_1000 - _1010 - _1101 - _1111;
         result[2] = _0000 + _0101;
         result[3] = _1000 + _1101;
         result[4] = _0010 + _0111;
         result[5] = _1010 + _1111;
+        result[0] = -result[2] - result[4];
+        result[1] = -result[3] - result[5];
     }
     
     void IglUtils::sampleSegment(const Eigen::RowVectorXd& vs,
