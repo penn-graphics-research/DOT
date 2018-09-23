@@ -14,7 +14,7 @@ cd OptCuts_dynamic
 mkdir build
 cd build
 cmake .. -G "Xcode"
-cmake --build . --config=Release
+cmake --build . --config Release
 cd ..
 python batch.py
 ```
