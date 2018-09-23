@@ -763,6 +763,85 @@ namespace FracCuts {
         outFile.close();
     }
     
+    void IglUtils::saveTetMesh(const std::string& filePath,
+                               const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT)
+    {
+        assert(TV.rows() > 0);
+        assert(TV.cols() == 3);
+        assert(TT.rows() > 0);
+        assert(TT.cols() == 4);
+        
+        FILE *out = fopen(filePath.c_str(), "w");
+        assert(out);
+        
+        fprintf(out, "$MeshFormat\n4 0 8\n$EndMeshFormat\n");
+        
+        fprintf(out, "$Entities\n0 0 0 1\n");
+        fprintf(out, "0 %le %le %le %le %le %le 0 0\n$EndEntities\n",
+                TV.col(0).minCoeff(), TV.col(1).minCoeff(), TV.col(2).minCoeff(),
+                TV.col(0).maxCoeff(), TV.col(1).maxCoeff(), TV.col(2).maxCoeff());
+        
+        fprintf(out, "$Nodes\n1 %lu\n0 3 0 %lu\n", TV.rows(), TV.rows());
+        for(int vI = 0; vI < TV.rows(); vI++) {
+            const Eigen::RowVector3d& v = TV.row(vI);
+            fprintf(out, "%d %le %le %le\n", vI + 1, v[0], v[1], v[2]);
+        }
+        fprintf(out, "$EndNodes\n");
+        
+        fprintf(out, "$Elements\n1 %lu\n0 3 4 %lu\n", TT.rows(), TT.rows());
+        for(int elemI = 0; elemI < TT.rows(); elemI++) {
+            const Eigen::RowVector4i& tetVInd = TT.row(elemI);
+            fprintf(out, "%d %d %d %d %d\n", elemI + 1,
+                    tetVInd[0] + 1, tetVInd[1] + 1, tetVInd[2] + 1, tetVInd[3] + 1);
+        }
+        fprintf(out, "$EndElements\n");
+        
+        fclose(out);
+    }
+    void IglUtils::readTetMesh(const std::string& filePath,
+                               Eigen::MatrixXd& TV, Eigen::MatrixXi& TT)
+    {
+        FILE *in = fopen(filePath.c_str(), "r");
+        assert(in);
+        
+        char buf[BUFSIZ];
+        while(fgets(buf, BUFSIZ, in)) {
+            if(strncmp("$Nodes", buf, 6) == 0) {
+                fgets(buf, BUFSIZ, in);
+                int vAmt;
+                sscanf(buf, "1 %d", &vAmt);
+                TV.resize(vAmt, 3);
+                fgets(buf, BUFSIZ, in);
+                break;
+            }
+        }
+        int bypass;
+        for(int vI = 0; vI < TV.rows(); vI++) {
+            fscanf(in, "%d %le %le %le\n", &bypass, &TV(vI, 0), &TV(vI, 1), &TV(vI, 2));
+        }
+        
+        while(fgets(buf, BUFSIZ, in)) {
+            if(strncmp("$Elements", buf, 9) == 0) {
+                fgets(buf, BUFSIZ, in);
+                int elemAmt;
+                sscanf(buf, "1 %d", &elemAmt);
+                TT.resize(elemAmt, 4);
+                fgets(buf, BUFSIZ, in);
+                break;
+            }
+        }
+        for(int elemI = 0; elemI < TT.rows(); elemI++) {
+            fscanf(in, "%d %d %d %d %d\n", &bypass,
+                    &TT(elemI, 0), &TT(elemI, 1), &TT(elemI, 2), &TT(elemI, 3));
+        }
+        TT.array() -= 1;
+        
+        std::cout << "tet mesh loaded with " << TV.rows() << " nodes and "
+            << TT.rows() << " tets." << std::endl;
+        
+        fclose(in);
+    }
+    
     void IglUtils::smoothVertField(const TriangleSoup<DIM>& mesh, Eigen::VectorXd& field)
     {
         assert(field.size() == mesh.V.rows());

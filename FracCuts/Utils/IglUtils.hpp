@@ -236,6 +236,10 @@ namespace FracCuts {
         
         static void saveMesh_Seamster(const std::string& filePath,
                                       const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
+        static void saveTetMesh(const std::string& filePath,
+                                const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT);
+        static void readTetMesh(const std::string& filePath,
+                                Eigen::MatrixXd& TV, Eigen::MatrixXi& TT);
         
         static void smoothVertField(const TriangleSoup<DIM>& mesh, Eigen::VectorXd& field);
         
