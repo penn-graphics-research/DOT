@@ -61,42 +61,6 @@ namespace FracCuts {
                             break;
                         }
                             
-                        case 1: {
-                            // turn a triangle soup into a mesh
-                            if(V.rows() != F.rows() * 3) {
-                                std::cout << "Input model is not a triangle soup!" << std::endl;
-                                return;
-                            }
-                            
-                            if(UV.rows() != V.rows()) {
-                                std::cout << "UV coordinates not valid, will generate separate rigid mapping UV!" << std::endl;
-                            }
-                            
-                            FracCuts::TriangleSoup<DIM> inputTriSoup(V, F, UV);
-                            if(argc > 4) {
-                                // input original model to get cohesive edge information
-                                Eigen::MatrixXd V0;
-                                Eigen::MatrixXi F0;
-                                std::string meshPath = std::string(argv[4]);
-                                const std::string suffix = meshPath.substr(meshPath.find_last_of('.'));
-                                if(suffix == ".off") {
-                                    igl::readOFF(meshPath, V0, F0);
-                                }
-                                else if(suffix == ".obj") {
-                                    igl::readOBJ(meshPath, V0, F0);
-                                }
-                                else {
-                                    std::cout << "unkown mesh file format!" << std::endl;
-                                    return;
-                                }
-                                
-                                inputTriSoup.cohE = FracCuts::TriangleSoup<DIM>(V0, F0, Eigen::MatrixXd()).cohE;
-                                inputTriSoup.computeFeatures();
-                            }
-                            inputTriSoup.saveAsMesh(outputFolderPath + meshName + "_processed.obj", true);
-                            break;
-                        }
-                            
                         case 2: {
                             // save texture as mesh
                             if(UV.rows() == 0) {
@@ -168,45 +132,6 @@ namespace FracCuts {
                             
                             std::cout << "texture saved as mesh into " << outputFolderPath << meshName << "_UV.obj" << std::endl;
                             
-                            break;
-                        }
-                            
-                        case 4: {
-                            // output as seamster format
-                            assert(F.rows() > 0);
-                            IglUtils::saveMesh_Seamster(outputFolderPath + meshName + ".seamster",
-                                                        V, F);
-                            
-                            std::cout << "mesh saved into " << outputFolderPath << meshName << ".seamster" << std::endl;
-                            break;
-                        }
-                            
-                        case 5: {
-                            // merge closed surface mesh file and UV file
-                            Eigen::MatrixXd V_UV;
-                            Eigen::MatrixXi F_UV;
-                            igl::readOBJ(meshPath.substr(0, meshPath.find("_closed.obj")) + ".obj",
-                                                         V_UV, F_UV);
-                            Eigen::VectorXi bnd;
-                            igl::boundary_loop(F_UV, bnd); // Find the open boundary
-                            assert(bnd.size());
-                            Eigen::MatrixXd bnd_uv;
-                            //            igl::map_vertices_to_circle(V, bnd, bnd_uv);
-                            FracCuts::IglUtils::map_vertices_to_circle(V_UV, bnd, bnd_uv);
-                            
-                            //            // Harmonic parametrization
-                            //            igl::harmonic(V, F, bnd, bnd_uv, 1, UV);
-                            
-                            // Harmonic map with uniform weights
-                            Eigen::SparseMatrix<double> A, M;
-                            FracCuts::IglUtils::computeUniformLaplacian(F_UV, A);
-                            igl::harmonic(A, M, bnd, bnd_uv, 1, V_UV);
-                            //            FracCuts::IglUtils::computeMVCMtr(V, F, A);
-                            //            FracCuts::IglUtils::fixedBoundaryParam_MVC(A, bnd, bnd_uv, UV);
-                            
-                            igl::writeOBJ(meshPath.substr(0, meshPath.find("_closed.obj")) +
-                                          "_withSUV.obj", V, F, N, FN, V_UV, F_UV);
-                            std::cout << "mesh saved in " << meshPath.substr(0, meshPath.find("_closed.obj")) + "_withSUV.obj" << std::endl;
                             break;
                         }
                             
