@@ -807,7 +807,7 @@ int main(int argc, char *argv[])
 #endif
     
     // construct mesh data structure
-    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV, FUV, false);
+    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV);
     // primitive test cases
     if(suffix == ".primitive") {
         temp->borderVerts_primitive = borderVerts_primitive;

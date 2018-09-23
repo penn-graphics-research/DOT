@@ -71,7 +71,7 @@ namespace FracCuts{
         Eigen::VectorXd vertWeight; // for regional seam placement
         Eigen::VectorXd triWeight; // for weighted stencil
         std::vector<std::vector<int>> borderVerts_primitive;
-        std::vector<Eigen::Matrix2d> restTriInv;
+        std::vector<Eigen::Matrix<double, dim, dim>> restTriInv;
         
         // indices for fast access
         std::map<std::pair<int, int>, int> edge2Tri;
@@ -91,8 +91,7 @@ namespace FracCuts{
         // initialize from a triangle mesh, V will be constructed from UV_mesh in 2D,
         // V_mesh will be used to initialize restShape
         TriangleSoup(const Eigen::MatrixXd& V_mesh, const Eigen::MatrixXi& F_mesh,
-                     const Eigen::MatrixXd& UV_mesh, const Eigen::MatrixXi& FUV_mesh = Eigen::MatrixXi(),
-                     bool separateTri = true, double p_initSeamLen = 0.0, double p_areaThres_AM = 0.0);
+                     const Eigen::MatrixXd& Vt_mesh, double p_areaThres_AM = 0.0);
         
         TriangleSoup(Primitive primitive, double size = 1.0, int elemAmt = 1000, bool separateTri = true);
         

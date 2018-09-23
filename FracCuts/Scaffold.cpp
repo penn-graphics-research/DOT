@@ -129,7 +129,7 @@ namespace FracCuts {
                             }
                             localTriI++;
                         }
-                        TriangleSoup<DIM> localMesh(localV_rest, localF, localV, Eigen::MatrixXi(), false);
+                        TriangleSoup<DIM> localMesh(localV_rest, localF, localV);
                         // compute inward normal
                         Eigen::RowVector2d sepDir_oneV;
                         mesh.compute2DInwardNormal(vI, sepDir_oneV);

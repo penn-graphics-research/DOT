@@ -39,201 +39,29 @@ namespace FracCuts {
     
     template<int dim>
     TriangleSoup<dim>::TriangleSoup(const Eigen::MatrixXd& V_mesh, const Eigen::MatrixXi& F_mesh,
-                               const Eigen::MatrixXd& UV_mesh, const Eigen::MatrixXi& FUV_mesh,
-                               bool separateTri, double p_initSeamLen, double p_areaThres_AM)
+                                    const Eigen::MatrixXd& Vt_mesh, double p_areaThres_AM)
     {
-        initSeamLen = p_initSeamLen;
-        areaThres_AM = p_areaThres_AM;
+        assert(V_mesh.rows() > 0);
+        assert(F_mesh.rows() > 0);
         
-        bool multiComp = false; //TODO: detect whether the mesh is multi-component
-        if(separateTri)
-        {
-            // duplicate vertices and edges, use new face vertex indices,
-            // construct cohesive edge pairs,
-            // compute triangle matrix to save rest shapes
-            V_rest.resize(F_mesh.rows() * F_mesh.cols(), 3);
-            V.resize(F_mesh.rows() * F_mesh.cols(), 2);
-            F.resize(F_mesh.rows(), F_mesh.cols());
-            std::map<std::pair<int, int>, Eigen::Vector3i> edge2DupInd;
-            int cohEAmt = 0;
-            for(int triI = 0; triI < F_mesh.rows(); triI++)
-            {
-                int vDupIndStart = triI * 3;
-                
-                if(UV_mesh.rows() == V_mesh.rows()) {
-                    // bijective map without seams, usually Tutte
-                    V.row(vDupIndStart) = UV_mesh.row(F_mesh.row(triI)[0]);
-                    V.row(vDupIndStart + 1) = UV_mesh.row(F_mesh.row(triI)[1]);
-                    V.row(vDupIndStart + 2) = UV_mesh.row(F_mesh.row(triI)[2]);
-                }
-                
-//                // perturb for testing separation energy
-//                V.row(vDupIndStart + 1) = V.row(vDupIndStart) + 0.5 * (V.row(vDupIndStart + 1) - V.row(vDupIndStart));
-//                V.row(vDupIndStart + 2) = V.row(vDupIndStart) + 0.5 * (V.row(vDupIndStart + 2) - V.row(vDupIndStart));
-                
-                V_rest.row(vDupIndStart) = V_mesh.row(F_mesh.row(triI)[0]);
-                V_rest.row(vDupIndStart + 1) = V_mesh.row(F_mesh.row(triI)[1]);
-                V_rest.row(vDupIndStart + 2) = V_mesh.row(F_mesh.row(triI)[2]);
-                
-                F(triI, 0) = vDupIndStart;
-                F(triI, 1) = vDupIndStart + 1;
-                F(triI, 2) = vDupIndStart + 2;
-                
-                for(int vI = 0; vI < 3; vI++)
-                {
-                    int vsI = F_mesh.row(triI)[vI], veI = F_mesh.row(triI)[(vI + 1) % 3];
-                    auto cohEFinder = edge2DupInd.find(std::pair<int, int>(veI, vsI));
-                    if(cohEFinder == edge2DupInd.end()) {
-                        cohEAmt++;
-                        edge2DupInd[std::pair<int, int>(vsI, veI)] = Eigen::Vector3i(cohEAmt, F(triI, vI), F(triI, (vI + 1) % 3));
-                    }
-                    else {
-                        edge2DupInd[std::pair<int, int>(vsI, veI)] = Eigen::Vector3i(-cohEFinder->second[0], F(triI, vI), F(triI, (vI + 1) % 3));
-                    }
-                }
-            }
-            
-            cohE.resize(cohEAmt, 4);
-            cohE.setConstant(-1);
-            for(const auto& cohPI : edge2DupInd) {
-                if(cohPI.second[0] > 0) {
-                    cohE.row(cohPI.second[0] - 1)[0] = cohPI.second[1];
-                    cohE.row(cohPI.second[0] - 1)[1] = cohPI.second[2];
-                }
-                else {
-                    cohE.row(-cohPI.second[0] - 1)[2] = cohPI.second[2];
-                    cohE.row(-cohPI.second[0] - 1)[3] = cohPI.second[1];
-                }
-            }
-//            std::cout << cohE << std::endl;
-            
-            if(UV_mesh.rows() == 0) {
-                // no input UV
-                initRigidUV();
-            }
-            else if(UV_mesh.rows() != V_mesh.rows()) {
-                // input UV with seams
-                assert(0 && "TODO: separate each triangle in UV space according to FUV!");
-            }
+        V_rest = V_mesh;
+        F = F_mesh;
+        if(Vt_mesh.rows() == V_mesh.rows()) {
+            V = Vt_mesh;
         }
         else {
-            // deal with mesh
-            if(UV_mesh.rows() == V_mesh.rows()) {
-                // same vertex and uv index
-                V_rest = V_mesh;
-                V = UV_mesh;
-                F = F_mesh;
-            }
-            else if(UV_mesh.rows() != 0) {
-                // different vertex and uv index, split 3D surface according to UV and merge back while saving into files
-                assert(F_mesh.rows() == FUV_mesh.rows());
-                // UV map contains seams
-                // Split triangles along the seams on the surface (construct cohesive edges there)
-                // to construct a bijective map
-                std::set<std::pair<int, int>> HE_UV;
-                std::map<std::pair<int, int>, std::pair<int, int>> HE;
-                for(int triI = 0; triI < FUV_mesh.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd_UV = FUV_mesh.row(triI);
-                    HE_UV.insert(std::pair<int, int>(triVInd_UV[0], triVInd_UV[1]));
-                    HE_UV.insert(std::pair<int, int>(triVInd_UV[1], triVInd_UV[2]));
-                    HE_UV.insert(std::pair<int, int>(triVInd_UV[2], triVInd_UV[0]));
-                    const Eigen::RowVector3i& triVInd = F_mesh.row(triI);
-                    HE[std::pair<int, int>(triVInd[0], triVInd[1])] = std::pair<int, int>(triI, 0);
-                    HE[std::pair<int, int>(triVInd[1], triVInd[2])] = std::pair<int, int>(triI, 1);
-                    HE[std::pair<int, int>(triVInd[2], triVInd[0])] = std::pair<int, int>(triI, 2);
-                }
-                std::vector<std::vector<int>> cohEdges;
-                for(int triI = 0; triI < FUV_mesh.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd_UV = FUV_mesh.row(triI);
-                    const Eigen::RowVector3i& triVInd = F_mesh.row(triI);
-                    for(int eI = 0; eI < 3; eI++) {
-                        int vI = eI, vI_post = (eI + 1) % 3;
-                        if(HE_UV.find(std::pair<int, int>(triVInd_UV[vI_post], triVInd_UV[vI])) == HE_UV.end()) {
-                            // boundary edge in UV space
-                            const auto finder = HE.find(std::pair<int, int>(triVInd[vI_post], triVInd[vI]));
-                            if(finder != HE.end()) {
-                                // non-boundary edge on the surface
-                                // construct cohesive edge pair
-                                cohEdges.resize(cohEdges.size() + 1);
-                                cohEdges.back().emplace_back(triVInd_UV[vI]);
-                                cohEdges.back().emplace_back(triVInd_UV[vI_post]);
-                                cohEdges.back().emplace_back(FUV_mesh(finder->second.first, (finder->second.second + 1) % 3));
-                                cohEdges.back().emplace_back(FUV_mesh(finder->second.first, finder->second.second));
-                                HE.erase(std::pair<int, int>(triVInd[vI], triVInd[vI_post])); // prevent from inserting again
-                            }
-                        }
-                    }
-                }
-                bool makeCoh = true;
-                if(makeCoh) {
-                    igl::list_to_matrix(cohEdges, cohE);
-                }
-                
-                V_rest.resize(UV_mesh.rows(), 3);
-                V = UV_mesh;
-                F = FUV_mesh;
-                std::vector<bool> updated(UV_mesh.rows(), false);
-                for(int triI = 0; triI < F_mesh.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd = F_mesh.row(triI);
-                    const Eigen::RowVector3i& triVInd_UV = FUV_mesh.row(triI);
-                    for(int vI = 0; vI < 3; vI++) {
-                        if(!updated[triVInd_UV[vI]]) {
-                            V_rest.row(triVInd_UV[vI]) = V_mesh.row(triVInd[vI]);
-                            updated[triVInd_UV[vI]] = true;
-                        }
-                    }
-                }
-                
-                if(!makeCoh) {
-                    for(const auto& cohI : cohEdges) {
-                        initSeamLen += (V_rest.row(cohI[0]) - V_rest.row(cohI[1])).norm();
-                    }
-                }
-                else {
-                    initSeams = cohE;
-                }
-            }
-            else {
-                assert(V_mesh.rows() > 0);
-                assert(F_mesh.rows() > 0);
-                V_rest = V_mesh;
-                F = F_mesh;
-                V = Eigen::MatrixXd::Zero(V_rest.rows(), 2);
-                std::cout << "No UV provided, initialized to all 0" << std::endl;
-            }
+            assert(Vt_mesh.rows() == 0);
+            V = Eigen::MatrixXd::Zero(V_rest.rows(), dim);
+            std::cout << "No Vt provided, initialized to all 0" << std::endl;
         }
+        
+        initSeamLen = 0.0;
+        areaThres_AM = p_areaThres_AM;
         
         triWeight = Eigen::VectorXd::Ones(F.rows());
         computeFeatures(false, true);
         
         vertWeight = Eigen::VectorXd::Ones(V.rows());
-        //TEST: compute gaussian curvature for regional seam placement
-//        vertWeight = Eigen::VectorXd::Ones(V.rows()) * 2.0 * M_PI;
-//        for(int triI = 0; triI < F.rows(); triI++) {
-//            const Eigen::RowVector3i& triVInd = F.row(triI);
-//            const Eigen::RowVector3d v[3] = {
-//                V_rest.row(triVInd[0]),
-//                V_rest.row(triVInd[1]),
-//                V_rest.row(triVInd[2])
-//            };
-//            for(int vI = 0; vI < 3; vI++) {
-//                int vI_post = (vI + 1) % 3;
-//                int vI_pre = (vI + 2) % 3;
-//                const Eigen::RowVector3d e0 = v[vI_pre] - v[vI];
-//                const Eigen::RowVector3d e1 = v[vI_post] - v[vI];
-//                vertWeight[triVInd[vI]] -= std::acos(std::max(-1.0, std::min(1.0, e0.dot(e1) / e0.norm() / e1.norm())));
-//            }
-//        }
-//        const double maxRatio = 4.0;
-//        for(int vI = 0; vI < V.rows(); vI++) {
-//            if(isBoundaryVert(vI)) {
-//                vertWeight[vI] -= M_PI;
-//            }
-//            if(vertWeight[vI] < 0) {
-//                vertWeight[vI] = -vertWeight[vI];
-//            }
-//            vertWeight[vI] = maxRatio - (maxRatio - 1.0) * vertWeight[vI] / (2.0 * M_PI);
-//        }
     }
     
     void initCylinder(double r1_x, double r1_y, double r2_x, double r2_y, double height, int circle_res, int height_resolution,
@@ -787,6 +615,9 @@ namespace FracCuts {
             Eigen::Matrix2d X0;
             X0.col(0) = x0[1] - x0[0];
             X0.col(1) = x0[2] - x0[0];
+            if(dim == 3) {
+                X0.col(2) = x0[3] - x0[0];
+            }
             restTriInv[triI] = X0.inverse();
             //TODO: support areaThres_AM
             
@@ -1899,7 +1730,7 @@ namespace FracCuts {
             }
             globalTriIToLocal[triI] = localTriI;
         }
-        submesh = TriangleSoup(V_rest_sub, F_sub, V_sub, Eigen::MatrixXi(), false);
+        submesh = TriangleSoup(V_rest_sub, F_sub, V_sub);
         
         std::set<int> fixedVert_sub;
         for(const auto& fixedVI : fixedVert) {
