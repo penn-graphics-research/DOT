@@ -52,6 +52,8 @@ namespace FracCuts {
         
         void setZero(void);
         
+        virtual void setCoeff(int rowI, int colI, double val);
+        
         virtual void addCoeff(int rowI, int colI, double val);
     };
     
