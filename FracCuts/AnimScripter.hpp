@@ -26,6 +26,7 @@ namespace FracCuts {
         AST_RANDOM
     };
     
+    template<int dim>
     class AnimScripter
     {
     protected:
@@ -33,10 +34,10 @@ namespace FracCuts {
         
         std::vector<std::vector<int>> handleVerts;
         
-        std::map<int, Eigen::Vector2d> velocity_handleVerts;
+        std::map<int, Eigen::Matrix<double, dim, 1>> velocity_handleVerts;
         
         std::map<int, double> angVel_handleVerts;
-        std::map<int, Eigen::Vector2d> rotCenter_handleVerts;
+        std::map<int, Eigen::Matrix<double, dim, 1>> rotCenter_handleVerts;
         
     protected:
         static const std::vector<std::string> animScriptTypeStrs;
@@ -45,8 +46,8 @@ namespace FracCuts {
         AnimScripter(AnimScriptType p_animScriptType = AST_NULL);
         
     public:
-        void initAnimScript(TriangleSoup<DIM>& mesh);
-        void stepAnimScript(TriangleSoup<DIM>& mesh, double dt);
+        void initAnimScript(TriangleSoup<dim>& mesh);
+        void stepAnimScript(TriangleSoup<dim>& mesh, double dt);
         
     public:
         void setAnimScriptType(AnimScriptType p_animScriptType);

@@ -10,15 +10,18 @@
 
 namespace FracCuts {
     
-    const std::vector<std::string> AnimScripter::animScriptTypeStrs = {
+    template<int dim>
+    const std::vector<std::string> AnimScripter<dim>::animScriptTypeStrs = {
         "null", "hang", "stretch", "squash", "bend", "onepoint", "random"
     };
     
-    AnimScripter::AnimScripter(AnimScriptType p_animScriptType) :
+    template<int dim>
+    AnimScripter<dim>::AnimScripter(AnimScriptType p_animScriptType) :
         animScriptType(p_animScriptType)
     {}
     
-    void AnimScripter::initAnimScript(TriangleSoup<DIM>& mesh)
+    template<int dim>
+    void AnimScripter<dim>::initAnimScript(TriangleSoup<dim>& mesh)
     {
         switch (animScriptType) {
             case AST_NULL:
@@ -39,7 +42,8 @@ namespace FracCuts {
                     mesh.addFixedVert(borderI);
                     handleVerts.emplace_back(borderI);
                     for(const auto bVI : borderI) {
-                        velocity_handleVerts[bVI] << std::pow(-1.0, bI) * -0.1, 0.0;
+                        velocity_handleVerts[bVI].setZero();
+                        velocity_handleVerts[bVI][0] = std::pow(-1.0, bI) * -0.1;
                     }
                     bI++;
                 }
@@ -54,7 +58,8 @@ namespace FracCuts {
                     mesh.addFixedVert(borderI);
                     handleVerts.emplace_back(borderI);
                     for(const auto bVI : borderI) {
-                        velocity_handleVerts[bVI] << std::pow(-1.0, bI) * 0.03, 0.0;
+                        velocity_handleVerts[bVI].setZero();
+                        velocity_handleVerts[bVI][0] = std::pow(-1.0, bI) * 0.03;
                     }
                     bI++;
                 }
@@ -79,7 +84,7 @@ namespace FracCuts {
                 
             case AST_ONEPOINT: {
                 const Eigen::RowVector3d center = mesh.bbox.colwise().mean();
-                mesh.V.rowwise() = center.leftCols(2);
+                mesh.V.rowwise() = center.leftCols(dim);
                 mesh.V.col(1).array() += (mesh.bbox(1, 1) - mesh.bbox(0, 1)) / 2.0;
                 break;
             }
@@ -89,8 +94,8 @@ namespace FracCuts {
                 mesh.V /= 2.0;
                 Eigen::RowVector3d offset = mesh.bbox.colwise().mean();
                 offset[1] += (mesh.bbox(1, 1) - mesh.bbox(0, 1)) / 2.0;
-                offset.leftCols(2) -= mesh.V.row(0);
-                mesh.V.rowwise() += offset.leftCols(2);
+                offset.leftCols(dim) -= mesh.V.row(0);
+                mesh.V.rowwise() += offset.leftCols(dim);
                 break;
             }
                 
@@ -100,7 +105,8 @@ namespace FracCuts {
         }
     }
     
-    void AnimScripter::stepAnimScript(TriangleSoup<DIM>& mesh, double dt)
+    template<int dim>
+    void AnimScripter<dim>::stepAnimScript(TriangleSoup<dim>& mesh, double dt)
     {
         switch (animScriptType) {
             case AST_NULL:
@@ -118,11 +124,13 @@ namespace FracCuts {
                 
             case AST_BEND:
                 for(const auto& movingVerts : angVel_handleVerts) {
-                    const Eigen::Matrix2d rotMtr =
-                        Eigen::Rotation2D<double>(movingVerts.second * dt).toRotationMatrix();
+                    const Eigen::Matrix3d rotMtr =
+                        Eigen::AngleAxis<double>(movingVerts.second * dt,
+                                                 Eigen::Vector3d::UnitZ()).toRotationMatrix();
+                    
                     const auto rotCenter = rotCenter_handleVerts.find(movingVerts.first);
                     assert(rotCenter != rotCenter_handleVerts.end());
-                    mesh.V.row(movingVerts.first) = rotMtr * (mesh.V.row(movingVerts.first).transpose() - rotCenter->second) + rotCenter->second;
+                    mesh.V.row(movingVerts.first) = rotMtr.block<dim, dim>(0, 0) * (mesh.V.row(movingVerts.first).transpose() - rotCenter->second) + rotCenter->second;
                 }
                 break;
                 
@@ -138,12 +146,14 @@ namespace FracCuts {
         }
     }
     
-    void AnimScripter::setAnimScriptType(AnimScriptType p_animScriptType)
+    template<int dim>
+    void AnimScripter<dim>::setAnimScriptType(AnimScriptType p_animScriptType)
     {
         animScriptType = p_animScriptType;
     }
     
-    AnimScriptType AnimScripter::getAnimScriptTypeByStr(const std::string& str)
+    template<int dim>
+    AnimScriptType AnimScripter<dim>::getAnimScriptTypeByStr(const std::string& str)
     {
         for(int i = 0; i < animScriptTypeStrs.size(); i++) {
             if(str == animScriptTypeStrs[i]) {
@@ -152,10 +162,13 @@ namespace FracCuts {
         }
         return AST_NULL;
     }
-    std::string AnimScripter::getStrByAnimScriptType(AnimScriptType animScriptType)
+    template<int dim>
+    std::string AnimScripter<dim>::getStrByAnimScriptType(AnimScriptType animScriptType)
     {
         assert(animScriptType < animScriptTypeStrs.size());
         return animScriptTypeStrs[animScriptType];
     }
+    
+    template class AnimScripter<DIM>;
     
 }
