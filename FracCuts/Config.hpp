@@ -36,6 +36,7 @@ namespace FracCuts {
         EnergyType energyType;
         TimeStepperType timeStepperType;
         Primitive shapeType;
+        std::string inputShapePath;
         int resolution;
         double size;
         double duration, dt;

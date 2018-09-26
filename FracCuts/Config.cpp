@@ -21,7 +21,7 @@ namespace FracCuts {
         "Newton", "ADMM", "DADMM", "ADMMDD"
     };
     const std::vector<std::string> Config::shapeTypeStrs = {
-        "grid", "square", "spikes", "Sharkey", "cylinder"
+        "grid", "square", "spikes", "Sharkey", "cylinder", "input"
     };
     
     Config::Config(void) :
@@ -71,12 +71,15 @@ namespace FracCuts {
                 else if(token == "script") {
                     std::string type;
                     ss >> type;
-                    animScriptType = AnimScripter::getAnimScriptTypeByStr(type);
+                    animScriptType = AnimScripter<DIM>::getAnimScriptTypeByStr(type);
                 }
                 else if(token == "shape") {
                     std::string type;
                     ss >> type;
                     shapeType = getShapeTypeByStr(type);
+                    if(shapeType == P_INPUT) {
+                        ss >> inputShapePath;
+                    }
                 }
             }
             
@@ -91,8 +94,17 @@ namespace FracCuts {
     
     void Config::appendInfoStr(std::string& inputStr) const
     {
-        inputStr += (getStrByShapeType(shapeType) + "_" +
-                     AnimScripter::getStrByAnimScriptType(animScriptType) + "_" +
+        std::string shapeName;
+        if(shapeType == P_INPUT) {
+            std::string fileName = inputShapePath.substr(inputShapePath.find_last_of('/') + 1);
+            shapeName = fileName.substr(0, fileName.find_last_of('.'));
+        }
+        else {
+            shapeName = getStrByShapeType(shapeType);
+        }
+        
+        inputStr += (shapeName + "_" +
+                     AnimScripter<DIM>::getStrByAnimScriptType(animScriptType) + "_" +
                      getStrByEnergyType(energyType) + "_" +
                      IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR) + "_" +
                      getStrByTimeStepperType(timeStepperType) +
