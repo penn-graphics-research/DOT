@@ -230,6 +230,6 @@ namespace FracCuts
         result *= elemWeight * lambda;
     }
     
-    template class CohesiveEnergy<2>;
+    template class CohesiveEnergy<DIM>;
     
 }

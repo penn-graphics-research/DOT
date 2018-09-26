@@ -143,6 +143,6 @@ namespace FracCuts {
         
     }
     
-    template class ARAPEnergy<2>;
+    template class ARAPEnergy<DIM>;
     
 }

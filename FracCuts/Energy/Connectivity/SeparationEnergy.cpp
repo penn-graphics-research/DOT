@@ -313,6 +313,6 @@ namespace FracCuts {
         return -2 * sigma / std::pow(tpsigma, 3);
     }
     
-    template class SeparationEnergy<2>;
+    template class SeparationEnergy<DIM>;
     
 }
