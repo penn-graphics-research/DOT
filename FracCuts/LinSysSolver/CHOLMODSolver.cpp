@@ -118,6 +118,21 @@ namespace FracCuts {
     }
     
     template <typename vectorTypeI, typename vectorTypeS>
+    void CHOLMODSolver<vectorTypeI, vectorTypeS>::setCoeff(int rowI, int colI, double val)
+    {
+        //TODO: directly manipulate valuePtr without a
+        //TODO: faster O(1) indices!!
+        
+        if(rowI <= colI) {
+            assert(rowI < Base::IJ2aI.size());
+            const auto finder = Base::IJ2aI[rowI].find(colI);
+            assert(finder != Base::IJ2aI[rowI].end());
+            Base::a[finder->second] = val;
+            ((double*)A->x)[finder->second] = val;
+        }
+    }
+    
+    template <typename vectorTypeI, typename vectorTypeS>
     void CHOLMODSolver<vectorTypeI, vectorTypeS>::addCoeff(int rowI, int colI, double val)
     {
         //TODO: directly manipulate valuePtr without a
