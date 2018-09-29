@@ -188,7 +188,6 @@ namespace FracCuts {
                 // line search init
                 double alpha = 1.0;
                 Base::energyTerms[0]->initStepSize(zi, p, alpha);
-                alpha *= 0.99;
                 
                 // Armijo's rule:
                 const double m = p.dot(g);
@@ -253,7 +252,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.V.rows(), 1, [&](int vI)
 #else
-        for(int vI = 0; vI < result.V.rows(); vI++)
+        for(int vI = 0; vI < Base::result.V.rows(); vI++)
 #endif
         {
             Base::result.V(vI, 0) = rhs_xUpdate[vI * 2] / coefMtr_diag[vI * 2];
@@ -266,7 +265,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
-        for(int triI = 0; triI < result.F.rows(); triI++)
+        for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
             compute_Di_mult_xi(triI);
@@ -337,6 +336,6 @@ namespace FracCuts {
         }
     }
     
-    template class DADMMTimeStepper<2>;
+    template class DADMMTimeStepper<DIM>;
     
 }

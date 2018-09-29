@@ -39,6 +39,7 @@ namespace FracCuts {
         
     public:
         bool getNeedRefactorize(void) const;
+        bool getNeedElemInvSafeGuard(void) const;
         const Eigen::Vector2d& getVisRange_energyVal(void) const;
         void setVisRange_energyVal(double visRange_min, double visRange_max);
         
@@ -108,15 +109,20 @@ namespace FracCuts {
         
         virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
                                double& E) const;
-        virtual void compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
-                                           Eigen::Vector2d& dE_div_dsigma) const;
-        virtual void compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
-                                             Eigen::Matrix2d& d2E_div_dsigma2) const;
+        virtual void compute_dE_div_dsigma(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                           Eigen::Matrix<double, dim, 1>& dE_div_dsigma) const;
+        virtual void compute_d2E_div_dsigma2(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                             Eigen::Matrix<double, dim, dim>& d2E_div_dsigma2) const;
+        virtual void compute_BLeftCoef(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                       Eigen::Matrix<double, dim * (dim - 1) / 2, 1>& BLeftCoef) const;
+//        virtual void compute_BRightCoef(const Eigen::Matrix<double, dim, 1>& singularValues,
+//                                        const Eigen::Matrix<double, dim, 1>& dE_div_dsigma,
+//                                        Eigen::Matrix<double, dim * (dim- 1) / 2, 1>& BRightCoef) const;
         virtual void compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
                                        const AutoFlipSVD<Eigen::Matrix<double, dim, dim>>& svd,
                                        Eigen::Matrix<double, dim, dim>& dE_div_dF) const;
         
-        virtual void compute_d2E_div_dF2_rest(Eigen::MatrixXd& d2E_div_dF2_rest) const;
+        virtual void compute_d2E_div_dF2_rest(Eigen::Matrix<double, dim * dim, dim * dim>& d2E_div_dF2_rest) const;
         
         virtual void initStepSize(const TriangleSoup<dim>& data,
                                   const Eigen::VectorXd& searchDir,

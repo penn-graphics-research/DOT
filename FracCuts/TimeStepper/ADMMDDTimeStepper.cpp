@@ -186,7 +186,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
-        for(int triI = 0; triI < result.F.rows(); triI++)
+        for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
             std::vector<std::map<int, int>::iterator> mapper(mesh_subdomain.size());
@@ -559,7 +559,6 @@ namespace FracCuts {
                 // line search init
                 double alpha = 1.0;
                 Base::energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
-                alpha *= 0.99;
                 
                 // Armijo's rule:
                 const double m = p.dot(g);
@@ -687,8 +686,8 @@ namespace FracCuts {
     {
         // incremental potential:
         Base::energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
-                                              svd_subdomain[subdomainI],
-                                              F_subdomain[subdomainI], Ei);
+                                                    svd_subdomain[subdomainI],
+                                                    F_subdomain[subdomainI], Ei);
         Ei *= Base::dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -806,6 +805,6 @@ namespace FracCuts {
 #endif
     }
     
-    template class ADMMDDTimeStepper<2>;
+    template class ADMMDDTimeStepper<DIM>;
     
 }

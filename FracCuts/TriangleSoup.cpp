@@ -70,6 +70,8 @@ namespace FracCuts {
         Eigen::MatrixXd * uv_coords_per_face = NULL,
         Eigen::MatrixXi * uv_coords_face_ids = NULL)
     {
+        assert(DIM == 2);
+#if(DIM == 2)
         int nvertices = circle_res * (height_resolution+1);
         int nfaces = 2*circle_res * height_resolution;
         
@@ -102,11 +104,14 @@ namespace FracCuts {
                 }
             }
         }
+#endif
     }
     
     template<int dim>
-    TriangleSoup<dim>::TriangleSoup(Primitive primitive, double size, int elemAmt, bool separateTri)
+    TriangleSoup<dim>::TriangleSoup(Primitive primitive, double size, int elemAmt)
     {
+        assert(dim == 2);
+#if(DIM == 2)
         assert(size > 0.0);
         assert(elemAmt > 0);
         
@@ -333,23 +338,12 @@ namespace FracCuts {
                 Eigen::RowVectorXd range = topRight - bottomLeft;
                 double scale = size / range[0];
                 V *= scale;
-                bottomLeft *= scale;
-                topRight *= scale;
-                range *= scale;
+                
+                IglUtils::findBorderVerts(V, borderVerts_primitive);
                 
                 V_rest.resize(V.rows(), 3);
                 V_rest.leftCols(2) = V;
                 V_rest.rightCols(1).setZero();
-                
-                borderVerts_primitive.resize(2);
-                for(int vI = 0; vI < V.rows(); vI++) {
-                    if(V(vI, 0) < bottomLeft[0] + range[0] / 100.0) {
-                        borderVerts_primitive[0].emplace_back(vI);
-                    }
-                    else if(V(vI, 0) > topRight[0] - range[0] / 100.0) {
-                        borderVerts_primitive[1].emplace_back(vI);
-                    }
-                }
                 
                 break;
             }
@@ -364,16 +358,12 @@ namespace FracCuts {
                 break;
         }
         
-        if(separateTri) {
-            *this = TriangleSoup(V_rest, F, V);
-        }
-        else {
-            triWeight = Eigen::VectorXd::Ones(F.rows());
-            computeFeatures(false, true);
-        }
+        triWeight = Eigen::VectorXd::Ones(F.rows());
+        computeFeatures(false, true);
         initSeamLen = 0.0;
         
         vertWeight = Eigen::VectorXd::Ones(V.rows());
+#endif
     }
     
     template<int dim>
@@ -399,10 +389,6 @@ namespace FracCuts {
             LaplacianMtr.insert(fixedVI, fixedVI) = 1.0;
         }
         LaplacianMtr.makeCompressed();
-//        //        Eigen::SparseMatrix<double> M;
-//        //        massmatrix(data.V_rest, data.F, igl::MASSMATRIX_TYPE_DEFAULT, M);
-//                    LaplacianMtr.insert(it.row() * 2, it.col() * 2) = -it.value();// * M.coeffRef(it.row(), it.row());
-//                    LaplacianMtr.insert(it.row() * 2 + 1, it.col() * 2 + 1) = -it.value();// * M.coeffRef(it.row(), it.row());
     }
     
     template<int dim>
@@ -523,7 +509,9 @@ namespace FracCuts {
         }else if(simplex_size == 4)
         {
             assert(V.cols() == 3);
-            assert(eff_type == MASSMATRIX_TYPE_BARYCENTRIC);
+            if(eff_type != MASSMATRIX_TYPE_BARYCENTRIC) {
+                std::cout << "switched to barycentric mass matrix for tetrahedra" << std::endl;
+            }
             MI.resize(m*4,1); MJ.resize(m*4,1); MV.resize(m*4,1);
             MI.block(0*m,0,m,1) = F.col(0);
             MI.block(1*m,0,m,1) = F.col(1);
@@ -578,9 +566,7 @@ namespace FracCuts {
             }
             edgeLen[cohI] = (V_rest.row(cohE(cohI, 0)) - V_rest.row(cohE(cohI, 1))).norm();
         }
-        
-//        igl::cotmatrix_entries(V_rest, F, cotVals);
-        
+
         restTriInv.resize(F.rows());
         triNormal.resize(F.rows(), 3);
         triArea.resize(F.rows());
@@ -594,9 +580,9 @@ namespace FracCuts {
         e0dote1_div_dbAreaSq.resize(F.rows());
         vFLoc.resize(0);
         vFLoc.resize(V.rows());
-        std::vector<Eigen::RowVector3d> vertNormals(V_rest.rows(), Eigen::Vector3d::Zero());
+        std::vector<Eigen::RowVector3d> vertNormals(V_rest.rows(), Eigen::RowVector3d::Zero());
         for(int triI = 0; triI < F.rows(); triI++) {
-            const Eigen::Vector3i& triVInd = F.row(triI);
+            const Eigen::Matrix<int, 1, dim + 1>& triVInd = F.row(triI);
             
             vFLoc[triVInd[0]].insert(std::pair<int, int>(triI, 0));
             vFLoc[triVInd[1]].insert(std::pair<int, int>(triI, 1));
@@ -609,24 +595,28 @@ namespace FracCuts {
             const Eigen::Vector3d& P2 = V_rest.row(triVInd[1]);
             const Eigen::Vector3d& P3 = V_rest.row(triVInd[2]);
             
+            Eigen::Matrix<double, dim, dim> X0;
+#if(DIM == 2)
             Eigen::Vector3d x0_3D[3] = { P1, P2, P3 };
             Eigen::Vector2d x0[3];
             IglUtils::mapTriangleTo2D(x0_3D, x0);
-            Eigen::Matrix2d X0;
             X0.col(0) = x0[1] - x0[0];
             X0.col(1) = x0[2] - x0[0];
-            if(dim == 3) {
-                X0.col(2) = x0[3] - x0[0];
-            }
+#else
+            const Eigen::Vector3d& P4 = V_rest.row(triVInd[3]);
+            X0.col(0) = P2 - P1;
+            X0.col(1) = P3 - P1;
+            X0.col(2) = P4 - P1;
+#endif
             restTriInv[triI] = X0.inverse();
             //TODO: support areaThres_AM
             
             const Eigen::Vector3d P2m1 = P2 - P1;
             const Eigen::Vector3d P3m1 = P3 - P1;
-            const Eigen::RowVector3d normalVec = P2m1.cross(P3m1);
+            const Eigen::RowVector3d normalVec = P2m1.cross(P3m1).transpose();
             
-            triNormal.row(triI) = normalVec.normalized();
-            triArea[triI] = 0.5 * normalVec.norm();
+            triNormal.row(triI) = normalVec.normalized(); //TODO: invalid in 3D
+            triArea[triI] = X0.determinant() / dim / (dim - 1);
             if(triArea[triI] < areaThres_AM) {
                 // air mesh triangle degeneracy prevention
                 triArea[triI] = areaThres_AM;
@@ -684,47 +674,40 @@ namespace FracCuts {
             }
         }
         
-        edge2Tri.clear();
-        vNeighbor.resize(0);
-        vNeighbor.resize(V_rest.rows());
-        for(int triI = 0; triI < F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = F.row(triI);
-            for(int vI = 0; vI < 3; vI++) {
-                int vI_post = (vI + 1) % 3;
-                edge2Tri[std::pair<int, int>(triVInd[vI], triVInd[vI_post])] = triI;
-                vNeighbor[triVInd[vI]].insert(triVInd[vI_post]);
-                vNeighbor[triVInd[vI_post]].insert(triVInd[vI]);
+        if(dim == 2) {
+            edge2Tri.clear();
+            vNeighbor.resize(0);
+            vNeighbor.resize(V_rest.rows());
+            for(int triI = 0; triI < F.rows(); triI++) {
+                const Eigen::Matrix<int, 1, dim + 1>& triVInd = F.row(triI);
+                for(int vI = 0; vI < 3; vI++) {
+                    int vI_post = (vI + 1) % 3;
+                    edge2Tri[std::pair<int, int>(triVInd[vI], triVInd[vI_post])] = triI;
+                    vNeighbor[triVInd[vI]].insert(triVInd[vI_post]);
+                    vNeighbor[triVInd[vI_post]].insert(triVInd[vI]);
+                }
             }
         }
+        else {
+            vNeighbor.resize(0);
+            vNeighbor.resize(V_rest.rows());
+            for(int elemI = 0; elemI < F.rows(); elemI++) {
+                const Eigen::Matrix<int, 1, dim + 1>& elemVInd = F.row(elemI);
+                for(int vI = 0; vI < dim + 1; vI++) {
+                    for(int vJ = vI + 1; vJ < dim + 1; vJ ++) {
+                        vNeighbor[elemVInd[vI]].insert(elemVInd[vJ]);
+                        vNeighbor[elemVInd[vJ]].insert(elemVInd[vI]);
+                    }
+                }
+            }
+        }
+
         cohEIndex.clear();
         for(int cohI = 0; cohI < cohE.rows(); cohI++) {
             const Eigen::RowVector4i& cohEI = cohE.row(cohI);
             if(cohEI.minCoeff() >= 0) {
                 cohEIndex[std::pair<int, int>(cohEI[0], cohEI[1])] = cohI;
                 cohEIndex[std::pair<int, int>(cohEI[3], cohEI[2])] = -cohI - 1;
-            }
-        }
-        
-        validSplit.resize(V_rest.rows());
-        for(int vI = 0; vI < V_rest.rows(); vI++) {
-            validSplit[vI].clear();
-            if(isBoundaryVert(vI)) {
-                continue;
-            }
-            
-            std::vector<int> nbVs(vNeighbor[vI].begin(), vNeighbor[vI].end());
-            std::vector<Eigen::RowVector3d> projectedEdge(nbVs.size());
-            for(int nbI = 0; nbI < nbVs.size(); nbI++) {
-                const Eigen::RowVector3d edge = V_rest.row(nbVs[nbI]) - V_rest.row(vI);
-                projectedEdge[nbI] = (edge - edge.dot(vertNormals[vI]) * vertNormals[vI]).normalized();
-            }
-            for(int nbI = 0; nbI + 1 < nbVs.size(); nbI++) {
-                for(int nbJ = nbI + 1; nbJ < nbVs.size(); nbJ++) {
-                    if(projectedEdge[nbI].dot(projectedEdge[nbJ]) <= 0.0) {
-                        validSplit[vI].insert(std::pair<int, int>(nbVs[nbI], nbVs[nbJ]));
-                        validSplit[vI].insert(std::pair<int, int>(nbVs[nbJ], nbVs[nbI]));
-                    }
-                }
             }
         }
         
@@ -807,687 +790,22 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void TriangleSoup<dim>::onePointCut(int vI)
-    {
-        assert((vI >= 0) && (vI < V_rest.rows()));
-        std::vector<int> path(vNeighbor[vI].begin(), vNeighbor[vI].end());
-        assert(path.size() >= 3);
-        path[1] = vI;
-        path.resize(3);
-        
-        bool makeCoh = true;
-        if(!makeCoh) {
-            for(int pI = 0; pI + 1 < path.size(); pI++) {
-                initSeamLen += (V_rest.row(path[pI]) - V_rest.row(path[pI + 1])).norm();
-            }
-        }
-        
-        cutPath(path, makeCoh);
-        
-        if(makeCoh) {
-            initSeams = cohE;
-        }
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::highCurvOnePointCut(void)
-    {
-        std::vector<double> gaussianCurv(V.rows(), 2.0 * M_PI);
-        for(int triI = 0; triI < F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = F.row(triI);
-            const Eigen::RowVector3d v[3] = {
-                V_rest.row(triVInd[0]),
-                V_rest.row(triVInd[1]),
-                V_rest.row(triVInd[2])
-            };
-            for(int vI = 0; vI < 3; vI++) {
-                int vI_post = (vI + 1) % 3;
-                int vI_pre = (vI + 2) % 3;
-                const Eigen::RowVector3d e0 = v[vI_pre] - v[vI];
-                const Eigen::RowVector3d e1 = v[vI_post] - v[vI];
-                gaussianCurv[triVInd[vI]] -= std::acos(std::max(-1.0, std::min(1.0, e0.dot(e1) / e0.norm() / e1.norm())));
-            }
-        }
-        
-        for(auto& gcI : gaussianCurv) {
-            if(gcI < 0) {
-                gcI = -gcI;
-            }
-        }
-        int vI_maxGC = 0;
-        for(int vI = 1; vI < gaussianCurv.size(); vI++) {
-            if(gaussianCurv[vI] > gaussianCurv[vI_maxGC]) {
-                vI_maxGC = vI;
-            }
-        }
-        
-        assert(vNeighbor[vI_maxGC].size() >= 3);
-        int vJ_maxGC = *vNeighbor[vI_maxGC].begin();
-        for(const auto& vINb : vNeighbor[vI_maxGC]) {
-            if(gaussianCurv[vINb] > gaussianCurv[vJ_maxGC]) {
-                vJ_maxGC = vINb;
-            }
-        }
-        
-        //!!! use smoothest cut as initial?
-        assert(vNeighbor[vJ_maxGC].size() >= 3);
-        int vK_maxGC = -1;
-        double gc_vK = -__DBL_MAX__;
-        for(const auto& vJNb : vNeighbor[vJ_maxGC]) {
-            if((gaussianCurv[vJNb] > gc_vK) &&
-               (vJNb != vI_maxGC))
-            {
-                vK_maxGC = vJNb;
-                gc_vK = gaussianCurv[vJNb];
-            }
-        }
-            
-        std::vector<int> path(3);
-        path[0] = vI_maxGC;
-        path[1] = vJ_maxGC;
-        path[2] = vK_maxGC;
-        
-        bool makeCoh = true;
-        if(!makeCoh) {
-            for(int pI = 0; pI + 1 < path.size(); pI++) {
-                initSeamLen += (V_rest.row(path[pI]) - V_rest.row(path[pI + 1])).norm();
-            }
-        }
-        
-        cutPath(path, makeCoh);
-        
-        if(makeCoh) {
-            initSeams = cohE;
-        }
-    }
-    
-    // A utility function to find the vertex with minimum distance value, from
-    // the set of vertices not yet included in shortest path tree
-    int minDistance(const std::vector<double>& dist, const std::vector<bool>& sptSet)
-    {
-        // Initialize min value
-        double min = __DBL_MAX__;
-        int min_index = -1;
-        
-        for (int v = 0; v < dist.size(); v++) {
-            if ((!sptSet[v]) && (dist[v] <= min)) {
-                min = dist[v], min_index = v;
-            }
-        }
-        
-        return min_index;
-    }
-    
-    // Funtion that implements Dijkstra's single source shortest path algorithm
-    // for a graph represented using adjacency matrix representation
-    void dijkstra(const std::vector<std::map<int, double>>& graph, int src, std::vector<double>& dist, std::vector<int>& parent)
-    {
-        int nV = static_cast<int>(graph.size());
-        
-        dist.resize(0);
-        dist.resize(nV, __DBL_MAX__);
-        // The output array.  dist[i] will hold the shortest
-        // distance from src to i
-        
-        std::vector<bool> sptSet(nV, false); // sptSet[i] will true if vertex i is included in shortest
-        // path tree or shortest distance from src to i is finalized
-        
-        parent.resize(0);
-        parent.resize(nV, -1);
-        
-        // Distance of source vertex from itself is always 0
-        dist[src] = 0.0;
-        
-        // Find shortest path for all vertices
-        for (int count = 0; count + 1 < nV; count++)
-        {
-            // Pick the minimum distance vertex from the set of vertices not
-            // yet processed. u is always equal to src in first iteration.
-            int u = minDistance(dist, sptSet);
-            
-            // Mark the picked vertex as processed
-            sptSet[u] = true;
-            
-            for(const auto v : graph[u]) {
-                // Update dist[v] only if is not in sptSet, there is an edge from
-                // u to v, and total weight of path from src to  v through u is
-                // smaller than current value of dist[v]
-                if ((!sptSet[v.first]) && (dist[u] != __DBL_MAX__)
-                    && (dist[u] + v.second < dist[v.first]))
-                {
-                    dist[v.first] = dist[u] + v.second;
-                    parent[v.first] = u;
-                }
-            }
-        }
-    }
-    
-    int getFarthestPoint(const std::vector<std::map<int, double>>& graph, int src)
-    {
-        int nV = static_cast<int>(graph.size());
-        std::vector<double> dist;
-        std::vector<int> parent;
-        dijkstra(graph, src, dist, parent);
-        
-        double maxDist = 0.0;
-        int vI_maxDist = -1;
-        for(int vI = 0; vI < nV; vI++) {
-            if(dist[vI] > maxDist) {
-                maxDist = dist[vI];
-                vI_maxDist = vI;
-            }
-        }
-        assert(vI_maxDist >= 0);
-        return vI_maxDist;
-    }
-    
-    void getFarthestPointPath(const std::vector<std::map<int, double>>& graph, int src, std::vector<int>& path)
-    {
-        int nV = static_cast<int>(graph.size());
-        std::vector<double> dist;
-        std::vector<int> parent;
-        dijkstra(graph, src, dist, parent);
-        
-        double maxDist = 0.0;
-        int vI_maxDist = -1;
-        for(int vI = 0; vI < nV; vI++) {
-            if(dist[vI] > maxDist) {
-                maxDist = dist[vI];
-                vI_maxDist = vI;
-            }
-        }
-        assert(vI_maxDist >= 0);
-        path.resize(0);
-        while(vI_maxDist >= 0) {
-            path.emplace_back(vI_maxDist);
-            vI_maxDist = parent[vI_maxDist];
-        }
-        std::reverse(path.begin(), path.end());
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::farthestPointCut(void)
-    {
-        assert(vNeighbor.size() == V_rest.rows());
-        
-        std::vector<std::map<int, double>> graph(vNeighbor.size());
-        for(int vI = 0; vI < vNeighbor.size(); vI++) {
-            for(const auto nbI : vNeighbor[vI]) {
-                if(nbI > vI) {
-                    graph[nbI][vI] = graph[vI][nbI] = (V_rest.row(vI) - V_rest.row(nbI)).norm();
-                }
-            }
-        }
-        
-        std::vector<int> path;
-        getFarthestPointPath(graph, getFarthestPoint(graph, 0), path);
-        
-        bool makeCoh = true;
-        if(!makeCoh) {
-            for(int pI = 0; pI + 1 < path.size(); pI++) {
-                initSeamLen += (V_rest.row(path[pI]) - V_rest.row(path[pI + 1])).norm();
-            }
-        }
-        
-        cutPath(path, makeCoh);
-//        save("/Users/mincli/Desktop/meshes/test_triSoup.obj");
-//        saveAsMesh("/Users/mincli/Desktop/meshes/test_mesh.obj");
-        
-        if(makeCoh) {
-            initSeams = cohE;
-        }
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::geomImgCut(TriangleSoup& data_findExtrema)
-    {
-        // compute UV map for find extremal point (interior)
-        data_findExtrema = *this;
-        const int mapType = 0; // 0: SD, 1: harmonic (uniform), 2: harmonic (cotangent), 3: harmonic (MVC)
-        if(mapType) {
-            Eigen::VectorXi bnd;
-            igl::boundary_loop(this->F, bnd); // Find the open boundary
-            assert(bnd.size());
-            //TODO: ensure it doesn't have multiple boundaries? or multi-components?
-            
-            // Map the boundary to a circle, preserving edge proportions
-            Eigen::MatrixXd bnd_uv;
-            //            igl::map_vertices_to_circle(V, bnd, bnd_uv);
-            FracCuts::IglUtils::map_vertices_to_circle(this->V_rest, bnd, bnd_uv);
-            
-            Eigen::MatrixXd UV_Tutte;
-            
-            switch (mapType) {
-                case 1: {
-                    // Harmonic map with uniform weights
-                    Eigen::SparseMatrix<double> A, M;
-                    FracCuts::IglUtils::computeUniformLaplacian(this->F, A);
-                    igl::harmonic(A, M, bnd, bnd_uv, 1, UV_Tutte);
-                    break;
-                }
-                    
-                case 2: {
-                    // Harmonic parametrization
-                    igl::harmonic(V, F, bnd, bnd_uv, 1, UV_Tutte);
-                    break;
-                }
-                    
-                case 3: {
-                    // Shape Preserving Mesh Parameterization
-                    // (Harmonic map with MVC weights)
-                    Eigen::SparseMatrix<double> A;
-                    FracCuts::IglUtils::computeMVCMtr(this->V_rest, this->F, A);
-                    FracCuts::IglUtils::fixedBoundaryParam_MVC(A, bnd, bnd_uv, UV_Tutte);
-                    break;
-                }
-                    
-                default:
-                    assert(0 && "Unknown map specified for finding Geometry Image cuts");
-                    break;
-            }
-            
-            
-            data_findExtrema.V = UV_Tutte;
-        }
-        
-        // pick the vertex with largest L2 stretch
-        int vI_extremal = -1;
-        Eigen::VectorXd L2stretchPerElem, vertScores;
-        data_findExtrema.computeL2StretchPerElem(L2stretchPerElem);
-        vertScores.resize(V_rest.rows());
-        vertScores.setZero();
-        for(int triI = 0; triI < F.rows(); triI++) {
-            for(int i = 0; i < 3; i++) {
-                if(vertScores[F(triI, i)] < L2stretchPerElem[triI]) {
-                    vertScores[F(triI, i)] = L2stretchPerElem[triI];
-                }
-            }
-        }
-        double extremal = 0.0;
-        for(int vI = 0; vI < vertScores.size(); vI++) {
-            if(!isBoundaryVert(vI)) {
-                if(extremal < vertScores[vI]) {
-                    extremal = vertScores[vI];
-                    vI_extremal = vI;
-                }
-            }
-        }
-        assert(vI_extremal >= 0);
-        
-        // construct mesh graph
-        assert(vNeighbor.size() == V_rest.rows());
-        std::vector<std::map<int, double>> graph(vNeighbor.size());
-        for(int vI = 0; vI < vNeighbor.size(); vI++) {
-            for(const auto nbI : vNeighbor[vI]) {
-                if(nbI > vI) {
-                    graph[nbI][vI] = graph[vI][nbI] = (V_rest.row(vI) - V_rest.row(nbI)).norm();
-                }
-            }
-        }
-        
-        // find closest point on boundary
-        int nV = static_cast<int>(graph.size());
-        std::vector<double> dist;
-        std::vector<int> parent;
-        dijkstra(graph, vI_extremal, dist, parent);
-        double minDistToBound = __DBL_MAX__;
-        int vI_minDistToBound = -1;
-        for(int vI = 0; vI < nV; vI++) {
-            if(isBoundaryVert(vI)) {
-                if(dist[vI] < minDistToBound) {
-                    minDistToBound = dist[vI];
-                    vI_minDistToBound = vI;
-                }
-            }
-        }
-        assert((vI_minDistToBound >= 0) && "No boundary on the mesh!");
-        
-        // find shortest path to closest point on boundary
-        std::vector<int> path;
-        while(vI_minDistToBound >= 0) {
-            path.emplace_back(vI_minDistToBound);
-            vI_minDistToBound = parent[vI_minDistToBound];
-        }
-        std::reverse(path.begin(), path.end());
-        
-        cutPath(path, true);
-//        save("/Users/mincli/Desktop/meshes/test_triSoup.obj");
-//        saveAsMesh("/Users/mincli/Desktop/meshes/test_mesh.obj");
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::cutPath(std::vector<int> path, bool makeCoh, int changePos,
-                               const Eigen::MatrixXd& newVertPos, bool allowCutThrough)
-    {
-        assert(path.size() >= 2);
-        if(changePos) {
-            assert((changePos == 1) && "right now only support change 1"); //!!! still only allow 1?
-            assert(newVertPos.cols() == 2);
-            assert(changePos * 2 == newVertPos.rows());
-        }
-        
-        for(int pI = 1; pI + 1 < path.size(); pI++) {
-            assert(!isBoundaryVert(path[pI]) &&
-                   "Boundary vertices detected on split path, please split multiple times!");
-        }
-        
-        bool isFromBound = isBoundaryVert(path[0]);
-        bool isToBound = isBoundaryVert(path.back());
-        if(allowCutThrough && (isFromBound || isToBound)) {
-            bool cutThrough = false;
-            if(isFromBound && isToBound) {
-                cutThrough = true;
-            }
-            else if(isToBound) {
-                std::reverse(path.begin(), path.end());
-                // always start cut from boundary
-            }
-            
-            for(int vI = 0; vI + 1 < path.size(); vI++) {
-                //TODO: enable change pos!
-                int vInd_s = path[vI];
-                int vInd_e = path[vI + 1];
-                assert(edge2Tri.find(std::pair<int, int>(vInd_s, vInd_e)) != edge2Tri.end());
-                assert(edge2Tri.find(std::pair<int, int>(vInd_e, vInd_s)) != edge2Tri.end());
-                Eigen::MatrixXd newVertPos;
-                if(cutThrough) {
-                    newVertPos.resize(4, 2);
-                    newVertPos << V.row(vInd_s), V.row(vInd_s), V.row(vInd_e), V.row(vInd_e);
-                }
-                else {
-                    newVertPos.resize(2, 2);
-                    newVertPos << V.row(vInd_s), V.row(vInd_s);
-                }
-                splitEdgeOnBoundary(std::pair<int, int>(vInd_s, vInd_e), newVertPos, true); //!!! make coh?
-                updateFeatures();
-            }
-        }
-        else {
-            // path is interior
-            assert(path.size() >= 3);
-            
-            std::vector<int> tri_left;
-            int vI = path[1];
-            int vI_new = path[0];
-            while(1) {
-                auto finder = edge2Tri.find(std::pair<int, int>(vI, vI_new));
-                assert(finder != edge2Tri.end());
-                tri_left.emplace_back(finder->second);
-                const Eigen::RowVector3i& triVInd = F.row(finder->second);
-                for(int i = 0; i < 3; i++) {
-                    if((triVInd[i] != vI) && (triVInd[i] != vI_new)) {
-                        vI_new = triVInd[i];
-                        break;
-                    }
-                }
-                
-                if(vI_new == path[2]) {
-                    break;
-                }
-                if(vI_new == path[0]) {
-                    assert(0 && "not a valid path!");
-                }
-            }
-            
-            int nV = static_cast<int>(V_rest.rows());
-            V_rest.conservativeResize(nV + 1, 3);
-            V_rest.row(nV) = V_rest.row(path[1]);
-            vertWeight.conservativeResize(nV + 1);
-            vertWeight[nV] = vertWeight[path[1]];
-            V.conservativeResize(nV + 1, 2);
-            if(changePos) {
-                V.row(nV) = newVertPos.block(0, 0, 1, 2);
-                V.row(path[1]) = newVertPos.block(1, 0, 1, 2);
-            }
-            else {
-                V.row(nV) = V.row(path[1]);
-            }
-            for(const auto triI : tri_left) {
-                for(int vI = 0; vI < 3; vI++) {
-                    if(F(triI, vI) == path[1]) {
-                        F(triI, vI) = nV;
-                        break;
-                    }
-                }
-            }
-            if(makeCoh) {
-                int nCoh = static_cast<int>(cohE.rows());
-                cohE.conservativeResize(nCoh + 2, 4);
-                cohE.row(nCoh) << nV, path[0], path[1], path[0];
-                cohE.row(nCoh + 1) << path[2], nV, path[2], path[1];
-            }
-            
-            computeFeatures(); //TODO: only update locally
-            
-            for(int vI = 2; vI + 1 < path.size(); vI++) {
-                //TODO: enable change pos!
-                int vInd_s = path[vI];
-                int vInd_e = path[vI + 1];
-                assert(edge2Tri.find(std::pair<int, int>(vInd_s, vInd_e)) != edge2Tri.end());
-                assert(edge2Tri.find(std::pair<int, int>(vInd_e, vInd_s)) != edge2Tri.end());
-                Eigen::Matrix2d newVertPos;
-                newVertPos << V.row(vInd_s), V.row(vInd_s);
-                splitEdgeOnBoundary(std::pair<int, int>(vInd_s, vInd_e), newVertPos, true, allowCutThrough); //!!! make coh?
-                updateFeatures();
-            }
-        }
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::computeSeamScore(Eigen::VectorXd& seamScore) const
-    {
-        seamScore.resize(cohE.rows());
-        for(int cohI = 0; cohI < cohE.rows(); cohI++)
-        {
-            if(boundaryEdge[cohI]) {
-                seamScore[cohI] = -1.0;
-            }
-            else {
-                seamScore[cohI] = std::max((V.row(cohE(cohI, 0)) - V.row(cohE(cohI, 2))).norm(),
-                    (V.row(cohE(cohI, 1)) - V.row(cohE(cohI, 3))).norm()) / avgEdgeLen;
-            }
-        }
-    }
-    template<int dim>
-    void TriangleSoup<dim>::computeBoundaryLen(double& boundaryLen) const
-    {
-        boundaryLen = 0.0;
-        for(const auto& e : edge2Tri) {
-            if(edge2Tri.find(std::pair<int, int>(e.first.second, e.first.first)) == edge2Tri.end()) {
-                boundaryLen += (V_rest.row(e.first.second) - V_rest.row(e.first.first)).norm();
-            }
-        }
-    }
-    template<int dim>
-    void TriangleSoup<dim>::computeSeamSparsity(double& sparsity, bool triSoup) const
-    {
-        const double thres = 1.0e-2;
-        sparsity = 0.0;
-        for(int cohI = 0; cohI < cohE.rows(); cohI++)
-        {
-            if(!boundaryEdge[cohI]) {
-                if((!triSoup) ||
-                   ((V.row(cohE(cohI, 0)) - V.row(cohE(cohI, 2))).norm() / avgEdgeLen > thres) ||
-                   ((V.row(cohE(cohI, 1)) - V.row(cohE(cohI, 3))).norm() / avgEdgeLen > thres))
-                {
-                    sparsity += edgeLen[cohI];
-                }
-            }
-        }
-        sparsity += initSeamLen;
-    }
-    template<int dim>
-    void TriangleSoup<dim>::computeL2StretchPerElem(Eigen::VectorXd& L2StretchPerElem) const
-    {
-        L2StretchPerElem.resize(F.rows());
-        for(int triI = 0; triI < F.rows(); triI++)
-        {
-            const Eigen::Vector3i& triVInd = F.row(triI);
-            const Eigen::Vector3d x_3D[3] = {
-                V_rest.row(triVInd[0]),
-                V_rest.row(triVInd[1]),
-                V_rest.row(triVInd[2])
-            };
-            const Eigen::Vector2d uv[3] = {
-                V.row(triVInd[0]),
-                V.row(triVInd[1]),
-                V.row(triVInd[2])
-            };
-            Eigen::Matrix2d dg;
-            IglUtils::computeDeformationGradient(x_3D, uv, dg);
-            
-            const double a = Eigen::Vector2d(dg.block(0, 0, 2, 1)).squaredNorm();
-            const double c = Eigen::Vector2d(dg.block(0, 1, 2, 1)).squaredNorm();
-            const double t0 = a + c;
-            
-            L2StretchPerElem[triI] = std::sqrt(t0 / 2.0);
-        }
-    }
-    template<int dim>
-    void TriangleSoup<dim>::computeStandardStretch(double& stretch_l2, double& stretch_inf, double& stretch_shear, double& compress_inf) const
-    {
-        stretch_l2 = 0.0;
-        stretch_inf = -__DBL_MAX__;
-        stretch_shear = 0.0;
-        compress_inf = __DBL_MAX__;
-        for(int triI = 0; triI < F.rows(); triI++)
-        {
-            const Eigen::Vector3i& triVInd = F.row(triI);
-            const Eigen::Vector3d x_3D[3] = {
-                V_rest.row(triVInd[0]),
-                V_rest.row(triVInd[1]),
-                V_rest.row(triVInd[2])
-            };
-            const Eigen::Vector2d uv[3] = {
-                V.row(triVInd[0]),
-                V.row(triVInd[1]),
-                V.row(triVInd[2])
-            };
-            Eigen::Matrix2d dg;
-            IglUtils::computeDeformationGradient(x_3D, uv, dg);
-            
-            const double a = Eigen::Vector2d(dg.block(0, 0, 2, 1)).squaredNorm();
-            const double b = Eigen::Vector2d(dg.block(0, 0, 2, 1)).dot(Eigen::Vector2d(dg.block(0, 1, 2, 1)));
-            const double c = Eigen::Vector2d(dg.block(0, 1, 2, 1)).squaredNorm();
-            const double t0 = a + c;
-            const double t1 = std::sqrt((a - c) * (a - c) + 4. * b * b);
-            const double tau = std::sqrt((t0 + t1) / 2.);
-            const double gamma = std::sqrt((t0 - t1) / 2.);
-            
-            stretch_l2 += t0 / 2.0 * triArea[triI];
-            
-            if(tau > stretch_inf) {
-                stretch_inf = tau;
-            }
-            
-            stretch_shear += b * b / a / c * triArea[triI];
-            
-            if(gamma < compress_inf) {
-                compress_inf = gamma;
-            }
-        }
-        stretch_l2 /= surfaceArea;
-        stretch_l2 = std::sqrt(stretch_l2);
-        stretch_shear /= surfaceArea;
-        stretch_shear = std::sqrt(stretch_shear);
-        
-        double surfaceArea_UV = 0.0;
-        for(int triI = 0; triI < F.rows(); triI++) {
-            const Eigen::Vector3i& triVInd = F.row(triI);
-            
-            const Eigen::Vector2d& U1 = V.row(triVInd[0]);
-            const Eigen::Vector2d& U2 = V.row(triVInd[1]);
-            const Eigen::Vector2d& U3 = V.row(triVInd[2]);
-            
-            const Eigen::Vector2d U2m1 = U2 - U1;
-            const Eigen::Vector2d U3m1 = U3 - U1;
-            
-            surfaceArea_UV += 0.5 * (U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0]);
-        }
-        
-        // area scaling:
-        const double scaleFactor = std::sqrt(surfaceArea_UV / surfaceArea);
-        stretch_l2 *= scaleFactor;
-        stretch_inf *= scaleFactor;
-        compress_inf *= scaleFactor; // not meaningful now...
-        // stretch_shear won't be affected by area scaling
-    }
-    template<int dim>
-    void TriangleSoup<dim>::outputStandardStretch(std::ofstream& file) const
-    {
-        double stretch_l2, stretch_inf, stretch_shear, compress_inf;
-        computeStandardStretch(stretch_l2, stretch_inf, stretch_shear, compress_inf);
-        file << stretch_l2 << " " << stretch_inf << " " << stretch_shear << " " << compress_inf << std::endl;
-    }
-    template<int dim>
-    void TriangleSoup<dim>::computeAbsGaussianCurv(double& absGaussianCurv) const
-    {
-        //!!! it's easy to optimize this way actually...
-        std::vector<double> weights(V.rows(), 0.0);
-        std::vector<double> gaussianCurv(V.rows(), 2.0 * M_PI);
-        for(int triI = 0; triI < F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = F.row(triI);
-            const Eigen::RowVector3d v[3] = {
-                V_rest.row(triVInd[0]),
-                V_rest.row(triVInd[1]),
-                V_rest.row(triVInd[2])
-            };
-            for(int vI = 0; vI < 3; vI++) {
-                int vI_post = (vI + 1) % 3;
-                int vI_pre = (vI + 2) % 3;
-                const Eigen::RowVector3d e0 = v[vI_pre] - v[vI];
-                const Eigen::RowVector3d e1 = v[vI_post] - v[vI];
-                gaussianCurv[triVInd[vI]] -= std::acos(std::max(-1.0, std::min(1.0, e0.dot(e1) / e0.norm() / e1.norm())));
-                weights[triVInd[vI]] += triArea[triI];
-            }
-        }
-        
-        absGaussianCurv = 0.0;
-        for(int vI = 0; vI < V.rows(); vI++) {
-            if(!isBoundaryVert(vI)) {
-                absGaussianCurv += std::abs(gaussianCurv[vI]) * weights[vI];
-            }
-        }
-        absGaussianCurv /= surfaceArea * 3.0;
-    }
-
-    template<int dim>
-    void TriangleSoup<dim>::initRigidUV(void)
-    {
-        V.resize(V_rest.rows(), 2);
-        for(int triI = 0; triI < F.rows(); triI++)
-        {
-            const Eigen::Vector3i& triVInd = F.row(triI);
-            
-            const Eigen::Vector3d x_3D[3] = {
-                V_rest.row(triVInd[0]),
-                V_rest.row(triVInd[1]),
-                V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x[3];
-            IglUtils::mapTriangleTo2D(x_3D, x);
-            
-            V.row(triVInd[0]) = x[0];
-            V.row(triVInd[1]) = x[1];
-            V.row(triVInd[2]) = x[2];
-        }
-    }
-    
-    template<int dim>
     bool TriangleSoup<dim>::checkInversion(int triI, bool mute) const
     {
         assert(triI < F.rows());
         
         const double eps = 0.0;//1.0e-20 * avgEdgeLen * avgEdgeLen;
 
-        const Eigen::Vector3i& triVInd = F.row(triI);
+        const Eigen::Matrix<int, 1, dim + 1>& triVInd = F.row(triI);
         
-        const Eigen::Vector2d e_u[2] = {
-            V.row(triVInd[1]) - V.row(triVInd[0]),
-            V.row(triVInd[2]) - V.row(triVInd[0])
-        };
+        Eigen::Matrix<double, dim, dim> e_u;
+        e_u.col(0) = (V.row(triVInd[1]) - V.row(triVInd[0])).transpose();
+        e_u.col(1) = (V.row(triVInd[2]) - V.row(triVInd[0])).transpose();
+        if(dim == 3) {
+            e_u.col(2) = (V.row(triVInd[3]) - V.row(triVInd[0])).transpose();
+        }
         
-        const double dbArea = e_u[0][0] * e_u[1][1] - e_u[0][1] * e_u[1][0];
+        const double dbArea = e_u.determinant();
         if(dbArea < eps) {
             if(!mute) {
                 std::cout << "***Element inversion detected: " << dbArea << " < " << eps << std::endl;
@@ -1527,6 +845,8 @@ namespace FracCuts {
     void TriangleSoup<dim>::save(const std::string& filePath, const Eigen::MatrixXd& V, const Eigen::MatrixXi& F,
                             const Eigen::MatrixXd UV, const Eigen::MatrixXi& FUV) const
     {
+        assert(dim == 2);
+#if(DIM == 2)
         std::ofstream out;
         out.open(filePath);
         assert(out.is_open());
@@ -1560,6 +880,7 @@ namespace FracCuts {
         }
         
         out.close();
+#endif
     }
     
     template<int dim>
@@ -1569,8 +890,10 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void TriangleSoup<dim>::saveAsMesh(const std::string& filePath, bool scaleUV) const
+    void TriangleSoup<dim>::saveAsMesh(const std::string& filePath, bool scaleUV,
+                                       const Eigen::MatrixXi& SF) const
     {
+#if(DIM == 2)
         const double thres = 1.0e-2;
         std::vector<int> dupVI2GroupI(V.rows());
         std::vector<std::set<int>> meshVGroup(V.rows());
@@ -1698,14 +1021,19 @@ namespace FracCuts {
         }
         
         save(filePath, V_mesh, F_mesh, UV_mesh, FUV_mesh);
+#else
+        IglUtils::saveTetMesh(filePath, V, F, SF);
+#endif
     }
-        
+    
     template<int dim>
     void TriangleSoup<dim>::constructSubmesh(const Eigen::VectorXi& triangles,
                                         TriangleSoup& submesh,
                                         std::map<int, int>& globalVIToLocal,
                                         std::map<int, int>& globalTriIToLocal) const
     {
+        assert(dim == 2);
+#if(DIM == 2)
         Eigen::MatrixXi F_sub;
         F_sub.resize(triangles.size(), 3);
         Eigen::MatrixXd V_rest_sub, V_sub;
@@ -1740,79 +1068,20 @@ namespace FracCuts {
             }
         }
         submesh.resetFixedVert(fixedVert_sub);
+#endif
     }
     
-    template<int dim>
-    bool TriangleSoup<dim>::findBoundaryEdge(int vI, const std::pair<int, int>& startEdge,
-                                        std::pair<int, int>& boundaryEdge)
-    {
-        auto finder = edge2Tri.find(startEdge);
-        assert(finder != edge2Tri.end());
-        bool proceed = (startEdge.first != vI);
-        const int vI_neighbor = (proceed ? startEdge.first : startEdge.second);
-        int vI_new = vI_neighbor;
-        while(1) {
-            const Eigen::RowVector3i& triVInd = F.row(finder->second);
-            for(int i = 0; i < 3; i++) {
-                if((triVInd[i] != vI) && (triVInd[i] != vI_new)) {
-                    vI_new = triVInd[i];
-                    break;
-                }
-            }
-            
-            if(vI_new == vI_neighbor) {
-                return false;
-            }
-            
-            finder = edge2Tri.find(proceed ? std::pair<int, int>(vI_new, vI) : std::pair<int, int>(vI, vI_new));
-            if(finder == edge2Tri.end()) {
-                boundaryEdge.first = (proceed ? vI : vI_new);
-                boundaryEdge.second = (proceed ? vI_new : vI);
-                return true;
-            }
-        }
-    }
-    
-    template<int dim>
-    bool TriangleSoup<dim>::insideTri(int triI, const Eigen::RowVector2d& pos) const
-    {
-        const Eigen::RowVector3i& triVInd = F.row(triI);
-        const Eigen::RowVector2d e01 = V.row(triVInd[1]) - V.row(triVInd[0]);
-        const Eigen::RowVector2d e02 = V.row(triVInd[2]) - V.row(triVInd[0]);
-        const Eigen::RowVector2d e0p = pos - V.row(triVInd[0]);
-        
-        // represent ep0 using e01 and e02
-        Eigen::Matrix2d A;
-        A << e01.transpose(), e02.transpose();
-        Eigen::Vector2d coef = A.colPivHouseholderQr().solve(e0p.transpose());
-        
-        // check inside
-        if((coef[0] >= 0.0) && (coef[1] >= 0.0) && (coef[0] + coef[1] <= 1.0)) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-       
-    template<int dim>
-    bool TriangleSoup<dim>::insideUVRegion(const std::vector<int>& triangles, const Eigen::RowVector2d& pos) const
-    {
-        for(const auto& triI : triangles) {
-            if(insideTri(triI, pos)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     template<int dim>
     bool TriangleSoup<dim>::isBoundaryVert(int vI, int vI_neighbor,
-                                      std::vector<int>& tri_toSep, std::pair<int, int>& boundaryEdge, bool toBound) const
+                                           std::vector<int>& tri_toSep,
+                                           std::pair<int, int>& boundaryEdge,
+                                           bool toBound) const
     {
-//        const auto inputEdgeTri = edge2Tri.find(toBound ? std::pair<int, int>(vI, vI_neighbor) :
-//                                                std::pair<int, int>(vI_neighbor, vI));
-//        assert(inputEdgeTri != edge2Tri.end());
+        assert(dim == 2);
+#if(DIM == 2)
+        //        const auto inputEdgeTri = edge2Tri.find(toBound ? std::pair<int, int>(vI, vI_neighbor) :
+        //                                                std::pair<int, int>(vI_neighbor, vI));
+        //        assert(inputEdgeTri != edge2Tri.end());
         
         tri_toSep.resize(0);
         auto finder = edge2Tri.find(toBound ? std::pair<int, int>(vI_neighbor, vI):
@@ -1846,6 +1115,7 @@ namespace FracCuts {
                 return true;
             }
         } while(1);
+#endif
     }
     
     template<int dim>
@@ -1856,7 +1126,7 @@ namespace FracCuts {
         
         for(const auto vI_neighbor : vNeighbor[vI]) {
             if((edge2Tri.find(std::pair<int, int>(vI, vI_neighbor)) == edge2Tri.end()) ||
-                (edge2Tri.find(std::pair<int, int>(vI_neighbor, vI)) == edge2Tri.end()))
+               (edge2Tri.find(std::pair<int, int>(vI_neighbor, vI)) == edge2Tri.end()))
             {
                 return true;
             }
@@ -1864,10 +1134,12 @@ namespace FracCuts {
         
         return false;
     }
-      
+    
     template<int dim>
     void TriangleSoup<dim>::compute2DInwardNormal(int vI, Eigen::RowVector2d& normal) const
     {
+        assert(dim == 2);
+#if(DIM == 2)
         std::vector<int> incTris[2];
         std::pair<int, int> boundaryEdge[2];
         if(!isBoundaryVert(vI, *vNeighbor[vI].begin(), incTris[0], boundaryEdge[0], 0)) {
@@ -1884,331 +1156,9 @@ namespace FracCuts {
         if(boundaryEdgeDir[1][0] * normal[1] - boundaryEdgeDir[1][1] * normal[0] < 0.0) {
             normal *= -1.0;
         }
+#endif
     }
     
-    template<int dim>
-    void TriangleSoup<dim>::splitEdgeOnBoundary(const std::pair<int, int>& edge,
-                                           const Eigen::MatrixXd& newVertPos,
-                                           bool changeVertPos, bool allowCutThrough)
-    {
-        assert(vNeighbor.size() == V.rows());
-        auto edgeTriIndFinder = edge2Tri.find(edge);
-        auto edgeTriIndFinder_dual = edge2Tri.find(std::pair<int, int>(edge.second, edge.first));
-        assert(edgeTriIndFinder != edge2Tri.end());
-        assert(edgeTriIndFinder_dual != edge2Tri.end());
-        
-        bool duplicateBoth = false;
-        int vI_boundary = edge.first, vI_interior = edge.second;
-        if(isBoundaryVert(edge.first)) {
-            if(allowCutThrough && isBoundaryVert(edge.second)) {
-                if(changeVertPos) {
-                    assert(newVertPos.rows() == 4);
-                }
-                duplicateBoth = true;
-            }
-        }
-        else {
-            assert(isBoundaryVert(edge.second) && "Input edge must attach mesh boundary!");
-            
-            vI_boundary = edge.second;
-            vI_interior = edge.first;
-        }
-        
-        fracTail.erase(vI_boundary);
-        if(!duplicateBoth) {
-            fracTail.insert(vI_interior);
-            curFracTail = vI_interior;
-        }
-        else {
-            curFracTail = -1;
-        }
-        curInteriorFracTails.first = curInteriorFracTails.second = -1;
-        
-        // duplicate vI_boundary
-        std::vector<int> tri_toSep[2];
-        std::pair<int, int> boundaryEdge[2];
-        for(int toBound = 0; toBound < 2; toBound++) { //!!! why?
-            isBoundaryVert(vI_boundary, vI_interior, tri_toSep[1], boundaryEdge[1], toBound);
-            assert(!tri_toSep[1].empty());
-        }
-        if(duplicateBoth) {
-            isBoundaryVert(vI_interior, vI_boundary, tri_toSep[0], boundaryEdge[0], true);
-            assert(!tri_toSep[0].empty());
-        }
-        
-        int nV = static_cast<int>(V_rest.rows());
-        V_rest.conservativeResize(nV + 1, 3);
-        V_rest.row(nV) = V_rest.row(vI_boundary);
-        vertWeight.conservativeResize(nV + 1);
-        vertWeight[nV] = vertWeight[vI_boundary];
-        V.conservativeResize(nV + 1, 2);
-        if(changeVertPos) {
-            V.row(nV) = newVertPos.block(1, 0, 1, 2);
-            V.row(vI_boundary) = newVertPos.block(0, 0, 1, 2);
-        }
-        else {
-            V.row(nV) = V.row(vI_boundary);
-        }
-        
-        for(const auto triI : tri_toSep[1]) {
-            for(int vI = 0; vI < 3; vI++) {
-                if(F(triI, vI) == vI_boundary) {
-                    // update triangle vertInd, edge2Tri and vNeighbor
-                    int vI_post = F(triI, (vI + 1) % 3);
-                    int vI_pre = F(triI, (vI + 2) % 3);
-                    
-                    F(triI, vI) = nV;
-                    
-                    edge2Tri.erase(std::pair<int, int>(vI_boundary, vI_post));
-                    edge2Tri[std::pair<int, int>(nV, vI_post)] = triI;
-                    edge2Tri.erase(std::pair<int, int>(vI_pre, vI_boundary));
-                    edge2Tri[std::pair<int, int>(vI_pre, nV)] = triI;
-                    
-                    vNeighbor[vI_pre].erase(vI_boundary);
-                    vNeighbor[vI_pre].insert(nV);
-                    vNeighbor[vI_post].erase(vI_boundary);
-                    vNeighbor[vI_post].insert(nV);
-                    vNeighbor[vI_boundary].erase(vI_pre);
-                    vNeighbor[vI_boundary].erase(vI_post);
-                    vNeighbor.resize(nV + 1);
-                    vNeighbor[nV].insert(vI_pre);
-                    vNeighbor[nV].insert(vI_post);
-                    
-                    break;
-                }
-            }
-        }
-        vNeighbor[vI_boundary].insert(vI_interior);
-        vNeighbor[vI_interior].insert(vI_boundary);
-        
-        // add cohesive edge pair and update cohEIndex
-        const int nCE = static_cast<int>(cohE.rows());
-        cohE.conservativeResize(nCE + 1, 4);
-        cohE.row(nCE) << vI_interior, nV, vI_interior, vI_boundary; //!! is it a problem?
-        cohEIndex[std::pair<int, int>(vI_interior, nV)] = nCE;
-        cohEIndex[std::pair<int, int>(vI_boundary, vI_interior)] = -nCE - 1;
-        auto CEIfinder = cohEIndex.find(boundaryEdge[1]);
-        if(CEIfinder != cohEIndex.end()) {
-            if(CEIfinder->second >= 0) {
-                cohE(CEIfinder->second, 0) = nV;
-            }
-            else {
-                cohE(-CEIfinder->second - 1, 3) = nV;
-            }
-            cohEIndex[std::pair<int, int>(nV, boundaryEdge[1].second)] = CEIfinder->second;
-            cohEIndex.erase(CEIfinder);
-        }
-        
-        if(duplicateBoth) {
-            int nV = static_cast<int>(V_rest.rows());
-//            subOptimizerInfo[1].first.insert(nV);
-            V_rest.conservativeResize(nV + 1, 3);
-            V_rest.row(nV) = V_rest.row(vI_interior);
-            vertWeight.conservativeResize(nV + 1);
-            vertWeight[nV] = vertWeight[vI_interior];
-            V.conservativeResize(nV + 1, 2);
-            if(changeVertPos) {
-                V.row(nV) = newVertPos.block(2, 0, 1, 2);
-                V.row(vI_interior) = newVertPos.block(3, 0, 1, 2);
-            }
-            else {
-                V.row(nV) = V.row(vI_interior);
-            }
-            
-            for(const auto triI : tri_toSep[0]) {
-                for(int vI = 0; vI < 3; vI++) {
-                    if(F(triI, vI) == vI_interior) {
-                        // update triangle vertInd, edge2Tri and vNeighbor
-                        int vI_post = F(triI, (vI + 1) % 3);
-                        int vI_pre = F(triI, (vI + 2) % 3);
-                        
-                        F(triI, vI) = nV;
-                        
-                        edge2Tri.erase(std::pair<int, int>(vI_interior, vI_post));
-                        edge2Tri[std::pair<int, int>(nV, vI_post)] = triI;
-                        edge2Tri.erase(std::pair<int, int>(vI_pre, vI_interior));
-                        edge2Tri[std::pair<int, int>(vI_pre, nV)] = triI;
-
-                        vNeighbor[vI_pre].erase(vI_interior);
-                        vNeighbor[vI_pre].insert(nV);
-                        vNeighbor[vI_post].erase(vI_interior);
-                        vNeighbor[vI_post].insert(nV);
-                        vNeighbor[vI_interior].erase(vI_pre);
-                        vNeighbor[vI_interior].erase(vI_post);
-                        vNeighbor.resize(nV + 1);
-                        vNeighbor[nV].insert(vI_pre);
-                        vNeighbor[nV].insert(vI_post);
-                        
-                        break;
-                    }
-                }
-            }
-            
-            // update cohesive edge pair and update cohEIndex
-            cohE(nCE, 2) = nV;
-            cohEIndex.erase(std::pair<int, int>(vI_boundary, vI_interior));
-            cohEIndex[std::pair<int, int>(vI_boundary, nV)] = -nCE - 1;
-            auto CEIfinder = cohEIndex.find(boundaryEdge[0]);
-            if(CEIfinder != cohEIndex.end()) {
-                if(CEIfinder->second >= 0) {
-                    cohE(CEIfinder->second, 0) = nV;
-                }
-                else {
-                    cohE(-CEIfinder->second - 1, 3) = nV;
-                }
-                cohEIndex[std::pair<int, int>(nV, boundaryEdge[0].second)] = CEIfinder->second;
-                cohEIndex.erase(CEIfinder);
-            }
-        }
-    }
-    
-    template<int dim>
-    void TriangleSoup<dim>::mergeBoundaryEdges(const std::pair<int, int>& edge0, const std::pair<int, int>& edge1,
-                                          const Eigen::RowVectorXd& mergedPos)
-    {
-        assert(edge0.second == edge1.first);
-        assert(edge2Tri.find(std::pair<int, int>(edge0.second, edge0.first)) == edge2Tri.end());
-        assert(edge2Tri.find(std::pair<int, int>(edge1.second, edge1.first)) == edge2Tri.end());
-        assert(vNeighbor.size() == V.rows());
-        
-        fracTail.erase(edge0.second);
-        fracTail.insert(edge0.first);
-        curFracTail = edge0.first;
-        
-        V.row(edge0.first) = mergedPos;
-        int vBackI = static_cast<int>(V.rows()) - 1;
-        if(edge1.second < vBackI) {
-            V_rest.row(edge1.second) = V_rest.row(vBackI);
-            vertWeight[edge1.second] = vertWeight[vBackI];
-            V.row(edge1.second) = V.row(vBackI);
-            
-            auto finder = fracTail.find(vBackI);
-            if(finder != fracTail.end()) {
-                fracTail.erase(finder);
-                fracTail.insert(edge1.second);
-            }
-        }
-        else {
-            assert(edge1.second == vBackI);
-        }
-        V_rest.conservativeResize(vBackI, 3);
-        vertWeight.conservativeResize(vBackI);
-        V.conservativeResize(vBackI, 2);
-        
-//        for(const auto& nbI : vNeighbor[edge1.second]) {
-//            std::pair<int, int> edgeToFind[2] = {
-//                std::pair<int, int>(edge1.second, nbI),
-//                std::pair<int, int>(nbI, edge1.second)
-//            };
-//            for(int eI = 0; eI < 2; eI++) {
-//                auto edgeTri = edge2Tri.find(edgeToFind[eI]);
-//                if(edgeTri != edge2Tri.end()) {
-//                    for(int vI = 0; vI < 3; vI++) {
-//                        if(F(edgeTri->second, vI) == edge1.second) {
-//                            F(edgeTri->second, vI) = edge0.first;
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-        
-        for(int triI = 0; triI < F.rows(); triI++) {
-            for(int vI = 0; vI < 3; vI++) {
-                if(F(triI, vI) == edge1.second) {
-                    F(triI, vI) = edge0.first;
-                    break;
-                }
-            }
-        }
-
-        if(edge1.second < vBackI) {
-            for(int triI = 0; triI < F.rows(); triI++) {
-                for(int vI = 0; vI < 3; vI++) {
-                    if(F(triI, vI) == vBackI) {
-                        F(triI, vI) = edge1.second;
-                    }
-                }
-            }
-//            // not valid because vNeighbor is not updated
-//            for(const auto& nbI : vNeighbor[vBackI]) {
-//                std::pair<int, int> edgeToFind[2] = {
-//                    std::pair<int, int>(vBackI, nbI),
-//                    std::pair<int, int>(nbI, vBackI)
-//                };
-//                for(int eI = 0; eI < 2; eI++) {
-//                    auto edgeTri = edge2Tri.find(edgeToFind[eI]);
-//                    if(edgeTri != edge2Tri.end()) {
-//                        for(int vI = 0; vI < 3; vI++) {
-//                            if(F(edgeTri->second, vI) == vBackI) {
-//                                F(edgeTri->second, vI) = edge1.second;
-//                                break;
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-        }
-        
-        auto cohEFinder = cohEIndex.find(edge0);
-        assert(cohEFinder != cohEIndex.end());
-        int cohEBackI = static_cast<int>(cohE.rows()) - 1;
-        if(cohEFinder->second >= 0) {
-            if(cohEFinder->second < cohEBackI) {
-                cohE.row(cohEFinder->second) = cohE.row(cohEBackI);
-            }
-            else {
-                assert(cohEFinder->second == cohEBackI);
-            }
-        }
-        else {
-            if(-cohEFinder->second - 1 < cohEBackI) {
-                cohE.row(-cohEFinder->second - 1) = cohE.row(cohEBackI);
-            }
-            else {
-                assert(-cohEFinder->second - 1 == cohEBackI);
-            }
-        }
-        cohE.conservativeResize(cohEBackI, 4);
-        
-        for(int cohI = 0; cohI < cohE.rows(); cohI++) {
-            for(int pI = 0; pI < 4; pI++) {
-                if(cohE(cohI, pI) == edge1.second) {
-                    cohE(cohI, pI) = edge0.first;
-                }
-            }
-        }
-        if(edge1.second < vBackI) {
-            for(int cohI = 0; cohI < cohE.rows(); cohI++) {
-                for(int pI = 0; pI < 4; pI++) {
-                    if(cohE(cohI, pI) == vBackI) {
-                        cohE(cohI, pI) = edge1.second;
-                    }
-                }
-            }
-        }
-        
-        // closeup just interior splitted diamond
-        //TODO: do it faster by knowing the edge in advance and locate using cohIndex
-        for(int cohI = 0; cohI < cohE.rows(); cohI++) {
-            if((cohE(cohI, 0) == cohE(cohI, 2)) &&
-                (cohE(cohI, 1) == cohE(cohI, 3)))
-           {
-               fracTail.erase(cohE(cohI, 0));
-               fracTail.erase(cohE(cohI, 1));
-               curFracTail = -1;
-               
-               if(cohI < cohE.rows() - 1) {
-                   cohE.row(cohI) = cohE.row(cohE.rows() - 1);
-               }
-               cohE.conservativeResize(cohE.rows() - 1, 4);
-               break;
-           }
-        }
-        
-        //TODO: locally update edge2Tri, vNeighbor, cohEIndex
-    }
-        
-    template class TriangleSoup<2>;
+    template class TriangleSoup<DIM>;
     
 }

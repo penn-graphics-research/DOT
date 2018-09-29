@@ -461,7 +461,7 @@ namespace FracCuts {
 //        std::cout << "computing entry value..." << std::endl;
 //        clock_t start = clock();
         std::vector<Eigen::Matrix<double, 6, 6>> triHessians(data.F.rows());
-        std::vector<Eigen::VectorXi> vInds(data.F.rows());
+        std::vector<Eigen::Vector3i> vInds(data.F.rows());
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)data.F.rows(), 1, [&](int triI)
 #else
@@ -555,7 +555,7 @@ namespace FracCuts {
             // project to nearest SPD matrix
             IglUtils::makePD(curHessian);
             
-            Eigen::VectorXi& vInd = vInds[triI];
+            Eigen::Vector3i& vInd = vInds[triI];
             vInd = triVInd;
             for(int vI = 0; vI < 3; vI++) {
                 if(data.fixedVert.find(vInd[vI]) != data.fixedVert.end()) {
@@ -801,22 +801,20 @@ namespace FracCuts {
         }
     }
     template<int dim>
-    void SymStretchEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
-                                                 Eigen::Vector2d& dE_div_dsigma) const
+    void SymStretchEnergy<dim>::compute_dE_div_dsigma(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                      Eigen::Matrix<double, dim, 1>& dE_div_dsigma) const
     {
-        dE_div_dsigma.resize(singularValues.size());
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
-            dE_div_dsigma[sigmaI] = 2.0 * singularValues[sigmaI] -
-                2.0 * std::pow(singularValues[sigmaI], -3);
+        for(int sigmaI = 0; sigmaI < dim; sigmaI++) {
+            dE_div_dsigma[sigmaI] = 2.0 * (singularValues[sigmaI] -
+                                           std::pow(singularValues[sigmaI], -3));
         }
     }
     template<int dim>
-    void SymStretchEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
-                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
+    void SymStretchEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                        Eigen::Matrix<double, dim, dim>& d2E_div_dsigma2) const
     {
-        d2E_div_dsigma2.resize(singularValues.size(), singularValues.size());
         d2E_div_dsigma2.setZero();
-        for(int sigmaI = 0; sigmaI < singularValues.size(); sigmaI++) {
+        for(int sigmaI = 0; sigmaI < dim; sigmaI++) {
             d2E_div_dsigma2(sigmaI, sigmaI) = 2.0 + 6.0 * std::pow(singularValues[sigmaI], -4);
         }
     }
@@ -835,5 +833,5 @@ namespace FracCuts {
         stressTensor = F - FmT * FmT.transpose() * FmT;
     }
     
-    template class SymStretchEnergy<2>;
+    template class SymStretchEnergy<DIM>;
 }

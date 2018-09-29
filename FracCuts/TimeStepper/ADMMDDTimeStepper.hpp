@@ -42,8 +42,8 @@ namespace FracCuts {
         Eigen::MatrixXd consensusMtr;
         Eigen::LDLT<Eigen::MatrixXd> consensusSolver;
         std::vector<LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>*> linSysSolver_subdomain;
-        std::vector<std::vector<AutoFlipSVD<Eigen::Matrix2d>>> svd_subdomain;
-        std::vector<std::vector<Eigen::Matrix2d>> F_subdomain;
+        std::vector<std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>> svd_subdomain;
+        std::vector<std::vector<Eigen::Matrix<double, dim, dim>>> F_subdomain;
         
     public:
         ADMMDDTimeStepper(const TriangleSoup<dim>& p_data0,

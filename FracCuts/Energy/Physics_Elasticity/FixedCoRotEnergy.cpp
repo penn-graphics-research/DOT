@@ -39,28 +39,79 @@ namespace FracCuts {
         E = u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1;
     }
     template<int dim>
-    void FixedCoRotEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
-                                                 Eigen::Vector2d& dE_div_dsigma) const
+    void FixedCoRotEnergy<dim>::compute_dE_div_dsigma(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                      Eigen::Matrix<double, dim, 1>& dE_div_dsigma) const
     {
         const double sigmaProdm1lambda = lambda * (singularValues.prod() - 1.0);
-        Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
+        Eigen::Matrix<double, dim, 1> sigmaProd_noI;
+        if(dim == 2) {
+            sigmaProd_noI[0] = singularValues[1];
+            sigmaProd_noI[1] = singularValues[0];
+        }
+        else {
+            sigmaProd_noI[0] = singularValues[1] * singularValues[2];
+            sigmaProd_noI[1] = singularValues[2] * singularValues[0];
+            sigmaProd_noI[2] = singularValues[0] * singularValues[1];
+        }
         
         dE_div_dsigma[0] = (_2u * (singularValues[0] - 1.0) +
                             sigmaProd_noI[0] * sigmaProdm1lambda);
         dE_div_dsigma[1] = (_2u * (singularValues[1] - 1.0) +
                             sigmaProd_noI[1] * sigmaProdm1lambda);
+        if(dim == 3) {
+            dE_div_dsigma[2] = (_2u * (singularValues[2] - 1.0) +
+                                sigmaProd_noI[2] * sigmaProdm1lambda);
+        }
     }
     template<int dim>
-    void FixedCoRotEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
-                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
+    void FixedCoRotEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                        Eigen::Matrix<double, dim, dim>& d2E_div_dsigma2) const
     {
         const double sigmaProd = singularValues.prod();
-        Eigen::Vector2d sigmaProd_noI(singularValues[1], singularValues[0]);
+        Eigen::Matrix<double, dim, 1> sigmaProd_noI;
+        if(dim == 2) {
+            sigmaProd_noI[0] = singularValues[1];
+            sigmaProd_noI[1] = singularValues[0];
+        }
+        else {
+            sigmaProd_noI[0] = singularValues[1] * singularValues[2];
+            sigmaProd_noI[1] = singularValues[2] * singularValues[0];
+            sigmaProd_noI[2] = singularValues[0] * singularValues[1];
+        }
         
         d2E_div_dsigma2(0, 0) = _2u + lambda * sigmaProd_noI[0] * sigmaProd_noI[0];
         d2E_div_dsigma2(1, 1) = _2u + lambda * sigmaProd_noI[1] * sigmaProd_noI[1];
-        d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
-            lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
+        if(dim == 3) {
+            d2E_div_dsigma2(2, 2) = _2u + lambda * sigmaProd_noI[2] * sigmaProd_noI[2];
+        }
+        
+        if(dim == 2) {
+            d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
+                lambda * ((sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
+        }
+        else {
+            d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) =
+                lambda * (singularValues[2] * (sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[1]);
+            d2E_div_dsigma2(0, 2) = d2E_div_dsigma2(2, 0) =
+                lambda * (singularValues[1] * (sigmaProd - 1.0) + sigmaProd_noI[0] * sigmaProd_noI[2]);
+            d2E_div_dsigma2(2, 1) = d2E_div_dsigma2(1, 2) =
+                lambda * (singularValues[0] * (sigmaProd - 1.0) + sigmaProd_noI[2] * sigmaProd_noI[1]);
+        }
+    }
+    template<int dim>
+    void FixedCoRotEnergy<dim>::compute_BLeftCoef(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                  Eigen::Matrix<double, dim * (dim - 1) / 2, 1>& BLeftCoef) const
+    {
+        const double sigmaProd = singularValues.prod();
+        const double halfLambda = lambda / 2.0;
+        if(dim == 2) {
+            BLeftCoef[0] = u - halfLambda * (sigmaProd - 1);
+        }
+        else {
+            BLeftCoef[0] = u - halfLambda * singularValues[2] * (sigmaProd - 1);
+            BLeftCoef[1] = u - halfLambda * singularValues[0] * (sigmaProd - 1);
+            BLeftCoef[2] = u - halfLambda * singularValues[1] * (sigmaProd - 1);
+        }
     }
     template<int dim>
     void FixedCoRotEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
@@ -82,28 +133,11 @@ namespace FracCuts {
         
         double err = 0.0;
         for(int triI = 0; triI < data.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
+            AutoFlipSVD<Eigen::Matrix<double, dim, dim>> svd(Eigen::Matrix<double, dim, dim>::Identity()); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
             
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
-            A = X0.inverse(); //TODO: this only need to be computed once
-            
-            AutoFlipSVD<Eigen::MatrixXd> svd(X0 * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
-            
-            const double sigmam12Sum = (svd.singularValues() - Eigen::Vector2d::Ones()).squaredNorm();
-            const double sigmaProdm1 = svd.singularValues().prod() - 1.0;
-            
-            const double w = data.triWeight[triI] * data.triArea[triI];
-            const double energyVal = w * (u * sigmam12Sum + lambda / 2.0 * sigmaProdm1 * sigmaProdm1);
-            err += energyVal;
+            double energyVal;
+            compute_E(svd.singularValues(), energyVal);
+            err += data.triWeight[triI] * data.triArea[triI] * energyVal;
         }
         
         std::cout << "energyVal computation error = " << err << std::endl;
@@ -126,6 +160,6 @@ namespace FracCuts {
         bulkModulus = lambda + _2u / 3.0;
     }
     
-    template class FixedCoRotEnergy<2>;
+    template class FixedCoRotEnergy<DIM>;
     
 }

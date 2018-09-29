@@ -18,12 +18,14 @@
 
 //#define USE_METIS
 
-#define USE_CLOSEDFORMSVD2D
-
 // for comparing subversions
 #define USE_GW
 
-#define DIM 2
+#define DIM 3
+
+#if(DIM == 2)
+#define USE_CLOSEDFORMSVD2D
+#endif
 
 namespace FracCuts {
     enum MethodType {

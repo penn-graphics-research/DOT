@@ -81,16 +81,17 @@ namespace FracCuts {
         Eigen::VectorXd velocity;
         Eigen::MatrixXd resultV_n, xTilta;
         double dt, dtSq;
-        const Eigen::Vector2d gravity;
-        Eigen::Vector2d gravityDtSq;
+        Eigen::Matrix<double, dim, 1> gravity, gravityDtSq;
         int frameAmt;
-        AnimScripter animScripter;
+        AnimScripter<dim> animScripter;
         int innerIterAmt;
-        std::vector<AutoFlipSVD<Eigen::Matrix2d>> svd;
-        std::vector<Eigen::Matrix2d> F;
+        std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>> svd;
+        std::vector<Eigen::Matrix<double, dim, dim>> F;
         
     public: // constructor and destructor
-        Optimizer(const TriangleSoup<dim>& p_data0, const std::vector<Energy<dim>*>& p_energyTerms, const std::vector<double>& p_energyParams,
+        Optimizer(const TriangleSoup<dim>& p_data0,
+                  const std::vector<Energy<dim>*>& p_energyTerms,
+                  const std::vector<double>& p_energyParams,
                   int p_propagateFracture = 1, bool p_mute = false, bool p_scaffolding = false,
                   const Eigen::MatrixXd& UV_bnds = Eigen::MatrixXd(),
                   const Eigen::MatrixXi& E = Eigen::MatrixXi(),

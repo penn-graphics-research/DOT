@@ -387,52 +387,6 @@ namespace FracCuts {
             }
         }
     }
-    void IglUtils::addBlockToMatrix(const Eigen::Matrix<double, 2, 6>& block,
-                                    const Eigen::RowVector3i& index, int rowIndI,
-                                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
-    {
-        int rowStart = index[rowIndI] * 2;
-        if(rowStart < 0) {
-            rowStart = -rowStart - 2;
-            linSysSolver->addCoeff(rowStart, rowStart, 1.0);
-            linSysSolver->addCoeff(rowStart + 1, rowStart + 1, 1.0);
-            return;
-        }
-        
-        if(index[0] >= 0) {
-            int _2index0 = index[0] * 2;
-            linSysSolver->addCoeff(rowStart, _2index0, block(0, 0));
-            linSysSolver->addCoeff(rowStart, _2index0 + 1, block(0, 1));
-            linSysSolver->addCoeff(rowStart + 1, _2index0, block(1, 0));
-            linSysSolver->addCoeff(rowStart + 1, _2index0 + 1, block(1, 1));
-        }
-        
-        if(index[1] >= 0) {
-            int _2index1 = index[1] * 2;
-            linSysSolver->addCoeff(rowStart, _2index1, block(0, 2));
-            linSysSolver->addCoeff(rowStart, _2index1 + 1, block(0, 3));
-            linSysSolver->addCoeff(rowStart + 1, _2index1, block(1, 2));
-            linSysSolver->addCoeff(rowStart + 1, _2index1 + 1, block(1, 3));
-        }
-        
-        if(index[2] >= 0) {
-            int _2index2 = index[2] * 2;
-            linSysSolver->addCoeff(rowStart, _2index2, block(0, 4));
-            linSysSolver->addCoeff(rowStart, _2index2 + 1, block(0, 5));
-            linSysSolver->addCoeff(rowStart + 1, _2index2, block(1, 4));
-            linSysSolver->addCoeff(rowStart + 1, _2index2 + 1, block(1, 5));
-        }
-    }
-    void IglUtils::addIdBlockToMatrixDiag(const Eigen::VectorXi& index,
-                                          LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
-    {
-        for(int indI = 0; indI < index.size(); indI++) {
-            int rowStart = index[indI] * 2;
-            assert(rowStart >= 0);
-            linSysSolver->addCoeff(rowStart, rowStart, 1.0);
-            linSysSolver->addCoeff(rowStart + 1, rowStart + 1, 1.0);
-        }
-    }
     
     void IglUtils::writeSparseMatrixToFile(const std::string& filePath,
                                            const Eigen::VectorXi& I, const Eigen::VectorXi& J,
@@ -764,12 +718,16 @@ namespace FracCuts {
     }
     
     void IglUtils::saveTetMesh(const std::string& filePath,
-                               const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT)
+                               const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT,
+                               const Eigen::MatrixXi& F)
     {
         assert(TV.rows() > 0);
         assert(TV.cols() == 3);
         assert(TT.rows() > 0);
         assert(TT.cols() == 4);
+        if(F.rows() > 0) {
+            assert(F.cols() == 3);
+        }
         
         FILE *out = fopen(filePath.c_str(), "w");
         assert(out);
@@ -796,10 +754,19 @@ namespace FracCuts {
         }
         fprintf(out, "$EndElements\n");
         
+        fprintf(out, "$Surface\n");
+        fprintf(out, "%lu\n", F.rows());
+        for(int triI = 0; triI < F.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = F.row(triI);
+            fprintf(out, "%d %d %d\n", triVInd[0] + 1, triVInd[1] + 1, triVInd[2] + 1);
+        }
+        fprintf(out, "$EndSurface\n");
+        
         fclose(out);
     }
     void IglUtils::readTetMesh(const std::string& filePath,
-                               Eigen::MatrixXd& TV, Eigen::MatrixXi& TT)
+                               Eigen::MatrixXd& TV, Eigen::MatrixXi& TT,
+                               Eigen::MatrixXi& F)
     {
         FILE *in = fopen(filePath.c_str(), "r");
         assert(in);
@@ -836,8 +803,27 @@ namespace FracCuts {
         }
         TT.array() -= 1;
         
-        std::cout << "tet mesh loaded with " << TV.rows() << " nodes and "
-            << TT.rows() << " tets." << std::endl;
+        while(fgets(buf, BUFSIZ, in)) {
+            if(strncmp("$Surface", buf, 7) == 0) {
+                fgets(buf, BUFSIZ, in);
+                int elemAmt;
+                sscanf(buf, "%d", &elemAmt);
+                F.resize(elemAmt, 3);
+                break;
+            }
+        }
+        for(int triI = 0; triI < F.rows(); triI++) {
+            fscanf(in, "%d %d %d\n", &F(triI, 0), &F(triI, 1), &F(triI, 2));
+        }
+        if(F.rows() > 0) {
+            F.array() -= 1;
+        }
+        else {
+            //TODO: find surface triangles
+        }
+        
+        std::cout << "tet mesh loaded with " << TV.rows() << " nodes, "
+            << TT.rows() << " tets, and " << F.rows() << " surface tris." << std::endl;
         
         fclose(in);
     }
@@ -854,32 +840,29 @@ namespace FracCuts {
         }
     }
     
-    void IglUtils::compute_dsigma_div_dx(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                         const Eigen::MatrixXd& A,
-                                         Eigen::MatrixXd& dsigma_div_dx)
+    void IglUtils::compute_dsigma_div_dx(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                         const Eigen::Matrix<double, DIM, DIM>& A,
+                                         Eigen::Matrix<double, DIM * (DIM + 1), DIM>& dsigma_div_dx)
     {
-        dsigma_div_dx.resize(6, 2);
-        
-        for(int dimI = 0; dimI < 2; dimI++) {
-            Eigen::MatrixXd dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
-            Eigen::Matrix<double, 6, 1> result;
+        for(int dimI = 0; dimI < DIM; dimI++) {
+            Eigen::Matrix<double, DIM, DIM> dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            Eigen::Matrix<double, DIM * (DIM + 1), 1> result;
             IglUtils::dF_div_dx_mult(dsigma_div_dF, A, result);
             dsigma_div_dx.col(dimI) = result;
         }
     }
     
-    void IglUtils::compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                            Eigen::MatrixXd& dU_div_dF,
-                                            Eigen::MatrixXd& dV_div_dF)
+    void IglUtils::compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                            Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dU_div_dF,
+                                            Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dV_div_dF)
     {
+        assert(DIM == 2);
+#if(DIM == 2)
         Eigen::Matrix2d coefMtr;
         coefMtr << svd.singularValues()[0], svd.singularValues()[1],
             svd.singularValues()[1], svd.singularValues()[0];
         const Eigen::LDLT<Eigen::Matrix2d>& solver = coefMtr.ldlt();
         assert(solver.info() == Eigen::Success);
-        
-        dU_div_dF.resize(4, 4);
-        dV_div_dF.resize(4, 4);
         
         Eigen::Vector2d b;
         for(int rowI = 0; rowI < 2; rowI++) {
@@ -895,47 +878,55 @@ namespace FracCuts {
                 dV_div_dF.block(rowI * 2 + colI, 2, 1, 2) = wij21[1] * svd.matrixV().col(0).transpose();
             }
         }
+#endif
     }
     
-    void IglUtils::compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                           Eigen::MatrixXd& d2sigma_div_dF2)
+    void IglUtils::compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                           Eigen::Matrix<double, DIM * DIM, DIM * DIM * DIM>& d2sigma_div_dF2)
     {
-        Eigen::MatrixXd dU_div_dF, dV_div_dF;
+        Eigen::Matrix<double, DIM * DIM, DIM * DIM> dU_div_dF, dV_div_dF;
         compute_dU_and_dV_div_dF(svd, dU_div_dF, dV_div_dF);
         
-        d2sigma_div_dF2.resize(4, 8);
-        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
-            for(int Fij = 0; Fij < 4; Fij++) {
-                const Eigen::Matrix2d& d2sigma_div_dF2ij = dU_div_dF.block(Fij, sigmaI * 2, 1, 2).transpose() * svd.matrixV().col(sigmaI).transpose() +
-                    svd.matrixU().col(sigmaI) * dV_div_dF.block(Fij, sigmaI * 2, 1, 2);
-                d2sigma_div_dF2.block(Fij, sigmaI * 4, 1, 4) << d2sigma_div_dF2ij.row(0), d2sigma_div_dF2ij.row(1);
-            }
-        }
-    }
-    
-    void IglUtils::compute_d2sigma_div_dx2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                           const Eigen::MatrixXd& A,
-                                           Eigen::MatrixXd& d2sigma_div_dx2)
-    {
-        Eigen::MatrixXd d2sigma_div_dF2;
-        compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
-        
-        Eigen::Matrix<double, 6, 4> dF_div_dx;
-        compute_dF_div_dx(A, dF_div_dx);
-        
-        d2sigma_div_dx2.resize(6, 12);
-        for(int sigmaI = 0; sigmaI < 2; sigmaI++) {
-            for(int xI = 0; xI < 3; xI++) {
-                for(int xJ = 0; xJ < 3; xJ++) {
-                    d2sigma_div_dx2.block(xJ * 2, sigmaI * 6 + xI * 2, 2, 2) = dF_div_dx.block(xJ * 2, 0, 2, 4) * d2sigma_div_dF2.block(0, 4 * sigmaI, 4, 4) * dF_div_dx.block(xI * 2, 0, 2, 4).transpose();
+        for(int sigmaI = 0; sigmaI < DIM; sigmaI++) {
+            for(int Fij = 0; Fij < DIM * DIM; Fij++) {
+                const Eigen::Matrix<double, DIM, DIM>& d2sigma_div_dF2ij = dU_div_dF.block(Fij, sigmaI * DIM, 1, DIM).transpose() * svd.matrixV().col(sigmaI).transpose() +
+                    svd.matrixU().col(sigmaI) * dV_div_dF.block(Fij, sigmaI * DIM, 1, DIM);
+                
+                d2sigma_div_dF2.block(Fij, sigmaI * DIM * DIM, 1, DIM) = d2sigma_div_dF2ij.row(0);
+                d2sigma_div_dF2.block(Fij, sigmaI * DIM * DIM + DIM, 1, DIM) = d2sigma_div_dF2ij.row(1);
+                if(DIM == 3) {
+                    d2sigma_div_dF2.block(Fij, sigmaI * DIM * DIM + DIM * 2, 1, DIM) = d2sigma_div_dF2ij.row(2);
                 }
             }
         }
     }
     
-    void IglUtils::compute_dF_div_dx(const Eigen::Matrix2d& A,
-                                     Eigen::Matrix<double, 6, 4>& dF_div_dx)
+    void IglUtils::compute_d2sigma_div_dx2(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                           const Eigen::Matrix<double, DIM, DIM>& A,
+                                           Eigen::Matrix<double, DIM * (DIM + 1), DIM * (DIM + 1) * DIM>& d2sigma_div_dx2)
     {
+        Eigen::Matrix<double, DIM * DIM, DIM * DIM * DIM> d2sigma_div_dF2;
+        compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
+        
+        Eigen::Matrix<double, DIM * (DIM + 1), DIM * DIM> dF_div_dx;
+        compute_dF_div_dx(A, dF_div_dx);
+        
+        for(int sigmaI = 0; sigmaI < DIM; sigmaI++) {
+            for(int xI = 0; xI < DIM + 1; xI++) {
+                for(int xJ = 0; xJ < DIM + 1; xJ++) {
+                    d2sigma_div_dx2.block(xJ * DIM, sigmaI * DIM * (DIM + 1) + xI * DIM, DIM, DIM) = dF_div_dx.block(xJ * DIM, 0, DIM, DIM * DIM) *
+                        d2sigma_div_dF2.block(0, DIM * DIM * sigmaI, DIM * DIM, DIM * DIM) *
+                        dF_div_dx.block(xI * DIM, 0, DIM, DIM * DIM).transpose();
+                }
+            }
+        }
+    }
+    
+    void IglUtils::compute_dF_div_dx(const Eigen::Matrix<double, DIM, DIM>& A,
+                                     Eigen::Matrix<double, DIM * (DIM + 1), DIM * DIM>& dF_div_dx)
+    {
+        assert(DIM == 2);
+#if(DIM == 2)
         const double mA11mA21 = -A(0, 0) - A(1, 0);
         const double mA12mA22 = -A(0, 1) - A(1, 1);
         dF_div_dx <<
@@ -945,11 +936,13 @@ namespace FracCuts {
             0.0, 0.0, A(0, 0), A(0, 1),
             A(1, 0), A(1, 1), 0.0, 0.0,
             0.0, 0.0, A(1, 0), A(1, 1);
+#endif
     }
-    void IglUtils::dF_div_dx_mult(const Eigen::Matrix2d& right,
-                                  const Eigen::Matrix2d& A,
-                                  Eigen::Matrix<double, 6, 1>& result)
+    void IglUtils::dF_div_dx_mult(const Eigen::Matrix<double, DIM, DIM>& right,
+                                  const Eigen::Matrix<double, DIM, DIM>& A,
+                                  Eigen::Matrix<double, DIM * (DIM + 1), 1>& result)
     {
+#if(DIM == 2)
         const double _0000 = right(0, 0) * A(0, 0);
         const double _0010 = right(0, 0) * A(1, 0);
         const double _0101 = right(0, 1) * A(0, 1);
@@ -965,6 +958,20 @@ namespace FracCuts {
         result[5] = _1010 + _1111;
         result[0] = -result[2] - result[4];
         result[1] = -result[3] - result[5];
+#else
+        result[3] = A.row(0).dot(right.row(0));
+        result[4] = A.row(0).dot(right.row(1));
+        result[5] = A.row(0).dot(right.row(2));
+        result[6] = A.row(1).dot(right.row(0));
+        result[7] = A.row(1).dot(right.row(1));
+        result[8] = A.row(1).dot(right.row(2));
+        result[9] = A.row(2).dot(right.row(0));
+        result[10] = A.row(2).dot(right.row(1));
+        result[11] = A.row(2).dot(right.row(2));
+        result[0] = - result[3] - result[6] - result[9];
+        result[1] = - result[4] - result[7] - result[10];
+        result[2] = - result[5] - result[8] - result[11];
+#endif
     }
     
     void IglUtils::sampleSegment(const Eigen::RowVectorXd& vs,
@@ -979,6 +986,25 @@ namespace FracCuts {
         inBetween.resize(segAmt - 1, vs.size());
         for(int i = 0; i < segAmt - 1; i++) {
             inBetween.row(i) = vs + (i + 1) * stepVec;
+        }
+    }
+    
+    void IglUtils::findBorderVerts(const Eigen::MatrixXd& V,
+                                   std::vector<std::vector<int>>& borderVerts)
+    {
+        // resize to match size
+        Eigen::RowVectorXd bottomLeft = V.colwise().minCoeff();
+        Eigen::RowVectorXd topRight = V.colwise().maxCoeff();
+        Eigen::RowVectorXd range = topRight - bottomLeft;
+        
+        borderVerts.resize(2);
+        for(int vI = 0; vI < V.rows(); vI++) {
+            if(V(vI, 0) < bottomLeft[0] + range[0] / 100.0) {
+                borderVerts[0].emplace_back(vI);
+            }
+            else if(V(vI, 0) > topRight[0] - range[0] / 100.0) {
+                borderVerts[1].emplace_back(vI);
+            }
         }
     }
     

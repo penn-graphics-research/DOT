@@ -53,6 +53,7 @@ const int channel_initial = 0;
 const int channel_result = 1;
 const int channel_findExtrema = 2;
 int viewChannel = channel_result;
+Eigen::MatrixXi SF;
 bool viewUV = true; // view UV or 3D model
 double texScale = 1.0;
 bool showSeam = false;
@@ -62,7 +63,7 @@ int showDistortion = 2; // 0: don't show; 1: energy value; 2: other scalar field
 int showDistortion_init = showDistortion;
 Eigen::MatrixXd faceColors_default;
 bool showTexture = true; // show checkerboard
-bool isLighting = false;
+bool isLighting = true;
 bool showFracTail = true; //!!! frac tail info not initialized correctly
 bool showFixedVerts = true; //TODO: add key control
 float fracTailSize = 20.0f;
@@ -128,7 +129,7 @@ void updateViewerData_seam(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::Matrix
     if(showSeam) {
         const double seamDistThres = 1.0e-2;
         Eigen::VectorXd seamScore;
-        triSoup[viewChannel]->computeSeamScore(seamScore);
+        seamScore.setZero();
         
         const Eigen::VectorXd cohIndices = Eigen::VectorXd::LinSpaced(triSoup[viewChannel]->cohE.rows(),
                                                                 0, triSoup[viewChannel]->cohE.rows() - 1);
@@ -192,10 +193,15 @@ void updateViewerData_distortion(void)
 //                                  triSoup[viewChannel]->vertWeight[triVInd[1]] +
 //                                  triSoup[viewChannel]->vertWeight[triVInd[2]]) / 3.0;
 //            }
+#if(DIM == 2)
             optimizer->getFaceFieldForVis(faceWeight);
+#else
+            faceWeight = Eigen::VectorXd::Constant(SF.rows(), 0.1);
+#endif
 //            FracCuts::IglUtils::mapScalarToColor(faceWeight, color_distortionVis,
 //                faceWeight.minCoeff(), faceWeight.maxCoeff());
             igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, faceWeight, true, color_distortionVis);
+            color_distortionVis.array() += std::min(0.2, 1.0 - color_distortionVis.maxCoeff());
             break;
         }
     
@@ -224,21 +230,22 @@ void updateViewerData_distortion(void)
         color_distortionVis.conservativeResize(color_distortionVis.rows() + seamColor.rows(), 3);
         color_distortionVis.bottomRows(seamColor.rows()) = seamColor;
     }
-    
     viewer.data().set_colors(color_distortionVis);
 }
 
 void updateViewerData(void)
 {
     Eigen::MatrixXd UV_vis = triSoup[viewChannel]->V * texScale;
-    Eigen::MatrixXi F_vis = triSoup[viewChannel]->F;
+    Eigen::MatrixXi F_vis = ((DIM == 2) ? triSoup[viewChannel]->F : SF);
     if(viewUV) {
         if(optimizer->isScaffolding() && (viewChannel == channel_result)) {
             optimizer->getScaffold().augmentUVwithAirMesh(UV_vis, texScale);
             optimizer->getScaffold().augmentFwithAirMesh(F_vis);
         }
-        UV_vis.conservativeResize(UV_vis.rows(), 3);
-        UV_vis.rightCols(1) = Eigen::VectorXd::Zero(UV_vis.rows());
+        if(DIM == 2) {
+            UV_vis.conservativeResize(UV_vis.rows(), 3);
+            UV_vis.rightCols(1) = Eigen::VectorXd::Zero(UV_vis.rows());
+        }
         viewer.core.align_camera_center(triSoup[viewChannel]->V_rest * texScale, F_vis);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
         
@@ -250,7 +257,16 @@ void updateViewerData(void)
         viewer.data().set_mesh(UV_vis, F_vis);
         
         viewer.data().show_texture = false;
+#if(DIM == 2)
         viewer.core.lighting_factor = 0.0;
+#else
+        if(isLighting) {
+            viewer.core.lighting_factor = 0.6;
+        }
+        else {
+            viewer.core.lighting_factor = 0.0;
+        }
+#endif
 
         updateViewerData_meshEdges();
         
@@ -373,7 +389,8 @@ void saveInfo(bool writePNG, bool writeGIF, bool writeMesh)
     saveScreenshot(outputFolderPath + infoName + ".png", 0.5, writeGIF, writePNG);
     if(writeMesh) {
 //        triSoup[channel_result]->save(outputFolderPath + infoName + "_triSoup.obj");
-        triSoup[channel_result]->saveAsMesh(outputFolderPath + infoName + "_mesh.obj");
+        triSoup[channel_result]->saveAsMesh(outputFolderPath + infoName + "_mesh" +
+                                            ((DIM == 2) ? ".obj" : ".msh"), false, SF);
     }
 }
 
@@ -409,10 +426,7 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
     
     double distortion;
     energyTerms[0]->computeEnergyVal(*triSoup[channel_result], distortion);
-    file << distortion << " " <<
-        0.0 << std::endl;
-    
-    triSoup[channel_result]->outputStandardStretch(file);
+    file << distortion << " " << 0.0 << std::endl;
     
     file << "initialSeams " << triSoup[channel_result]->initSeams.rows() << std::endl;
     file << triSoup[channel_result]->initSeams << std::endl;
@@ -733,11 +747,29 @@ int main(int argc, char *argv[])
     else if(suffix == ".primitive") {
         loadSucceed = !config.loadFromFile(meshFilePath);
         if(loadSucceed) {
-            FracCuts::TriangleSoup<DIM> primitive(config.shapeType, config.size, config.resolution, false);
-            V = primitive.V_rest;
-            UV = primitive.V;
-            F = primitive.F;
-            borderVerts_primitive = primitive.borderVerts_primitive;
+            if(config.shapeType == FracCuts::Primitive::P_INPUT) {
+                assert(DIM == 3); //TODO: extend to 2D cases and absorb above
+                
+                FracCuts::IglUtils::readTetMesh(config.inputShapePath, V, F, SF);
+                
+                V *= config.size / (V.colwise().maxCoeff() - V.colwise().minCoeff()).maxCoeff();
+                //TODO: resampling according to config.resolution?
+                UV = V.leftCols(DIM);
+//                UV.col(0) *= 1.1;
+//                UV.col(1) *= 1.2;
+//                UV.col(2) *= 1.3;
+                FracCuts::IglUtils::findBorderVerts(V, borderVerts_primitive);
+            }
+            else {
+                FracCuts::TriangleSoup<DIM> primitive(config.shapeType,
+                                                      config.size, config.resolution);
+                V = primitive.V_rest;
+                UV = primitive.V;
+//                UV.col(0) *= 1.1;
+//                UV.col(1) *= 1.2;
+                F = primitive.F;
+                borderVerts_primitive = primitive.borderVerts_primitive;
+            }
         }
     }
     else {
@@ -750,13 +782,21 @@ int main(int argc, char *argv[])
     }
     vertAmt_input = V.rows();
     
+    // construct mesh data structure
+    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV);
+    // primitive test cases
+    if(suffix == ".primitive") {
+        temp->borderVerts_primitive = borderVerts_primitive;
+    }
+    triSoup.emplace_back(temp);
+    
     // Set lambda
-    double lambda = 0.5;
+    double lambda = 0.0;
     if(argc > 3) {
         lambda = std::stod(argv[3]);
         if((lambda != lambda) || (lambda < 0.0) || (lambda > 1.0)) {
-            std::cout << "Overwrite invalid lambda " << lambda << " to 0.5" << std::endl;
-            lambda = 0.5;
+            std::cout << "Overwrite invalid lambda " << lambda << " to 0.0" << std::endl;
+            lambda = 0.0;
         }
     }
     else {
@@ -781,7 +821,8 @@ int main(int argc, char *argv[])
         methodType = FracCuts::MethodType(std::stoi(argv[5]));
     }
     else {
-        std::cout << "Use default method: ours." << std::endl;
+        methodType = FracCuts::MT_NOCUT;
+        std::cout << "Use default method: simulation" << std::endl;
     }
     
     std::string startDS;
@@ -805,14 +846,6 @@ int main(int argc, char *argv[])
 #ifdef STATIC_SOLVE
     folderTail += "QuasiStatic";
 #endif
-    
-    // construct mesh data structure
-    FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV);
-    // primitive test cases
-    if(suffix == ".primitive") {
-        temp->borderVerts_primitive = borderVerts_primitive;
-    }
-    triSoup.emplace_back(temp);
     
     // create output folder
     mkdir(outputFolderPath.c_str(), 0777);
@@ -890,7 +923,7 @@ int main(int argc, char *argv[])
         }
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);
-//        energyTerms.back()->checkHessian(*triSoup[0], true);
+        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
     
     assert(lambda == 0.0);
@@ -967,6 +1000,7 @@ int main(int argc, char *argv[])
         viewer.core.animation_max_fps = 60.0;
         viewer.data().point_size = fracTailSize;
         viewer.data().show_overlay = true;
+        viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4, Eigen::Vector3f::UnitX()));
         viewer.launch();
     }
     

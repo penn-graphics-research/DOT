@@ -26,7 +26,8 @@ namespace FracCuts{
         P_SQUARE,
         P_SPIKES,
         P_SHARKEY,
-        P_CYLINDER
+        P_CYLINDER,
+        P_INPUT
     };
     class Scaffold;
     
@@ -63,7 +64,6 @@ namespace FracCuts{
         Eigen::VectorXd e0dote1_div_dbAreaSq;
         double avgEdgeLen;
         double virtualRadius;
-        std::vector<std::set<std::pair<int, int>>> validSplit;
         std::set<int> fixedVert; // for linear solve
         std::vector<bool> isFixedVert;
         Eigen::Matrix<double, 2, 3> bbox;
@@ -93,7 +93,7 @@ namespace FracCuts{
         TriangleSoup(const Eigen::MatrixXd& V_mesh, const Eigen::MatrixXi& F_mesh,
                      const Eigen::MatrixXd& Vt_mesh, double p_areaThres_AM = 0.0);
         
-        TriangleSoup(Primitive primitive, double size = 1.0, int elemAmt = 1000, bool separateTri = true);
+        TriangleSoup(Primitive primitive, double size = 1.0, int elemAmt = 1000);
         
     public: // API
         void computeMassMatrix(const igl::MassMatrixType type = igl::MASSMATRIX_TYPE_VORONOI);
@@ -103,23 +103,6 @@ namespace FracCuts{
         void addFixedVert(int vI);
         void addFixedVert(const std::vector<int>& p_fixedVert);
         
-        void onePointCut(int vI = 0);
-        void highCurvOnePointCut(void);
-        void farthestPointCut(void);
-        void geomImgCut(TriangleSoup& data_findExtrema);
-        void cutPath(std::vector<int> path, bool makeCoh = false, int changePos = 0,
-                     const Eigen::MatrixXd& newVertPos = Eigen::MatrixXd(), bool allowCutThrough = true);
-        
-        void computeSeamScore(Eigen::VectorXd& seamScore) const;
-        void computeBoundaryLen(double& boundaryLen) const;
-        void computeSeamSparsity(double& sparsity, bool triSoup = false) const;
-        void computeStandardStretch(double& stretch_l2, double& stretch_inf, double& stretch_shear, double& compress_inf) const;
-        void computeL2StretchPerElem(Eigen::VectorXd& L2StretchPerElem) const;
-        void outputStandardStretch(std::ofstream& file) const;
-        void computeAbsGaussianCurv(double& absGaussianCurv) const;
-        
-        void initRigidUV(void);
-        
         bool checkInversion(int triI, bool mute) const;
         bool checkInversion(bool mute = false, const std::vector<int>& triangles = std::vector<int>()) const;
         
@@ -127,7 +110,8 @@ namespace FracCuts{
                   const Eigen::MatrixXd UV, const Eigen::MatrixXi& FUV = Eigen::MatrixXi()) const;
         void save(const std::string& filePath) const;
         
-        void saveAsMesh(const std::string& filePath, bool scaleUV = false) const;
+        void saveAsMesh(const std::string& filePath, bool scaleUV = false,
+                        const Eigen::MatrixXi& SF = Eigen::MatrixXi()) const;
         
         void constructSubmesh(const Eigen::VectorXi& triangles,
                               TriangleSoup& submesh,
@@ -137,23 +121,12 @@ namespace FracCuts{
     public: // helper function
         void computeLaplacianMtr(void);
         
-        bool findBoundaryEdge(int vI, const std::pair<int, int>& startEdge,
-                              std::pair<int, int>& boundaryEdge);
-        
-        bool insideTri(int triI, const Eigen::RowVector2d& pos) const;
-        bool insideUVRegion(const std::vector<int>& triangles, const Eigen::RowVector2d& pos) const;
-        
         // toBound = false indicate counter-clockwise
         bool isBoundaryVert(int vI, int vI_neighbor,
                             std::vector<int>& tri_toSep, std::pair<int, int>& boundaryEdge, bool toBound = true) const;
         bool isBoundaryVert(int vI) const;
         
         void compute2DInwardNormal(int vI, Eigen::RowVector2d& normal) const;
-        
-        void splitEdgeOnBoundary(const std::pair<int, int>& edge, const Eigen::MatrixXd& newVertPos,
-                                bool changeVertPos = true, bool allowCutThrough = true);
-        void mergeBoundaryEdges(const std::pair<int, int>& edge0, const std::pair<int, int>& edge1,
-                                const Eigen::RowVectorXd& mergedPos);
     };
     
 }

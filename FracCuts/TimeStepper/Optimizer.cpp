@@ -47,8 +47,7 @@ namespace FracCuts {
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
                          const Config& animConfig) :
-        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams),
-        gravity(0.0, -9.80665)
+        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams)
     {
         assert(energyTerms.size() == energyParams.size());
         
@@ -74,26 +73,29 @@ namespace FracCuts {
             std::cout << "element inverted in the initial mesh!" << std::endl;
 //            exit(-1);
         }
+        else {
+            std::cout << "no element inversion detected!" << std::endl;
+        }
         
         globalIterNum = 0;
         relGL2Tol = 1.0e-2;
         topoIter = 0;
         innerIterAmt = 0;
         
-        Eigen::MatrixXd d2E_div_dF2_rest;
-        energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
-        sqnorm_H_rest = d2E_div_dF2_rest.squaredNorm();
-        Eigen::MatrixXd edgeLens;
-        igl::edge_lengths(data0.V_rest, data0.F, edgeLens);
-        Eigen::VectorXd ls;
-        ls.resize(data0.V_rest.rows());
-        ls.setZero();
-        for(int triI = 0; triI < data0.F.rows(); triI++) {
-            for(int i = 0; i < 3; i++) {
-                ls[data0.F(triI, i)] += edgeLens(triI, i);
-            }
-        }
-        sqnorm_l = ls.squaredNorm();
+//        Eigen::MatrixXd d2E_div_dF2_rest;
+//        energyTerms[0]->compute_d2E_div_dF2_rest(d2E_div_dF2_rest);
+//        sqnorm_H_rest = d2E_div_dF2_rest.squaredNorm();
+//        Eigen::MatrixXd edgeLens;
+//        igl::edge_lengths(data0.V_rest, data0.F, edgeLens);
+//        Eigen::VectorXd ls;
+//        ls.resize(data0.V_rest.rows());
+//        ls.setZero();
+//        for(int triI = 0; triI < data0.F.rows(); triI++) {
+//            for(int i = 0; i < 3; i++) {
+//                ls[data0.F(triI, i)] += edgeLens(triI, i);
+//            }
+//        }
+//        sqnorm_l = ls.squaredNorm();
         
         needRefactorize = false;
         for(const auto& energyTermI : energyTerms) {
@@ -113,10 +115,13 @@ namespace FracCuts {
         w_scaf = energyParams[0] * 0.01;
         
 #ifndef STATIC_SOLVE
+        gravity.setZero();
+        gravity[1] = -9.80665;
         setTime(10.0, 0.025);
 #else
         dt = dtSq = 1.0;
 #endif
+        std::cout << "dt and tol initialized" << std::endl;
         
 #ifdef LINSYSSOLVER_USE_CHOLMOD
         linSysSolver = new CHOLMODSolver<Eigen::VectorXi, Eigen::VectorXd>();
@@ -132,6 +137,13 @@ namespace FracCuts {
         svd.resize(result.F.rows());
         F.resize(result.F.rows());
         animScripter.initAnimScript(result);
+        if(energyTerms[0]->getNeedElemInvSafeGuard()) {
+            if(!result.checkInversion()) {
+                std::cout << "scripted motion causes element inversion, end process" << std::endl;
+                exit(-1);
+            }
+        }
+        std::cout << "animScriptor set" << std::endl;
         resultV_n = result.V;
         if(scaffolding) {
             scaffold = Scaffold(result, UV_bnds_scaffold, E_scaffold, bnd_scaffold);
@@ -143,13 +155,14 @@ namespace FracCuts {
         lastEDec = 0.0;
         data_findExtrema = data0;
         updateTargetGRes();
-        velocity = Eigen::VectorXd::Zero(result.V.rows() * 2);
+        velocity = Eigen::VectorXd::Zero(result.V.rows() * dim);
         computeXTilta();
         computeEnergyVal(result, scaffold, true, lastEnergyVal);
         if(!mute) {
             writeEnergyValToFile(true);
             std::cout << "E_initial = " << lastEnergyVal << std::endl;
         }
+        std::cout << "Newton's solver for Backward Euler constructed" << std::endl;
     }
     
     template<int dim>
@@ -275,16 +288,20 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::precompute(void)
     {
+        std::cout << "precompute: start" << std::endl;
         if(!mute) { timer_step.start(1); }
         linSysSolver->set_type(pardisoThreadAmt, 2);
 //            linSysSolver->set_pattern(I_mtr, J_mtr, V_mtr);
         linSysSolver->set_pattern(scaffolding ? vNeighbor_withScaf : result.vNeighbor,
                                   scaffolding ? fixedV_withScaf : result.fixedVert);
         if(!mute) { timer_step.stop(); }
+        std::cout << "precompute: sparse matrix allocated" << std::endl;
         computePrecondMtr(result, scaffold, true, linSysSolver);
+        std::cout << "precompute: sparse matrix entry computed" << std::endl;
         if(!mute) { timer_step.start(2); }
         linSysSolver->analyze_pattern();
         if(!mute) { timer_step.stop(); }
+        std::cout << "precompute: pattern analyzed" << std::endl;
         if(!needRefactorize) {
             try {
                 if(!mute) { timer_step.start(3); }
@@ -299,6 +316,7 @@ namespace FracCuts {
                 exit(-1);
             }
         }
+        std::cout << "precompute: factorized" << std::endl;
     }
     
     template<int dim>
@@ -310,6 +328,12 @@ namespace FracCuts {
         {
 #ifndef STATIC_SOLVE
             animScripter.stepAnimScript(result, dt);
+            if(energyTerms[0]->getNeedElemInvSafeGuard()) {
+                if(!result.checkInversion()) {
+                    std::cout << "scripted motion causes element inversion, end process" << std::endl;
+                    exit(-1);
+                }
+            }
 #endif
             if(!mute) { timer.start(1); }
             computeGradient(result, scaffold, true, gradient);
@@ -623,7 +647,7 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::computeXTilta(void)
     {
-        xTilta.conservativeResize(result.V.rows(), 2);
+        xTilta.conservativeResize(result.V.rows(), dim);
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)result.V.rows(), 1, [&](int vI)
 #else
@@ -635,7 +659,7 @@ namespace FracCuts {
             }
             else {
                 xTilta.row(vI) = (resultV_n.row(vI) +
-                                  (velocity.segment<2>(vI * 2) * dt +
+                                  (velocity.segment<dim>(vI * dim) * dt +
                                    gravityDtSq).transpose());
             }
         }
@@ -743,7 +767,6 @@ namespace FracCuts {
         bool stopped = false;
         double stepSize = 1.0;
         initStepSize(result, stepSize);
-        stepSize *= 0.99; // producing degenerated element is not allowed
         if(!mute) {
             std::cout << "stepSize: " << stepSize << " -> ";
         }
@@ -833,20 +856,23 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void Optimizer<dim>::stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
-                                TriangleSoup<dim>& data, Scaffold& scaffoldData, double stepSize) const
+    void Optimizer<dim>::stepForward(const Eigen::MatrixXd& dataV0,
+                                     const Eigen::MatrixXd& scaffoldV0,
+                                     TriangleSoup<dim>& data,
+                                     Scaffold& scaffoldData,
+                                     double stepSize) const
     {
         assert(dataV0.rows() == data.V.rows());
         if(scaffolding) {
-            assert(data.V.rows() + scaffoldData.airMesh.V.rows() - scaffoldData.bnd.size() == searchDir.size() / 2);
+            assert(data.V.rows() + scaffoldData.airMesh.V.rows() - scaffoldData.bnd.size() == searchDir.size() / dim);
         }
         else {
-            assert(data.V.rows() * 2 == searchDir.size());
+            assert(data.V.rows() * dim == searchDir.size());
         }
         assert(data.V.rows() == result.V.rows());
         
         for(int vI = 0; vI < data.V.rows(); vI++) {
-            data.V.row(vI) = dataV0.row(vI) + stepSize * searchDir.segment<2>(vI * 2).transpose();
+            data.V.row(vI) = dataV0.row(vI) + stepSize * searchDir.segment<dim>(vI * dim).transpose();
         }
         if(scaffolding) {
             scaffoldData.stepForward(scaffoldV0, searchDir, stepSize);
@@ -917,9 +943,7 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::writeEnergyValToFile(bool flush)
     {
-        double E_se;
-        result.computeSeamSparsity(E_se, false);
-        E_se /= result.virtualRadius;
+        double E_se = 0.0;
         
         buffer_energyValPerIter << lastEnergyVal + (1.0 - energyParams[0]) * E_se;
         
@@ -986,15 +1010,15 @@ namespace FracCuts {
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         
-        if(scaffolding && (!excludeScaffold)) {
-            SymStretchEnergy<dim> SD;
-            SD.computeEnergyVal(scaffoldData.airMesh, energyVal_scaffold, true);
-            energyVal_scaffold *= w_scaf / scaffold.airMesh.F.rows();
-            energyVal += energyVal_scaffold;
-        }
-        else {
+//        if(scaffolding && (!excludeScaffold)) {
+//            SymStretchEnergy<dim> SD;
+//            SD.computeEnergyVal(scaffoldData.airMesh, energyVal_scaffold, true);
+//            energyVal_scaffold *= w_scaf / scaffold.airMesh.F.rows();
+//            energyVal += energyVal_scaffold;
+//        }
+//        else {
             energyVal_scaffold = 0.0;
-        }
+//        }
         
 #ifndef STATIC_SOLVE
         timer_temp.start(4);
@@ -1030,11 +1054,11 @@ namespace FracCuts {
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
-        if(scaffolding) {
-            SymStretchEnergy<dim> SD;
-            SD.computeGradient(scaffoldData.airMesh, gradient_scaffold, true);
-            scaffoldData.augmentGradient(gradient, gradient_scaffold, (excludeScaffold ? 0.0 : (w_scaf / scaffold.airMesh.F.rows())));
-        }
+//        if(scaffolding) {
+//            SymStretchEnergy<dim> SD;
+//            SD.computeGradient(scaffoldData.airMesh, gradient_scaffold, true);
+//            scaffoldData.augmentGradient(gradient, gradient_scaffold, (excludeScaffold ? 0.0 : (w_scaf / scaffold.airMesh.F.rows())));
+//        }
         
 #ifndef STATIC_SOLVE
         timer_temp.start(5);
@@ -1045,8 +1069,8 @@ namespace FracCuts {
 #endif
         {
             if(!data.isFixedVert[vI]) {
-                gradient.segment<2>(vI * 2) += (data.massMatrix.coeff(vI, vI) *
-                                                (data.V.row(vI) - xTilta.row(vI)).transpose());
+                gradient.segment<dim>(vI * dim) += (data.massMatrix.coeff(vI, vI) *
+                                                    (data.V.row(vI) - xTilta.row(vI)).transpose());
             }
         }
 #ifdef USE_TBB
@@ -1058,9 +1082,10 @@ namespace FracCuts {
         if(!mute) { timer_step.stop(); }
     }
     template<int dim>
-    void Optimizer<dim>::computePrecondMtr(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
-                                      bool redoSVD,
-                                      LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver)
+    void Optimizer<dim>::computePrecondMtr(const TriangleSoup<dim>& data,
+                                           const Scaffold& scaffoldData,
+                                           bool redoSVD,
+                                           LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *p_linSysSolver)
     {
         if(!mute) { timer_step.start(0); }
         
@@ -1070,6 +1095,11 @@ namespace FracCuts {
                                                 energyParams[eI] * dtSq,
                                                 p_linSysSolver);
         }
+//        Eigen::VectorXi I, J;
+//        Eigen::VectorXd V;
+//        energyTerms[0]->computeHessianBySVD(data, &V, &I, &J, true);
+//        V *= energyParams[0] * dtSq;
+//        p_linSysSolver->update_a(I, J, V);
         
 //        if(scaffolding) {
 //            SymStretchEnergy SD;
@@ -1090,10 +1120,14 @@ namespace FracCuts {
         {
             if(!data.isFixedVert[vI]) {
                 double massI = data.massMatrix.coeff(vI, vI);
-                int ind0 = vI * 2;
+                int ind0 = vI * dim;
                 int ind1 = ind0 + 1;
                 p_linSysSolver->addCoeff(ind0, ind0, massI);
                 p_linSysSolver->addCoeff(ind1, ind1, massI);
+                if(dim == 3) {
+                    int ind2 = ind0 + 2;
+                    p_linSysSolver->addCoeff(ind2, ind2, massI);
+                }
             }
         }
 #ifdef USE_TBB
@@ -1107,15 +1141,15 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::computeHessian(const TriangleSoup<dim>& data, const Scaffold& scaffoldData, Eigen::SparseMatrix<double>& hessian) const
     {
-        energyTerms[0]->computeHessian(data, hessian);
-        hessian *= energyParams[0];
-        for(int eI = 1; eI < energyTerms.size(); eI++) {
-            Eigen::SparseMatrix<double> hessianI;
-            energyTerms[eI]->computeHessian(data, hessianI);
-            hessian += energyParams[eI] * hessianI;
-        }
-        
-        //TODO: SCAFFOLDING
+//        energyTerms[0]->computeHessian(data, hessian);
+//        hessian *= energyParams[0];
+//        for(int eI = 1; eI < energyTerms.size(); eI++) {
+//            Eigen::SparseMatrix<double> hessianI;
+//            energyTerms[eI]->computeHessian(data, hessianI);
+//            hessian += energyParams[eI] * hessianI;
+//        }
+//        
+//        //TODO: SCAFFOLDING
     }
     
     template<int dim>
@@ -1126,5 +1160,5 @@ namespace FracCuts {
                 lastEnergyVal);
     }
             
-    template class Optimizer<2>;
+    template class Optimizer<DIM>;
 }

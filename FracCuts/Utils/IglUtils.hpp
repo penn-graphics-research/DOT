@@ -115,11 +115,98 @@ namespace FracCuts {
                                         int dim, Eigen::VectorXd* V,
                                         Eigen::VectorXi* I = NULL,
                                         Eigen::VectorXi* J = NULL);
-        static void addBlockToMatrix(const Eigen::Matrix<double, 2, 6>& block,
-                                     const Eigen::RowVector3i& index, int rowIndI,
-                                     LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver);
+        template<int dim>
+        static void addBlockToMatrix(const Eigen::Matrix<double, dim, dim * (dim + 1)>& block,
+                                     const Eigen::Matrix<int, 1, dim + 1>& index, int rowIndI,
+                                     LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
+        {
+            int rowStart = index[rowIndI] * dim;
+            if(rowStart < 0) {
+                rowStart = -rowStart - dim;
+                linSysSolver->setCoeff(rowStart, rowStart, 1.0);
+                linSysSolver->setCoeff(rowStart + 1, rowStart + 1, 1.0);
+                if(dim == 3) {
+                    linSysSolver->setCoeff(rowStart + 2, rowStart + 2, 1.0);
+                }
+                return;
+            }
+            
+            if(index[0] >= 0) {
+                int _dimIndex0 = index[0] * dim;
+                linSysSolver->addCoeff(rowStart, _dimIndex0, block(0, 0));
+                linSysSolver->addCoeff(rowStart, _dimIndex0 + 1, block(0, 1));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex0, block(1, 0));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex0 + 1, block(1, 1));
+                if(dim == 3) {
+                    linSysSolver->addCoeff(rowStart, _dimIndex0 + 2, block(0, 2));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex0 + 2, block(1, 2));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex0, block(2, 0));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex0 + 1, block(2, 1));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex0 + 2, block(2, 2));
+                }
+            }
+            
+            if(index[1] >= 0) {
+                int _dimIndex1 = index[1] * dim;
+                linSysSolver->addCoeff(rowStart, _dimIndex1, block(0, dim));
+                linSysSolver->addCoeff(rowStart, _dimIndex1 + 1, block(0, dim + 1));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex1, block(1, dim));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex1 + 1, block(1, dim + 1));
+                if(dim == 3) {
+                    linSysSolver->addCoeff(rowStart, _dimIndex1 + 2, block(0, dim + 2));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex1 + 2, block(1, dim + 2));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex1, block(2, dim));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex1 + 1, block(2, dim + 1));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex1 + 2, block(2, dim + 2));
+                }
+            }
+            
+            if(index[2] >= 0) {
+                int _2dim = 2 * dim;
+                int _dimIndex2 = index[2] * dim;
+                linSysSolver->addCoeff(rowStart, _dimIndex2, block(0, _2dim));
+                linSysSolver->addCoeff(rowStart, _dimIndex2 + 1, block(0, _2dim + 1));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex2, block(1, _2dim));
+                linSysSolver->addCoeff(rowStart + 1, _dimIndex2 + 1, block(1, _2dim + 1));
+                if(dim == 3) {
+                    linSysSolver->addCoeff(rowStart, _dimIndex2 + 2, block(0, _2dim + 2));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex2 + 2, block(1, _2dim + 2));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex2, block(2, _2dim));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex2 + 1, block(2, _2dim + 1));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex2 + 2, block(2, _2dim + 2));
+                }
+            }
+            
+            if(dim == 3) {
+                if(index[3] >= 0) {
+                    int _3dim = 3 * dim;
+                    int _dimIndex3 = index[3] * dim;
+                    linSysSolver->addCoeff(rowStart, _dimIndex3, block(0, _3dim));
+                    linSysSolver->addCoeff(rowStart, _dimIndex3 + 1, block(0, _3dim + 1));
+                    linSysSolver->addCoeff(rowStart, _dimIndex3 + 2, block(0, _3dim + 2));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex3, block(1, _3dim));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex3 + 1, block(1, _3dim + 1));
+                    linSysSolver->addCoeff(rowStart + 1, _dimIndex3 + 2, block(1, _3dim + 2));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex3, block(2, _3dim));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex3 + 1, block(2, _3dim + 1));
+                    linSysSolver->addCoeff(rowStart + 2, _dimIndex3 + 2, block(2, _3dim + 2));
+                }
+            }
+        }
+        template<int dim>
         static void addIdBlockToMatrixDiag(const Eigen::VectorXi& index,
-                                           LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver);
+                                           LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver)
+        {
+            for(int indI = 0; indI < index.size(); indI++) {
+                int rowStart = index[indI] * dim;
+                assert(rowStart >= 0);
+                linSysSolver->addCoeff(rowStart, rowStart, 1.0);
+                linSysSolver->addCoeff(rowStart + 1, rowStart + 1, 1.0);
+                if(dim == 3) {
+                    linSysSolver->addCoeff(rowStart + 2, rowStart + 2, 1.0);
+                }
+            }
+        }
         
         template<typename Scalar, int size>
         static void symmetrizeMatrix(Eigen::Matrix<Scalar, size, size>& mtr) {
@@ -218,7 +305,8 @@ namespace FracCuts {
         static const std::string rtos(double real);
         
         static void differentiate_normalize(const Eigen::Vector2d& var, Eigen::Matrix2d& deriv);
-        static void differentiate_xxT(const Eigen::Vector2d& var, Eigen::Matrix<Eigen::RowVector2d, 2, 2>& deriv,
+        static void differentiate_xxT(const Eigen::Vector2d& var,
+                                      Eigen::Matrix<Eigen::RowVector2d, 2, 2>& deriv,
                                       double param = 1.0);
         
         static double computeRotAngle(const Eigen::RowVector2d& from, const Eigen::RowVector2d& to);
@@ -237,31 +325,33 @@ namespace FracCuts {
         static void saveMesh_Seamster(const std::string& filePath,
                                       const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
         static void saveTetMesh(const std::string& filePath,
-                                const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT);
+                                const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT,
+                                const Eigen::MatrixXi& F);
         static void readTetMesh(const std::string& filePath,
-                                Eigen::MatrixXd& TV, Eigen::MatrixXi& TT);
+                                Eigen::MatrixXd& TV, Eigen::MatrixXi& TT,
+                                Eigen::MatrixXi& F);
         
         static void smoothVertField(const TriangleSoup<DIM>& mesh, Eigen::VectorXd& field);
         
-        static void compute_dsigma_div_dx(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                          const Eigen::MatrixXd& A,
-                                          Eigen::MatrixXd& dsigma_div_dx);
+        static void compute_dsigma_div_dx(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                          const Eigen::Matrix<double, DIM, DIM>& A,
+                                          Eigen::Matrix<double, DIM * (DIM + 1), DIM>& dsigma_div_dx);
         
-        static void compute_d2sigma_div_dx2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                            const Eigen::MatrixXd& A,
-                                            Eigen::MatrixXd& d2sigma_div_dx2);
-        static void compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                            Eigen::MatrixXd& d2sigma_div_dF2);
-        static void compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::MatrixXd>& svd,
-                                             Eigen::MatrixXd& dU_div_dF,
-                                             Eigen::MatrixXd& dV_div_dF);
+        static void compute_d2sigma_div_dx2(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                            const Eigen::Matrix<double, DIM, DIM>& A,
+                                            Eigen::Matrix<double, DIM * (DIM + 1), DIM * (DIM + 1) * DIM>& d2sigma_div_dx2);
+        static void compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                            Eigen::Matrix<double, DIM * DIM, DIM * DIM * DIM>& d2sigma_div_dF2);
+        static void compute_dU_and_dV_div_dF(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
+                                             Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dU_div_dF,
+                                             Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dV_div_dF);
         
-        static void compute_dF_div_dx(const Eigen::Matrix2d& A,
-                                      Eigen::Matrix<double, 6, 4>& dF_div_dx);
+        static void compute_dF_div_dx(const Eigen::Matrix<double, DIM, DIM>& A,
+                                      Eigen::Matrix<double, DIM * (DIM + 1), DIM * DIM>& dF_div_dx);
         template<int colSize>
-        static void dF_div_dx_mult(const Eigen::Matrix<double, 4, colSize>& right,
-                                   const Eigen::Matrix2d& A,
-                                   Eigen::Matrix<double, 6, colSize>& result,
+        static void dF_div_dx_mult(const Eigen::Matrix<double, DIM * DIM, colSize>& right,
+                                   const Eigen::Matrix<double, DIM, DIM>& A,
+                                   Eigen::Matrix<double, DIM * (DIM + 1), colSize>& result,
                                    bool symmetric)
         {
             if(colSize == Eigen::Dynamic) {
@@ -270,7 +360,7 @@ namespace FracCuts {
             else {
                 assert(colSize > 0);
             }
-            
+#if(DIM == 2)
             if(symmetric) {
                 if(colSize == Eigen::Dynamic) {
                     assert(right.cols() == 6);
@@ -337,10 +427,27 @@ namespace FracCuts {
                     result(1, colI) = -result(3, colI) - result(5, colI);
                 }
             }
+#else
+            //TODO: use symmetric
+            for(int colI = 0; colI < right.cols(); colI++) {
+                result(3, colI) = (A.row(0) * right.block(0, colI, DIM, 1))[0];
+                result(4, colI) = (A.row(0) * right.block(DIM, colI, DIM, 1))[0];
+                result(5, colI) = (A.row(0) * right.block(DIM * 2, colI, DIM, 1))[0];
+                result(6, colI) = (A.row(1) * right.block(0, colI, DIM, 1))[0];
+                result(7, colI) = (A.row(1) * right.block(DIM, colI, DIM, 1))[0];
+                result(8, colI) = (A.row(1) * right.block(DIM * 2, colI, DIM, 1))[0];
+                result(9, colI) = (A.row(2) * right.block(0, colI, DIM, 1))[0];
+                result(10, colI) = (A.row(2) * right.block(DIM, colI, DIM, 1))[0];
+                result(11, colI) = (A.row(2) * right.block(DIM * 2, colI, DIM, 1))[0];
+                result(0, colI) = - result(3, colI) - result(6, colI) - result(9, colI);
+                result(1, colI) = - result(4, colI) - result(7, colI) - result(10, colI);
+                result(2, colI) = - result(5, colI) - result(8, colI) - result(11, colI);
+            }
+#endif
         }
-        static void dF_div_dx_mult(const Eigen::Matrix2d& right,
-                                   const Eigen::Matrix2d& A,
-                                   Eigen::Matrix<double, 6, 1>& result);
+        static void dF_div_dx_mult(const Eigen::Matrix<double, DIM, DIM>& right,
+                                   const Eigen::Matrix<double, DIM, DIM>& A,
+                                   Eigen::Matrix<double, DIM * (DIM + 1), 1>& result);
         template<int dim>
         static void computeCofactorMtr(const Eigen::Matrix<double, dim, dim>& F,
                                        Eigen::Matrix<double, dim, dim>& A)
@@ -375,6 +482,9 @@ namespace FracCuts {
                                   const Eigen::RowVectorXd& ve,
                                   double spacing,
                                   Eigen::MatrixXd& inBetween);
+        
+        static void findBorderVerts(const Eigen::MatrixXd& V,
+                                    std::vector<std::vector<int>>& borderVerts);
     };
     
 }

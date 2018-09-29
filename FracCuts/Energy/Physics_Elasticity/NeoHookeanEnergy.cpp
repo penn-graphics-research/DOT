@@ -32,8 +32,8 @@ namespace FracCuts {
         E = u / 2.0 * (sigma2Sum - dim) - (u - lambda / 2.0 * log_sigmaProd) * log_sigmaProd;
     }
     template<int dim>
-    void NeoHookeanEnergy<dim>::compute_dE_div_dsigma(const Eigen::Vector2d& singularValues,
-                                                 Eigen::Vector2d& dE_div_dsigma) const
+    void NeoHookeanEnergy<dim>::compute_dE_div_dsigma(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                      Eigen::Matrix<double, dim, 1>& dE_div_dsigma) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
         
@@ -41,10 +41,14 @@ namespace FracCuts {
         dE_div_dsigma[0] = u * (singularValues[0] - inv0) + lambda * inv0 * log_sigmaProd;
         const double inv1 = 1.0 / singularValues[1];
         dE_div_dsigma[1] = u * (singularValues[1] - inv1) + lambda * inv1 * log_sigmaProd;
+        if(dim == 3) {
+            const double inv2 = 1.0 / singularValues[2];
+            dE_div_dsigma[2] = u * (singularValues[2] - inv2) + lambda * inv2 * log_sigmaProd;
+        }
     }
     template<int dim>
-    void NeoHookeanEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Vector2d& singularValues,
-                                                   Eigen::Matrix2d& d2E_div_dsigma2) const
+    void NeoHookeanEnergy<dim>::compute_d2E_div_dsigma2(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                        Eigen::Matrix<double, dim, dim>& d2E_div_dsigma2) const
     {
         const double log_sigmaProd = std::log(singularValues.prod());
         
@@ -53,6 +57,27 @@ namespace FracCuts {
         const double inv2_1 = 1.0 / singularValues[1] / singularValues[1];
         d2E_div_dsigma2(1, 1) = u * (1.0 + inv2_1) - lambda * inv2_1 * (log_sigmaProd - 1.0);
         d2E_div_dsigma2(0, 1) = d2E_div_dsigma2(1, 0) = lambda / singularValues[0] / singularValues[1];
+        if(dim == 3) {
+            const double inv2_2 = 1.0 / singularValues[2] / singularValues[2];
+            d2E_div_dsigma2(2, 2) = u * (1.0 + inv2_2) - lambda * inv2_2 * (log_sigmaProd - 1.0);
+            d2E_div_dsigma2(1, 2) = d2E_div_dsigma2(2, 1) = lambda / singularValues[1] / singularValues[2];
+            d2E_div_dsigma2(2, 0) = d2E_div_dsigma2(0, 2) = lambda / singularValues[2] / singularValues[0];
+        }
+    }
+    template<int dim>
+    void NeoHookeanEnergy<dim>::compute_BLeftCoef(const Eigen::Matrix<double, dim, 1>& singularValues,
+                                                  Eigen::Matrix<double, dim * (dim - 1) / 2, 1>& BLeftCoef) const
+    {
+        //TODO: right coef also has analytical form
+        const double sigmaProd = singularValues.prod();
+        if(dim == 2) {
+            BLeftCoef[0] = u + (u - lambda * std::log(sigmaProd)) / sigmaProd;
+        }
+        else {
+            BLeftCoef[0] = u + (u - lambda * std::log(sigmaProd)) / singularValues[0] / singularValues[1];
+            BLeftCoef[1] = u + (u - lambda * std::log(sigmaProd)) / singularValues[1] / singularValues[2];
+            BLeftCoef[2] = u + (u - lambda * std::log(sigmaProd)) / singularValues[2] / singularValues[0];
+        }
     }
     template<int dim>
     void NeoHookeanEnergy<dim>::compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
@@ -61,7 +86,7 @@ namespace FracCuts {
     {
         //TODO: optimize for 2D
         const double J = svd.singularValues().prod();
-        Eigen::Matrix2d FInvT;
+        Eigen::Matrix<double, dim, dim> FInvT;
         IglUtils::computeCofactorMtr(F, FInvT);
         FInvT /= J;
         dE_div_dF = u * (F - FInvT) + lambda * std::log(J) * FInvT;
@@ -76,29 +101,11 @@ namespace FracCuts {
         
         double err = 0.0;
         for(int triI = 0; triI < data.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = data.F.row(triI);
+            AutoFlipSVD<Eigen::Matrix<double, dim, dim>> svd(Eigen::Matrix<double, dim, dim>::Identity()); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
             
-            Eigen::Vector3d x0_3D[3] = {
-                data.V_rest.row(triVInd[0]),
-                data.V_rest.row(triVInd[1]),
-                data.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
-            A = X0.inverse(); //TODO: this only need to be computed once
-            
-            AutoFlipSVD<Eigen::MatrixXd> svd(X0 * A); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
-            
-            const double sigma2Sum = svd.singularValues().squaredNorm();
-            const double sigmaProd = svd.singularValues().prod();
-            const double log_sigmaProd = std::log(sigmaProd);
-            
-            const double w = data.triWeight[triI] * data.triArea[triI];
-            const double energyVal = w * (u / 2.0 * (sigma2Sum - svd.singularValues().size()) - u * log_sigmaProd + lambda / 2.0 * log_sigmaProd * log_sigmaProd);
-            err += energyVal;
+            double energyVal;
+            compute_E(svd.singularValues(), energyVal);
+            err += data.triWeight[triI] * data.triArea[triI] * energyVal;
         }
         
         std::cout << "energyVal computation error = " << err << std::endl;
@@ -122,6 +129,6 @@ namespace FracCuts {
         bulkModulus = lambda + (2.0/3.0) * u;
     }
     
-    template class NeoHookeanEnergy<2>;
+    template class NeoHookeanEnergy<DIM>;
     
 }

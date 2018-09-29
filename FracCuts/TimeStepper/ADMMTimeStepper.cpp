@@ -152,7 +152,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.V.rows(), 1, [&](int vI)
 #else
-        for(int vI = 0; vI < result.V.rows(); vI++)
+        for(int vI = 0; vI < Base::result.V.rows(); vI++)
 #endif
         {
             if(Base::result.fixedVert.find(vI) == Base::result.fixedVert.end()) {
@@ -218,7 +218,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
-        for(int triI = 0; triI < result.F.rows(); triI++)
+        for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
             Eigen::VectorXd zi = z.row(triI).transpose();
@@ -242,7 +242,6 @@ namespace FracCuts {
                 // line search init
                 double alpha = 1.0;
                 Base::energyTerms[0]->initStepSize(zi, p, alpha); //TODO: different in F space
-                alpha *= 0.99;
                 
                 // Armijo's rule:
                 const double m = p.dot(g);
@@ -323,7 +322,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.V.rows(), 1, [&](int vI)
 #else
-        for(int vI = 0; vI < result.V.rows(); vI++)
+        for(int vI = 0; vI < Base::result.V.rows(); vI++)
 #endif
         {
             Base::result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
@@ -335,7 +334,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)Base::result.F.rows(), 1, [&](int triI)
 #else
-        for(int triI = 0; triI < result.F.rows(); triI++)
+        for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
             compute_Di_mult_xi(triI);
@@ -390,6 +389,6 @@ namespace FracCuts {
         P.diagonal().array() += weights2[triI];
     }
     
-    template class ADMMTimeStepper<2>;
+    template class ADMMTimeStepper<DIM>;
     
 }

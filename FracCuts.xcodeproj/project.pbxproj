@@ -10,6 +10,7 @@
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
+		98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */; };
 		986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */; };
 		987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 987382CF2076F49A0040BBCE /* Scaffold.cpp */; };
 		988D81A720AA7FFE0037737D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988ED1271F57211500B21181 /* OpenGL.framework */; };
@@ -61,6 +62,8 @@
 		983E7DB3202240D900412128 /* Diagnostic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Diagnostic.hpp; sourceTree = "<group>"; };
 		983E7DB62022421400412128 /* MeshProcessing.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MeshProcessing.hpp; sourceTree = "<group>"; };
 		98444EBA2156C72B004446B1 /* libtetgen.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtetgen.a; path = ../../../../usr/local/lib/libtetgen.a; sourceTree = "<group>"; };
+		98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = get_feasible_steps.cpp; sourceTree = "<group>"; };
+		98444EC0215F09B9004446B1 /* get_feasible_steps.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = get_feasible_steps.hpp; sourceTree = "<group>"; };
 		986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMDDTimeStepper.cpp; sourceTree = "<group>"; };
 		986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMDDTimeStepper.hpp; sourceTree = "<group>"; };
 		987382CB202902590040BBCE /* Types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Types.hpp; sourceTree = "<group>"; };
@@ -270,6 +273,8 @@
 				987382CB202902590040BBCE /* Types.hpp */,
 				98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */,
 				98EDD784213991A90065B715 /* ClosedFormSVD2d.hpp */,
+				98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */,
+				98444EC0215F09B9004446B1 /* get_feasible_steps.hpp */,
 				988ED1301F575C3C00B21181 /* IglUtils.cpp */,
 				988ED1311F575C3C00B21181 /* IglUtils.hpp */,
 				9894E5E02114F4E100FB0F46 /* METIS.hpp */,
@@ -362,6 +367,7 @@
 				98E6E6A720F7C59700130500 /* Config.cpp in Sources */,
 				98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */,
 				98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */,
+				98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */,
 				98D10F2D1F5CA12C0010E1A6 /* SymStretchEnergy.cpp in Sources */,
 				98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */,
 				98E6E68220D976D500130500 /* NeoHookeanEnergy.cpp in Sources */,
