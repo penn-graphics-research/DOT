@@ -74,9 +74,10 @@ namespace FracCuts {
             BLeftCoef[0] = u + (u - lambda * std::log(sigmaProd)) / sigmaProd;
         }
         else {
-            BLeftCoef[0] = u + (u - lambda * std::log(sigmaProd)) / singularValues[0] / singularValues[1];
-            BLeftCoef[1] = u + (u - lambda * std::log(sigmaProd)) / singularValues[1] / singularValues[2];
-            BLeftCoef[2] = u + (u - lambda * std::log(sigmaProd)) / singularValues[2] / singularValues[0];
+            const double middle = u - lambda * std::log(sigmaProd);
+            BLeftCoef[0] = u + middle / singularValues[0] / singularValues[1];
+            BLeftCoef[1] = u + middle / singularValues[1] / singularValues[2];
+            BLeftCoef[2] = u + middle / singularValues[2] / singularValues[0];
         }
     }
     template<int dim>

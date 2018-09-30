@@ -1028,26 +1028,24 @@ namespace FracCuts {
     
     template<int dim>
     void TriangleSoup<dim>::constructSubmesh(const Eigen::VectorXi& triangles,
-                                        TriangleSoup& submesh,
+                                        TriangleSoup<dim>& submesh,
                                         std::map<int, int>& globalVIToLocal,
                                         std::map<int, int>& globalTriIToLocal) const
     {
-        assert(dim == 2);
-#if(DIM == 2)
         Eigen::MatrixXi F_sub;
-        F_sub.resize(triangles.size(), 3);
+        F_sub.resize(triangles.size(), dim + 1);
         Eigen::MatrixXd V_rest_sub, V_sub;
         globalVIToLocal.clear();
         for(int localTriI = 0; localTriI < triangles.size(); localTriI++) {
             int triI = triangles[localTriI];
-            for(int vI = 0; vI < 3; vI++) {
+            for(int vI = 0; vI < dim + 1; vI++) {
                 int globalVI = F(triI, vI);
                 auto localVIFinder = globalVIToLocal.find(globalVI);
                 if(localVIFinder == globalVIToLocal.end()) {
                     int localVI = static_cast<int>(V_rest_sub.rows());
                     V_rest_sub.conservativeResize(localVI + 1, 3);
                     V_rest_sub.row(localVI) = V_rest.row(globalVI);
-                    V_sub.conservativeResize(localVI + 1, 2);
+                    V_sub.conservativeResize(localVI + 1, dim);
                     V_sub.row(localVI) = V.row(globalVI);
                     F_sub(localTriI, vI) = localVI;
                     globalVIToLocal[globalVI] = localVI;
@@ -1068,7 +1066,6 @@ namespace FracCuts {
             }
         }
         submesh.resetFixedVert(fixedVert_sub);
-#endif
     }
     
     template<int dim>

@@ -64,6 +64,7 @@
 		98444EBA2156C72B004446B1 /* libtetgen.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtetgen.a; path = ../../../../usr/local/lib/libtetgen.a; sourceTree = "<group>"; };
 		98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = get_feasible_steps.cpp; sourceTree = "<group>"; };
 		98444EC0215F09B9004446B1 /* get_feasible_steps.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = get_feasible_steps.hpp; sourceTree = "<group>"; };
+		98444EC321613609004446B1 /* Triplet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Triplet.h; sourceTree = "<group>"; };
 		986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMDDTimeStepper.cpp; sourceTree = "<group>"; };
 		986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMDDTimeStepper.hpp; sourceTree = "<group>"; };
 		987382CB202902590040BBCE /* Types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Types.hpp; sourceTree = "<group>"; };
@@ -270,6 +271,7 @@
 		98E6E68A20DB18B800130500 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				98444EC321613609004446B1 /* Triplet.h */,
 				987382CB202902590040BBCE /* Types.hpp */,
 				98E6E68F20DC1A2200130500 /* AutoFlipSVD.hpp */,
 				98EDD784213991A90065B715 /* ClosedFormSVD2d.hpp */,

@@ -493,7 +493,7 @@ namespace FracCuts {
     void Optimizer<dim>::initX(int option)
     {
         // global:
-        searchDir.resize(result.V.rows() * 2);
+        searchDir.resize(result.V.rows() * dim);
         switch(option) {
             case 0:
                 // already at last timestep config
@@ -507,11 +507,11 @@ namespace FracCuts {
 #endif
                 {
                     if(result.isFixedVert[vI]) {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment<dim>(vI * dim).setZero();
 
                     }
                     else {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2);
+                        searchDir.segment<dim>(vI * dim) = dt * velocity.segment<dim>(vI * dim);
                     }
                 }
 #ifdef USE_TBB
@@ -527,10 +527,10 @@ namespace FracCuts {
 #endif
                 {
                     if(result.isFixedVert[vI]) {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment<dim>(vI * dim).setZero();
                     }
                     else {
-                        searchDir.segment(vI * 2, 2) = dt * velocity.segment(vI * 2, 2) + gravityDtSq;
+                        searchDir.segment<dim>(vI * dim) = dt * velocity.segment<dim>(vI * dim) + gravityDtSq;
                     }
                 }
 #ifdef USE_TBB
@@ -548,12 +548,12 @@ namespace FracCuts {
 #endif
                 {
                     if(result.isFixedVert[vI]) {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment<dim>(vI * dim).setZero();
                     }
                     else {
                         double mass = result.massMatrix.coeff(vI, vI);
-                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
-                                                        dtSq * (gravity - f.segment(vI * 2, 2) / mass));
+                        searchDir.segment<dim>(vI * dim) = (dt * velocity.segment<dim>(vI * dim) +
+                                                        dtSq * (gravity - f.segment<dim>(vI * dim) / mass));
                     }
                 }
 #ifdef USE_TBB
@@ -572,12 +572,12 @@ namespace FracCuts {
 #endif
                 {
                     if(result.isFixedVert[vI]) {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment<dim>(vI * dim).setZero();
                     }
                     else {
                         double mass = result.massMatrix.coeff(vI, vI);
-                        searchDir.segment(vI * 2, 2) = (dt * velocity.segment(vI * 2, 2) +
-                                                        dtSq / 2.0 * (gravity - f.segment(vI * 2, 2) / mass));
+                        searchDir.segment<dim>(vI * dim) = (dt * velocity.segment<dim>(vI * dim) +
+                                                        dtSq / 2.0 * (gravity - f.segment<dim>(vI * dim) / mass));
                     }
                 }
 #ifdef USE_TBB
@@ -601,11 +601,12 @@ namespace FracCuts {
 #endif
                 {
                     if(result.isFixedVert[vI]) {
-                        searchDir.segment(vI * 2, 2).setZero();
+                        searchDir.segment<dim>(vI * dim).setZero();
                     }
                     else {
-                        searchDir[vI * 2] = -g[vI * 2] / linSysSolver->coeffMtr(vI * 2, vI * 2);
-                        searchDir[vI * 2 + 1] = -g[vI * 2 + 1] / linSysSolver->coeffMtr(vI * 2 + 1, vI * 2 + 1);
+                        searchDir[vI * dim] = -g[vI * dim] / linSysSolver->coeffMtr(vI * dim, vI * dim);
+                        searchDir[vI * dim + 1] = -g[vI * dim + 1] / linSysSolver->coeffMtr(vI * dim + 1, vI * dim + 1);
+                        searchDir[vI * dim + 2] = -g[vI * dim + 2] / linSysSolver->coeffMtr(vI * dim + 2, vI * dim + 2);
                     }
                 }
 #ifdef USE_TBB
@@ -639,6 +640,7 @@ namespace FracCuts {
         double stepSize = 1.0;
         energyTerms[0]->initStepSize(result, searchDir, stepSize);
         if(stepSize < 1.0) {
+            //TODO: necessary?
             stepSize *= 0.5;
         }
         stepForward(result.V, Eigen::MatrixXd(), result, scaffold, stepSize);

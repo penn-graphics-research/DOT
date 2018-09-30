@@ -78,15 +78,15 @@ namespace FracCuts {
         {
             // construct METIS mesh representation
             eptr.resize(mesh.F.rows() + 1);
-            eind.resize(mesh.F.rows() * 3);
+            eind.resize(mesh.F.rows() * (dim + 1));
             for(int triI = 0; triI < mesh.F.rows(); triI++) {
-                eptr[triI] = triI * 3;
-                const Eigen::RowVector3i& triVInd = mesh.F.row(triI);
-                for(int i = 0; i < 3; i++) {
+                eptr[triI] = triI * (dim + 1);
+                const Eigen::Matrix<int, 1, (dim + 1)>& triVInd = mesh.F.row(triI);
+                for(int i = 0; i < (dim + 1); i++) {
                     eind[eptr[triI] + i] = triVInd[i];
                 }
             }
-            eptr[mesh.F.rows()] = mesh.F.rows() * 3;
+            eptr[mesh.F.rows()] = mesh.F.rows() * (dim + 1);
             
             ne = mesh.F.rows();
             nn = mesh.V_rest.rows();
@@ -180,7 +180,7 @@ namespace FracCuts {
             
             params.ncuts         = 1;
             params.niter         = 10;
-            params.ncommon       = 2;
+            params.ncommon       = dim;
             
             params.dbglvl        = 511;
             params.balance       = 0;

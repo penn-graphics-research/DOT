@@ -169,8 +169,8 @@ namespace FracCuts {
         std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>> svd(data.F.rows());
         
         Eigen::VectorXd gradient0;
-        computeGradientBySVD(data, gradient0);
-//        computeGradientByPK(data, true, svd, F, gradient0);
+//        computeGradientBySVD(data, gradient0);
+        computeGradientByPK(data, true, svd, F, gradient0);
         const double h = 1.0e-4 * igl::avg_edge_length(data.V, data.F);
         TriangleSoup<dim> perturbed = data;
         Eigen::SparseMatrix<double> hessian_finiteDiff;
@@ -190,8 +190,8 @@ namespace FracCuts {
                 perturbed.V = data.V;
                 perturbed.V(vI, dimI) += h;
                 Eigen::VectorXd gradient_perturbed;
-                computeGradientBySVD(perturbed, gradient_perturbed);
-//                computeGradientByPK(perturbed, true, svd, F, gradient_perturbed);
+//                computeGradientBySVD(perturbed, gradient_perturbed);
+                computeGradientByPK(perturbed, true, svd, F, gradient_perturbed);
                 Eigen::VectorXd hessian_colI = (gradient_perturbed - gradient0) / h;
                 int colI = vI * dim + dimI;
                 for(int rowI = 0; rowI < data.V.rows() * dim; rowI++) {

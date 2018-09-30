@@ -54,6 +54,7 @@ const int channel_result = 1;
 const int channel_findExtrema = 2;
 int viewChannel = channel_result;
 Eigen::MatrixXi SF;
+std::vector<int> sTri2Tet;
 bool viewUV = true; // view UV or 3D model
 double texScale = 1.0;
 bool showSeam = false;
@@ -196,7 +197,12 @@ void updateViewerData_distortion(void)
 #if(DIM == 2)
             optimizer->getFaceFieldForVis(faceWeight);
 #else
-            faceWeight = Eigen::VectorXd::Constant(SF.rows(), 0.1);
+            Eigen::VectorXd faceWeight_tet;
+            optimizer->getFaceFieldForVis(faceWeight_tet);
+            faceWeight.conservativeResize(SF.rows());
+            for(int sfI = 0; sfI < SF.rows(); sfI++) {
+                faceWeight[sfI] = faceWeight_tet[sTri2Tet[sfI]];
+            }
 #endif
 //            FracCuts::IglUtils::mapScalarToColor(faceWeight, color_distortionVis,
 //                faceWeight.minCoeff(), faceWeight.maxCoeff());
@@ -759,6 +765,28 @@ int main(int argc, char *argv[])
 //                UV.col(1) *= 1.2;
 //                UV.col(2) *= 1.3;
                 FracCuts::IglUtils::findBorderVerts(V, borderVerts_primitive);
+                
+                std::map<FracCuts::Triplet, int> tri2Tet;
+                for(int elemI = 0; elemI < F.rows(); elemI++) {
+                    const Eigen::RowVector4i& elemVInd = F.row(elemI);
+                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
+                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
+                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
+                    tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
+                }
+                sTri2Tet.resize(SF.rows());
+                for(int triI = 0; triI < SF.rows(); triI++) {
+                    const Eigen::RowVector3i& triVInd = SF.row(triI);
+                    auto finder = tri2Tet.find(FracCuts::Triplet(triVInd.data()));
+                    if(finder == tri2Tet.end()) {
+                        finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[2], triVInd[0]));
+                        if(finder == tri2Tet.end()) {
+                            finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[0], triVInd[1]));
+                            assert(finder != tri2Tet.end());
+                        }
+                    }
+                    sTri2Tet[triI] = finder->second;
+                }
             }
             else {
                 FracCuts::TriangleSoup<DIM> primitive(config.shapeType,
@@ -923,7 +951,7 @@ int main(int argc, char *argv[])
         }
 //        energyTerms.back()->checkEnergyVal(*triSoup[0]);
 //        energyTerms.back()->checkGradient(*triSoup[0]);
-        energyTerms.back()->checkHessian(*triSoup[0], true);
+//        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
     
     assert(lambda == 0.0);
@@ -1000,7 +1028,9 @@ int main(int argc, char *argv[])
         viewer.core.animation_max_fps = 60.0;
         viewer.data().point_size = fracTailSize;
         viewer.data().show_overlay = true;
+#if(DIM == 3)
         viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4, Eigen::Vector3f::UnitX()));
+#endif
         viewer.launch();
     }
     
