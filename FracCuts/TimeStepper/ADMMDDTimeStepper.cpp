@@ -78,11 +78,11 @@ namespace FracCuts {
             partitions.getElementList(subdomainI, elemList_subdomain[subdomainI]);
 #else
             // partition according to face index
-            int subdomainTriAmt = result.F.rows() / mesh_subdomain.size();
+            int subdomainTriAmt = Base::result.F.rows() / mesh_subdomain.size();
             int triI_begin = subdomainTriAmt * subdomainI;
             int triI_end = subdomainTriAmt * (subdomainI + 1) - 1;
             if(subdomainI + 1 == mesh_subdomain.size()) {
-                triI_end = result.F.rows() - 1;
+                triI_end = Base::result.F.rows() - 1;
             }
             elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
                                                                         triI_begin,

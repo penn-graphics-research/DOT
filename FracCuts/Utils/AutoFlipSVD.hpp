@@ -50,7 +50,6 @@ namespace FracCuts {
             return *this;
         }
         
-        
     protected:
         void flip2d(const MatrixType& mtr, unsigned int computationOptions) {
             //!!! this flip algorithm is only valid in 2D

@@ -340,6 +340,32 @@ namespace FracCuts{
                         break;
                     }
                         
+                    case 100: {
+                        FILE *in = fopen(argv[3], "r");
+                        if(in) {
+                            char buf[BUFSIZ];
+                            Eigen::VectorXi count;
+                            while((!feof(in)) && fgets(buf, BUFSIZ, in)) {
+                                std::string line(buf);
+                                if((line.find("stat") != std::string::npos) && (line.find("conjugate_residual iterations")
+                                    != std::string::npos))
+                                {
+                                    int numStart = line.find('"', line.find("value")) + 1;
+                                    count.conservativeResize(count.size() + 1);
+                                    count[count.size() - 1] = stoi(line.substr(numStart, line.find('"', numStart) - numStart));
+                                }
+                            }
+                            std::cout << "avg = " << double(count.sum()) / count.size() << std::endl;
+                            std::cout << "min = " << count.minCoeff() << std::endl;
+                            std::cout << "max = " << count.maxCoeff() << std::endl;
+                            std::cout << "sum = " << count.sum() << std::endl;
+                        }
+                        else {
+                            std::cout << "can't open file " << argv[3] << std::endl;
+                        }
+                        break;
+                    }
+                        
                     default:
                         std::cout << "No diagMode " << diagMode << std::endl;
                         break;
