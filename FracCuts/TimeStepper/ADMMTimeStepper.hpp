@@ -63,10 +63,10 @@ namespace FracCuts {
                                       double& Ei) const;
         void computeGradient_zUpdate(int triI,
                                      const Eigen::RowVectorXd& zi,
-                                     Eigen::VectorXd& g) const;
+                                     Eigen::Matrix<double, dim * dim, 1>& g) const;
         void computeHessianProxy_zUpdate(int triI,
                                          const Eigen::RowVectorXd& zi,
-                                         Eigen::MatrixXd& P) const;
+                                         Eigen::Matrix<double, dim * dim, dim * dim>& P) const;
     };
     
 }

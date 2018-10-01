@@ -96,15 +96,15 @@ namespace FracCuts {
                                          bool projectSPD = true) const;
         
         virtual void computeEnergyValBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                             const Eigen::RowVectorXd& F,
+                                             const Eigen::Matrix<double, 1, dim * dim>& F,
                                              double& energyVal,
                                              bool uniformWeight = false) const;
         virtual void computeGradientBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                            const Eigen::RowVectorXd& F,
-                                            Eigen::VectorXd& gradient) const;
+                                            const Eigen::Matrix<double, 1, dim * dim>& F,
+                                            Eigen::Matrix<double, dim * dim, 1>& gradient) const;
         virtual void computeHessianBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                           const Eigen::RowVectorXd& F,
-                                           Eigen::MatrixXd& hessian,
+                                           const Eigen::Matrix<double, 1, dim * dim>& F,
+                                           Eigen::Matrix<double, dim * dim, dim * dim>& hessian,
                                            bool projectSPD = true) const;
         
         virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,

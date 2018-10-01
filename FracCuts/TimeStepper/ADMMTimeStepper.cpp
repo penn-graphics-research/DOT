@@ -221,46 +221,46 @@ namespace FracCuts {
         for(int triI = 0; triI < Base::result.F.rows(); triI++)
 #endif
         {
-            Eigen::VectorXd zi = z.row(triI).transpose();
-            Eigen::VectorXd g;
+            Eigen::RowVectorXd zi = z.row(triI);
+            Eigen::Matrix<double, dim * dim, 1> g;
             for(int j = 0; j < localMaxIter; j++) {
-                computeGradient_zUpdate(triI, zi.transpose(), g);
+                computeGradient_zUpdate(triI, zi, g);
 //                std::cout << "  " << triI << "-" << j << " ||g_local||^2 = "
 //                    << g.squaredNorm() << std::endl;
                 if(g.squaredNorm() < localTol) {
                     break;
                 }
                 
-                Eigen::MatrixXd P;
-                computeHessianProxy_zUpdate(triI, zi.transpose(), P);
+                Eigen::Matrix<double, dim * dim, dim * dim> P;
+                computeHessianProxy_zUpdate(triI, zi, P);
                 //NOTE: for z being the deformation gradient,
                 // no need to consider position constraints
                 
                 // solve for search direction
-                Eigen::VectorXd p = P.ldlt().solve(-g);
+                Eigen::Matrix<double, dim * dim, 1> p = P.ldlt().solve(-g);
                 
                 // line search init
                 double alpha = 1.0;
-                Base::energyTerms[0]->initStepSize(zi, p, alpha); //TODO: different in F space
+                Base::energyTerms[0]->initStepSize(zi.transpose(), p, alpha); //TODO: different in F space
                 
                 // Armijo's rule:
                 const double m = p.dot(g);
                 const double c1m = 1.0e-4 * m;
-                const Eigen::VectorXd zi0 = zi;
+                const Eigen::RowVectorXd zi0 = zi;
                 double E0;
-                computeEnergyVal_zUpdate(triI, zi0.transpose(), E0);
-                zi = zi0 + alpha * p;
+                computeEnergyVal_zUpdate(triI, zi0, E0);
+                zi = zi0 + alpha * p.transpose();
                 double E;
-                computeEnergyVal_zUpdate(triI, zi.transpose(), E);
+                computeEnergyVal_zUpdate(triI, zi, E);
                 while(E > E0 + alpha * c1m) {
                     alpha /= 2.0;
-                    zi = zi0 + alpha * p;
-                    computeEnergyVal_zUpdate(triI, zi.transpose(), E);
+                    zi = zi0 + alpha * p.transpose();
+                    computeEnergyVal_zUpdate(triI, zi, E);
                 }
             }
             
-            dz.row(triI) = zi.transpose() - z.row(triI);
-            z.row(triI) = zi.transpose();
+            dz.row(triI) = zi - z.row(triI);
+            z.row(triI) = zi;
             
             u.row(triI) += D_mult_x.row(triI) - z.row(triI);
         }
@@ -372,8 +372,8 @@ namespace FracCuts {
     }
     template<int dim>
     void ADMMTimeStepper<dim>::computeGradient_zUpdate(int triI,
-                                                  const Eigen::RowVectorXd& zi,
-                                                  Eigen::VectorXd& g) const
+                                                       const Eigen::RowVectorXd& zi,
+                                                       Eigen::Matrix<double, dim * dim, 1>& g) const
     {
         Base::energyTerms[0]->computeGradientBySVD_F(Base::result, triI, zi, g);
         g *= Base::dtSq;
@@ -381,8 +381,8 @@ namespace FracCuts {
     }
     template<int dim>
     void ADMMTimeStepper<dim>::computeHessianProxy_zUpdate(int triI,
-                                                      const Eigen::RowVectorXd& zi,
-                                                      Eigen::MatrixXd& P) const
+                                                           const Eigen::RowVectorXd& zi,
+                                                           Eigen::Matrix<double, dim * dim, dim * dim>& P) const
     {
         Base::energyTerms[0]->computeHessianBySVD_F(Base::result, triI, zi, P);
         P *= Base::dtSq;

@@ -938,59 +938,66 @@ namespace FracCuts {
     
     template<int dim>
     void Energy<dim>::computeEnergyValBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                              const Eigen::RowVectorXd& F,
+                                              const Eigen::Matrix<double, 1, dim * dim>& F,
                                               double& energyVal,
                                               bool uniformWeight) const
     {
-        assert(dim == 2);
-#if(DIM == 4)
-        Eigen::Matrix2d F_mtr;
-        F_mtr << F.segment(0, 2), F.segment(2, 2);
-        AutoFlipSVD<Eigen::MatrixXd> svd(F_mtr); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
+        Eigen::Matrix<double, dim, dim> F_mtr;
+        F_mtr.row(0) = F.segment(0, dim);
+        F_mtr.row(1) = F.segment(dim, dim);
+        if(dim == 3) {
+            F_mtr.row(2) = F.segment(dim * 2, dim);
+        }
+        AutoFlipSVD<Eigen::Matrix<double, dim, dim>> svd(F_mtr); //TODO: only decompose once for each element in each iteration, would need ComputeFull U and V for derivative computations
         
         compute_E(svd.singularValues(), energyVal);
         if(!uniformWeight) {
             energyVal *= data.triWeight[triI] * data.triArea[triI];
         }
-#endif
     }
     template<int dim>
     void Energy<dim>::computeGradientBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                        const Eigen::RowVectorXd& F,
-                                        Eigen::VectorXd& gradient) const
+                                             const Eigen::Matrix<double, 1, dim * dim>& F,
+                                             Eigen::Matrix<double, dim * dim, 1>& gradient) const
     {
-        assert(dim == 2);
-#if(DIM == 4)
-        Eigen::Matrix2d F_mtr;
-        F_mtr << F.segment(0, 2), F.segment(2, 2);
-        AutoFlipSVD<Eigen::MatrixXd> svd(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
+        Eigen::Matrix<double, dim, dim> F_mtr;
+        F_mtr.row(0) = F.segment(0, dim);
+        F_mtr.row(1) = F.segment(dim, dim);
+        if(dim == 3) {
+            F_mtr.row(2) = F.segment(dim * 2, dim);
+        }
+        AutoFlipSVD<Eigen::Matrix<double, dim, dim>> svd(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
         
         Eigen::Matrix<double, dim, 1> dE_div_dsigma;
         compute_dE_div_dsigma(svd.singularValues(), dE_div_dsigma);
         
-        gradient = Eigen::VectorXd::Zero(4);
-        for(int dimI = 0; dimI < 2; dimI++) {
-            Eigen::Matrix2d dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
-            Eigen::RowVectorXd dsigma_div_dF_vec;
-            dsigma_div_dF_vec.resize(4);
-            dsigma_div_dF_vec << dsigma_div_dF.row(0), dsigma_div_dF.row(1);
+        gradient.setZero();
+        for(int dimI = 0; dimI < dim; dimI++) {
+            Eigen::Matrix<double, dim, dim> dsigma_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            Eigen::Matrix<double, 1, dim * dim> dsigma_div_dF_vec;
+            dsigma_div_dF_vec.segment(0, dim) = dsigma_div_dF.row(0);
+            dsigma_div_dF_vec.segment(dim, dim) = dsigma_div_dF.row(1);
+            if(dim == 3) {
+                dsigma_div_dF_vec.segment(dim * 2, dim) = dsigma_div_dF.row(2);
+            }
             gradient += dsigma_div_dF_vec.transpose() * dE_div_dsigma[dimI];
         }
         
         const double w = data.triWeight[triI] * data.triArea[triI];
         gradient *= w;
-#endif
     }
     template<int dim>
     void Energy<dim>::computeHessianBySVD_F(const TriangleSoup<dim>& data, int triI,
-                                            const Eigen::RowVectorXd& F,
-                                            Eigen::MatrixXd& hessian,
+                                            const Eigen::Matrix<double, 1, dim * dim>& F,
+                                            Eigen::Matrix<double, dim * dim, dim * dim>& hessian,
                                             bool projectSPD) const
     {
-        assert(dim == 2);
-#if(DIM == 4)
-        Eigen::Matrix2d F_mtr;
-        F_mtr << F.segment(0, 2), F.segment(2, 2);
+        Eigen::Matrix<double, dim, dim> F_mtr;
+        F_mtr.row(0) = F.segment(0, dim);
+        F_mtr.row(1) = F.segment(dim, dim);
+        if(dim == 3) {
+            F_mtr.row(2) = F.segment(dim * 2, dim);
+        }
         AutoFlipSVD<Eigen::Matrix<double, dim, dim>> svd(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV); //TODO: only decompose once for each element in each iteration
         
         // right term:
@@ -1000,30 +1007,45 @@ namespace FracCuts {
         Eigen::Matrix<double, dim * dim, dim * dim * dim> d2sigma_div_dF2;
         IglUtils::compute_d2sigma_div_dF2(svd, d2sigma_div_dF2);
         
-        Eigen::MatrixXd d2E_div_dF2_right = d2sigma_div_dF2.block(0, 0, 4, 4) * dE_div_dsigma[0] +
-            d2sigma_div_dF2.block(0, 4, 4, 4) * dE_div_dsigma[1];
+        Eigen::Matrix<double, dim * dim, dim * dim> d2E_div_dF2_right =
+            d2sigma_div_dF2.block(0, 0, dim * dim, dim * dim) * dE_div_dsigma[0] +
+            d2sigma_div_dF2.block(0, dim * dim, dim * dim, dim * dim) * dE_div_dsigma[1];
+        if(dim == 3) {
+            d2E_div_dF2_right +=
+                d2sigma_div_dF2.block(0, dim * dim * 2, dim * dim, dim * dim) * dE_div_dsigma[2];
+        }
         
         // left term:
         Eigen::Matrix<double, dim, dim> d2E_div_dsigma2;
         compute_d2E_div_dsigma2(svd.singularValues(), d2E_div_dsigma2);
         
-        Eigen::MatrixXd dsigma_div_dF;
-        dsigma_div_dF.resize(4, 2);
-        for(int dimI = 0; dimI < 2; dimI++) {
-            Eigen::Matrix2d dsigmai_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
-            dsigma_div_dF.col(dimI) << dsigmai_div_dF.row(0).transpose(), dsigmai_div_dF.row(1).transpose();
+        Eigen::Matrix<double, dim * dim, dim> dsigma_div_dF;
+        for(int dimI = 0; dimI < dim; dimI++) {
+            Eigen::Matrix<double, dim, dim> dsigmai_div_dF = svd.matrixU().col(dimI) * svd.matrixV().col(dimI).transpose();
+            dsigma_div_dF.block(0, dimI, dim, 1) = dsigmai_div_dF.row(0).transpose();
+            dsigma_div_dF.block(dim, dimI, dim, 1) = dsigmai_div_dF.row(1).transpose();
+            if(dim == 3) {
+                dsigma_div_dF.block(dim * 2, dimI, dim, 1) = dsigmai_div_dF.row(2).transpose();
+            }
         }
         
-        Eigen::MatrixXd d2E_div_dF2_left = d2E_div_dsigma2(0, 0) * dsigma_div_dF.col(0) * dsigma_div_dF.col(0).transpose() +
-        d2E_div_dsigma2(1, 1) * dsigma_div_dF.col(1) * dsigma_div_dF.col(1).transpose();
+        Eigen::Matrix<double, dim * dim, dim * dim> d2E_div_dF2_left =
+            d2E_div_dsigma2(0, 0) * dsigma_div_dF.col(0) * dsigma_div_dF.col(0).transpose() +
+            d2E_div_dsigma2(1, 1) * dsigma_div_dF.col(1) * dsigma_div_dF.col(1).transpose();
+        if(dim == 3) {
+            d2E_div_dF2_left +=
+                d2E_div_dsigma2(2, 2) * dsigma_div_dF.col(2) * dsigma_div_dF.col(2).transpose();
+        }
         
         // cross sigma derivative
         if(crossSigmaDervative) {
-            for(int sigmaI = 0; sigmaI < svd.singularValues().size(); sigmaI++) {
-                for(int sigmaJ = sigmaI + 1; sigmaJ < svd.singularValues().size(); sigmaJ++) {
-                    const Eigen::MatrixXd m = dsigma_div_dF.col(sigmaJ) * dsigma_div_dF.col(sigmaI).transpose();
-                    d2E_div_dF2_left += d2E_div_dsigma2(sigmaI, sigmaJ) * m +
-                    d2E_div_dsigma2(sigmaJ, sigmaI) * m.transpose();
+            for(int sigmaI = 0; sigmaI < dim; sigmaI++) {
+                for(int sigmaJ = sigmaI + 1; sigmaJ < dim; sigmaJ++) {
+                    const Eigen::Matrix<double, dim * dim, dim * dim> m =
+                        dsigma_div_dF.col(sigmaJ) * dsigma_div_dF.col(sigmaI).transpose();
+                    d2E_div_dF2_left +=
+                        d2E_div_dsigma2(sigmaI, sigmaJ) * m +
+                        d2E_div_dsigma2(sigmaJ, sigmaI) * m.transpose();
                 }
             }
         }
@@ -1035,7 +1057,6 @@ namespace FracCuts {
         if(projectSPD) {
             IglUtils::makePD(hessian);
         }
-#endif
     }
     
     template<int dim>
