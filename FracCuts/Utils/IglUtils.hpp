@@ -322,12 +322,16 @@ namespace FracCuts {
                                  double halfWidth, double texScale, bool UVorSurface = false,
                                  const Eigen::RowVector3d& normal = Eigen::RowVector3d());
         
+        static void findSurfaceTris(const Eigen::MatrixXi& TT, Eigen::MatrixXi& F);
+        static void buildSTri2Tet(const Eigen::MatrixXi& F, const Eigen::MatrixXi& SF,
+                                  std::vector<int>& sTri2Tet);
+        
         static void saveMesh_Seamster(const std::string& filePath,
                                       const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
         static void saveTetMesh(const std::string& filePath,
                                 const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT,
-                                const Eigen::MatrixXi& F);
-        static void readTetMesh(const std::string& filePath,
+                                const Eigen::MatrixXi& F = Eigen::MatrixXi());
+        static bool readTetMesh(const std::string& filePath,
                                 Eigen::MatrixXd& TV, Eigen::MatrixXi& TT,
                                 Eigen::MatrixXi& F);
         

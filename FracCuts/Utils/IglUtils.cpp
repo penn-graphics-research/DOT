@@ -695,6 +695,63 @@ namespace FracCuts {
         }
     }
     
+    void IglUtils::findSurfaceTris(const Eigen::MatrixXi& TT, Eigen::MatrixXi& F)
+    {
+        std::map<FracCuts::Triplet, int> tri2Tet;
+        for(int elemI = 0; elemI < TT.rows(); elemI++) {
+            const Eigen::RowVector4i& elemVInd = TT.row(elemI);
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
+        }
+        
+        F.conservativeResize(0, 3);
+        for(const auto& triI : tri2Tet) {
+            const int* triVInd = triI.first.key;
+            // find dual triangle with reversed indices:
+            auto finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[1], triVInd[0]));
+            if(finder == tri2Tet.end()) {
+                finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[0], triVInd[2]));
+                if(finder == tri2Tet.end()) {
+                    finder = tri2Tet.find(FracCuts::Triplet(triVInd[0], triVInd[2], triVInd[1]));
+                    if(finder == tri2Tet.end()) {
+                        int oldSize = F.rows();
+                        F.conservativeResize(oldSize + 1, 3);
+                        F(oldSize, 0) = triVInd[0];
+                        F(oldSize, 1) = triVInd[1];
+                        F(oldSize, 2) = triVInd[2];
+                    }
+                }
+            }
+        }
+    }
+    void IglUtils::buildSTri2Tet(const Eigen::MatrixXi& F, const Eigen::MatrixXi& SF,
+                                 std::vector<int>& sTri2Tet)
+    {
+        std::map<FracCuts::Triplet, int> tri2Tet;
+        for(int elemI = 0; elemI < F.rows(); elemI++) {
+            const Eigen::RowVector4i& elemVInd = F.row(elemI);
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
+            tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
+        }
+        sTri2Tet.resize(SF.rows());
+        for(int triI = 0; triI < SF.rows(); triI++) {
+            const Eigen::RowVector3i& triVInd = SF.row(triI);
+            auto finder = tri2Tet.find(FracCuts::Triplet(triVInd.data()));
+            if(finder == tri2Tet.end()) {
+                finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[2], triVInd[0]));
+                if(finder == tri2Tet.end()) {
+                    finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[0], triVInd[1]));
+                    assert(finder != tri2Tet.end());
+                }
+            }
+            sTri2Tet[triI] = finder->second;
+        }
+    }
+
     void IglUtils::saveMesh_Seamster(const std::string& filePath,
                                      const Eigen::MatrixXd& V, const Eigen::MatrixXi& F)
     {
@@ -719,15 +776,21 @@ namespace FracCuts {
     
     void IglUtils::saveTetMesh(const std::string& filePath,
                                const Eigen::MatrixXd& TV, const Eigen::MatrixXi& TT,
-                               const Eigen::MatrixXi& F)
+                               const Eigen::MatrixXi& p_F)
     {
         assert(TV.rows() > 0);
         assert(TV.cols() == 3);
         assert(TT.rows() > 0);
         assert(TT.cols() == 4);
-        if(F.rows() > 0) {
-            assert(F.cols() == 3);
+        
+        Eigen::MatrixXi F_found;
+        if(p_F.rows() > 0) {
+            assert(p_F.cols() == 3);
         }
+        else {
+            findSurfaceTris(TT, F_found);
+        }
+        const Eigen::MatrixXi& F = ((p_F.rows() > 0) ? p_F : F_found);
         
         FILE *out = fopen(filePath.c_str(), "w");
         assert(out);
@@ -764,15 +827,17 @@ namespace FracCuts {
         
         fclose(out);
     }
-    void IglUtils::readTetMesh(const std::string& filePath,
+    bool IglUtils::readTetMesh(const std::string& filePath,
                                Eigen::MatrixXd& TV, Eigen::MatrixXi& TT,
                                Eigen::MatrixXi& F)
     {
         FILE *in = fopen(filePath.c_str(), "r");
-        assert(in);
+        if(!in) {
+            return false;
+        }
         
         char buf[BUFSIZ];
-        while(fgets(buf, BUFSIZ, in)) {
+        while((!feof(in)) && fgets(buf, BUFSIZ, in)) {
             if(strncmp("$Nodes", buf, 6) == 0) {
                 fgets(buf, BUFSIZ, in);
                 int vAmt;
@@ -782,12 +847,13 @@ namespace FracCuts {
                 break;
             }
         }
+        assert(TV.rows() > 0);
         int bypass;
         for(int vI = 0; vI < TV.rows(); vI++) {
             fscanf(in, "%d %le %le %le\n", &bypass, &TV(vI, 0), &TV(vI, 1), &TV(vI, 2));
         }
         
-        while(fgets(buf, BUFSIZ, in)) {
+        while((!feof(in)) && fgets(buf, BUFSIZ, in)) {
             if(strncmp("$Elements", buf, 9) == 0) {
                 fgets(buf, BUFSIZ, in);
                 int elemAmt;
@@ -797,13 +863,14 @@ namespace FracCuts {
                 break;
             }
         }
+        assert(TT.rows() > 0);
         for(int elemI = 0; elemI < TT.rows(); elemI++) {
             fscanf(in, "%d %d %d %d %d\n", &bypass,
                     &TT(elemI, 0), &TT(elemI, 1), &TT(elemI, 2), &TT(elemI, 3));
         }
         TT.array() -= 1;
         
-        while(fgets(buf, BUFSIZ, in)) {
+        while((!feof(in)) && fgets(buf, BUFSIZ, in)) {
             if(strncmp("$Surface", buf, 7) == 0) {
                 fgets(buf, BUFSIZ, in);
                 int elemAmt;
@@ -819,13 +886,16 @@ namespace FracCuts {
             F.array() -= 1;
         }
         else {
-            //TODO: find surface triangles
+            // if no surface triangles information provided, then find
+            findSurfaceTris(TT, F);
         }
         
         std::cout << "tet mesh loaded with " << TV.rows() << " nodes, "
             << TT.rows() << " tets, and " << F.rows() << " surface tris." << std::endl;
         
         fclose(in);
+        
+        return true;
     }
     
     void IglUtils::smoothVertField(const TriangleSoup<DIM>& mesh, Eigen::VectorXd& field)

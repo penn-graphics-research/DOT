@@ -291,15 +291,28 @@ namespace FracCuts {
     template<int dim>
     void ADMMDDTimeStepper<dim>::writeMeshToFile(const std::string& filePath_pre) const
     {
-        for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
-            Eigen::MatrixXd V(mesh_subdomain[subdomainI].V.rows(), 3);
-            V << mesh_subdomain[subdomainI].V, Eigen::VectorXd::Zero(V.rows());
-            igl::writeOBJ(filePath_pre + "_subdomain" + std::to_string(subdomainI) + ".obj",
-                          V, mesh_subdomain[subdomainI].F);
+        if(dim == 2) {
+            for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+                Eigen::MatrixXd V(mesh_subdomain[subdomainI].V.rows(), 3);
+                V.leftCols(2) = mesh_subdomain[subdomainI].V;
+                V.col(2).setZero();
+                igl::writeOBJ(filePath_pre + "_subdomain" + std::to_string(subdomainI) + ".obj",
+                              V, mesh_subdomain[subdomainI].F);
+            }
+            Eigen::MatrixXd V(Base::result.V.rows(), 3);
+            V.leftCols(2) = Base::result.V;
+            V.col(2).setZero();
+            igl::writeOBJ(filePath_pre + ".obj", V, Base::result.F);
         }
-        Eigen::MatrixXd V(Base::result.V.rows(), 3);
-        V << Base::result.V, Eigen::VectorXd::Zero(V.rows());
-        igl::writeOBJ(filePath_pre + ".obj", V, Base::result.F);
+        else {
+            for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
+                IglUtils::saveTetMesh(filePath_pre + "_subdomain" +
+                                      std::to_string(subdomainI) + ".msh",
+                                      mesh_subdomain[subdomainI].V,
+                                      mesh_subdomain[subdomainI].F);
+            }
+            IglUtils::saveTetMesh(filePath_pre + ".msh", Base::result.V, Base::result.F);
+        }
     }
     
     template<int dim>
@@ -309,7 +322,7 @@ namespace FracCuts {
 //        writeMeshToFile(outputFolderPath + "init");
         initDual();
         
-        int outputTimestepAmt = 100;
+        int outputTimestepAmt = 99;
         std::string curOutputFolderPath;
         if(Base::globalIterNum == outputTimestepAmt) {
             curOutputFolderPath = outputFolderPath + "timestep" + std::to_string(Base::globalIterNum);

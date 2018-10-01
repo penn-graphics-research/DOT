@@ -25,6 +25,8 @@
 
 extern std::string outputFolderPath;
 extern igl::opengl::glfw::Viewer viewer;
+extern Eigen::MatrixXi SF;
+extern std::vector<int> sTri2Tet;
 extern bool viewUV;
 extern bool showTexture;
 extern int showDistortion;
@@ -221,7 +223,6 @@ namespace FracCuts{
                     }
                         
                     case 9: {
-                        //TODO: support tet mesh
                         // visualize ADMM inner iterations
                         if(argc < 5) {
                             std::cout << "not enough command line arguments" << std::endl;
@@ -256,48 +257,63 @@ namespace FracCuts{
                         char buf[BUFSIZ];
                         while((!feof(dirList)) && fscanf(dirList, "%s", buf)) {
                             int timestepI = std::stoi(argv[4]);
-                            GifBegin(&GIFWriter, (resultsFolderPath + '/' + std::string(buf) + "/timestep" +
-                                                  std::to_string(timestepI) + "/" + "subdomains.gif").c_str(),
+                            GifBegin(&GIFWriter, (resultsFolderPath + '/' + std::string(buf) +
+                                                  "/timestep" + std::to_string(timestepI) +
+                                                  "/subdomains.gif").c_str(),
                                      GIFScale * (viewer.core.viewport[2] - viewer.core.viewport[0]),
                                      GIFScale * (viewer.core.viewport[3] - viewer.core.viewport[1]), GIFDelay);
                             for(int ADMMIterI = 0; true; ADMMIterI++) {
                                 int subdomainI = 0;
-                                std::string meshPath(resultsFolderPath + '/' + std::string(buf) + "/timestep" +
+                                std::string meshPath(resultsFolderPath + '/' +
+                                                     std::string(buf) + "/timestep" +
                                                      std::to_string(timestepI) + "/" +
-                                                     std::to_string(ADMMIterI) + "_subdomain0.obj");
+                                                     std::to_string(ADMMIterI) + "_subdomain0" +
+                                                     ((DIM == 2) ? ".obj" : ".msh"));
                                 Eigen::MatrixXd V, UV, N;
-                                Eigen::MatrixXi F, FUV, FN;
+                                Eigen::MatrixXi F, FUV, FN, _SF;
                                 Eigen::MatrixXd V_, UV_;
                                 Eigen::MatrixXi F_, FUV_;
                                 Eigen::VectorXd faceLabel;
+#if(DIM == 2)
                                 while(igl::readOBJ(meshPath, V, UV, N, F, FUV, FN)) {
+                                    faceLabel.conservativeResize(faceLabel.rows() + F.rows());
+                                    faceLabel.bottomRows(F.rows()).setConstant(subdomainI);
+#else
+                                SF.resize(0, 3);
+                                while(IglUtils::readTetMesh(meshPath, V, F, _SF)) {
+                                    _SF.array() += V_.rows();
+                                    SF.conservativeResize(SF.rows() + _SF.rows(), 3);
+                                    SF.bottomRows(_SF.rows()) = _SF;
+                                    
+                                    faceLabel.conservativeResize(faceLabel.rows() + _SF.rows());
+                                    faceLabel.bottomRows(_SF.rows()).setConstant(subdomainI);
+#endif
                                     F.array() += V_.rows();
-                                    F_.conservativeResize(F_.rows() + F.rows(), 3);
+                                    F_.conservativeResize(F_.rows() + F.rows(), DIM + 1);
                                     F_.bottomRows(F.rows()) = F;
                                     if(FUV.rows() > 0) {
                                         FUV.array() += UV_.rows();
-                                        FUV_.conservativeResize(FUV_.rows() + FUV.rows(), 3);
+                                        FUV_.conservativeResize(FUV_.rows() + FUV.rows(), DIM + 1);
                                         FUV_.bottomRows(FUV.rows()) = FUV;
                                     }
                                     V_.conservativeResize(V_.rows() + V.rows(), 3);
                                     V_.bottomRows(V.rows()) = V;
-                                    UV_.conservativeResize(UV_.rows() + V.rows(), 2);
-                                    UV_.bottomRows(V.rows()) = V.leftCols(2);
-                                    faceLabel.conservativeResize(faceLabel.rows() + F.rows());
-                                    faceLabel.bottomRows(F.rows()).setConstant(subdomainI);
+                                    UV_.conservativeResize(UV_.rows() + V.rows(), DIM);
+                                    UV_.bottomRows(V.rows()) = V.leftCols(DIM);
                                     
                                     subdomainI++;
                                     meshPath = resultsFolderPath + '/' + std::string(buf) +
                                         "/timestep" + std::to_string(timestepI) + "/" +
                                         std::to_string(ADMMIterI) + "_subdomain" +
-                                        std::to_string(subdomainI) + ".obj";
+                                        std::to_string(subdomainI) +
+                                        ((DIM == 2) ? ".obj" : ".msh");
                                 }
                                 if(subdomainI == 0) {
                                     break;
                                 }
                                 std::cout << subdomainI << " subdomain meshes loaded" << std::endl;
-                                TriangleSoup<DIM> resultMesh(V_, F_, UV_);
                                 
+                                TriangleSoup<DIM> resultMesh(V_, F_, UV_);
                                 triSoup[0] = triSoup[1] = &resultMesh;
                                 if(ADMMIterI == 0) {
                                     texScale = 10.0 / (triSoup[0]->bbox.row(1) -

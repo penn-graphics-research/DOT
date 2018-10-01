@@ -218,7 +218,8 @@ void updateViewerData_distortion(void)
         }
             
         case -1: {
-            assert(faceColors_default.rows() == triSoup[viewChannel]->F.rows());
+            assert(faceColors_default.rows() == ((DIM == 3) ? SF.rows() :
+                                                 triSoup[viewChannel]->F.rows()));
             color_distortionVis = faceColors_default;
             break;
         }
@@ -766,27 +767,7 @@ int main(int argc, char *argv[])
 //                UV.col(2) *= 1.3;
                 FracCuts::IglUtils::findBorderVerts(V, borderVerts_primitive);
                 
-                std::map<FracCuts::Triplet, int> tri2Tet;
-                for(int elemI = 0; elemI < F.rows(); elemI++) {
-                    const Eigen::RowVector4i& elemVInd = F.row(elemI);
-                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
-                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
-                    tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
-                    tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
-                }
-                sTri2Tet.resize(SF.rows());
-                for(int triI = 0; triI < SF.rows(); triI++) {
-                    const Eigen::RowVector3i& triVInd = SF.row(triI);
-                    auto finder = tri2Tet.find(FracCuts::Triplet(triVInd.data()));
-                    if(finder == tri2Tet.end()) {
-                        finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[2], triVInd[0]));
-                        if(finder == tri2Tet.end()) {
-                            finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[0], triVInd[1]));
-                            assert(finder != tri2Tet.end());
-                        }
-                    }
-                    sTri2Tet[triI] = finder->second;
-                }
+                FracCuts::IglUtils::buildSTri2Tet(F, SF, sTri2Tet);
             }
             else {
                 FracCuts::TriangleSoup<DIM> primitive(config.shapeType,
