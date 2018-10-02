@@ -17,6 +17,7 @@
 #endif
 
 #include "IglUtils.hpp"
+#include "Timer.hpp"
 
 #ifdef USE_METIS
 #include "METIS.hpp"
@@ -33,6 +34,7 @@
 #include <iostream>
 
 extern std::string outputFolderPath;
+extern Timer timer_temp3;
 
 namespace FracCuts {
     
@@ -51,6 +53,7 @@ namespace FracCuts {
              p_propagateFracture, p_mute, p_scaffolding,
              UV_bnds, E, bnd, animConfig)
     {
+        timer_temp3.start(0);
         // divide domain
         const int partitionAmt = animConfig.partitionAmt;
         mesh_subdomain.resize(partitionAmt);
@@ -236,6 +239,7 @@ namespace FracCuts {
             linSysSolver_subdomain[subdomainI] = new EigenLibSolver<Eigen::VectorXi, Eigen::VectorXd>();
 #endif
         }
+        timer_temp3.stop();
     }
     
     template<int dim>
@@ -337,7 +341,7 @@ namespace FracCuts {
             Base::file_iterStats << Base::globalIterNum << " ";
             
             subdomainSolve();
-            checkRes();
+//            checkRes();
             boundaryConsensusSolve();
             
             Base::computeGradient(Base::result, Base::scaffold, true, Base::gradient);
@@ -365,6 +369,7 @@ namespace FracCuts {
     template<int dim>
     void ADMMDDTimeStepper<dim>::initPrimal(int option)
     {
+        timer_temp3.start(1);
         // global:
         Base::initX(option);
         
@@ -392,10 +397,12 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+        timer_temp3.stop();
     }
     template<int dim>
     void ADMMDDTimeStepper<dim>::initDual(void)
     {
+        timer_temp3.start(2);
         Eigen::VectorXd g;
         Base::computeGradient(Base::result, Base::scaffold, true, g); //TODO: only need to compute for shared vertices
         Base::file_iterStats << Base::globalIterNum << " 0 0 " << g.squaredNorm() << std::endl;
@@ -450,10 +457,12 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+        timer_temp3.stop();
     }
     template<int dim>
     void ADMMDDTimeStepper<dim>::initWeights(void)
     {
+        timer_temp3.start(3);
         Base::computePrecondMtr(Base::result, Base::scaffold, true, Base::linSysSolver); //TODO: only need to compute for shared vertices
         
         double multiplier = 1.0;
@@ -523,10 +532,12 @@ namespace FracCuts {
 //                                              std::to_string(subdomainI),
 //                                              weightMtr_subdomain[subdomainI], true);
         }
+        timer_temp3.stop();
     }
     template<int dim>
     void ADMMDDTimeStepper<dim>::initConsensusSolver(void)
     {
+        timer_temp3.start(4);
 #ifdef USE_GW
         //TODO: consider using sparse matrix
         consensusMtr.conservativeResize(sharedVerts.size() * dim, sharedVerts.size() * dim);
@@ -545,11 +556,13 @@ namespace FracCuts {
         }
         consensusSolver = consensusMtr.ldlt();
 #endif
+        timer_temp3.stop();
     }
     
     template<int dim>
     void ADMMDDTimeStepper<dim>::subdomainSolve(void) // local solve
     {
+        timer_temp3.start(5);
         int localMaxIter = __INT_MAX__;
         double localTol = Base::targetGRes / mesh_subdomain.size() / 100.0; //TODO: needs to be more adaptive to global tol
 #ifdef USE_TBB
@@ -614,6 +627,7 @@ namespace FracCuts {
 #ifdef USE_TBB
         );
 #endif
+        timer_temp3.stop();
     }
     template<int dim>
     void ADMMDDTimeStepper<dim>::checkRes(void)
@@ -635,6 +649,7 @@ namespace FracCuts {
     template<int dim>
     void ADMMDDTimeStepper<dim>::boundaryConsensusSolve(void) // global solve
     {
+        timer_temp3.start(6);
 #ifndef USE_GW
         Base::result.V.setZero();
         for(int subdomainI = 0; subdomainI < mesh_subdomain.size(); subdomainI++) {
@@ -689,7 +704,7 @@ namespace FracCuts {
             }
         }
         
-        Eigen::VectorXd solvedSharedVerts = consensusSolver.solve(rhs); //TODO: prefactor in each time step
+        Eigen::VectorXd solvedSharedVerts = consensusSolver.solve(rhs);
         for(int svI = 0; svI < sharedVerts.size(); svI++) {
             Base::result.V.row(sharedVerts[svI]) = solvedSharedVerts.segment<dim>(svI * dim).transpose();
         }
@@ -701,6 +716,7 @@ namespace FracCuts {
             }
         }
 #endif
+        timer_temp3.stop();
     }
     
     // subdomain energy computation

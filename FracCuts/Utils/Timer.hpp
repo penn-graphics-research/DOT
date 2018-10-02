@@ -55,16 +55,16 @@ public:
     }
     
     // Print out the times spent in each activity
-    void print() {
+    void print(std::ostream& os = std::cout) {
         double sum = 0.0;
-        std::cerr << timings_.size() << " activities:\n";
+        os << timings_.size() << " activities:\n";
         for (TimerInt i = 0; i < timings_.size(); i++) {
-            std::cerr.width(10);
-            std::cerr << std::right << timings_[i] << " s: " << names_[i] << "\n";
+            os.width(10);
+            os << std::right << timings_[i] << " s: " << names_[i] << "\n";
             sum += timings_[i];
         }
-        std::cerr.width(10);
-        std::cerr << std::right << sum << " s: Total\n";
+        os.width(10);
+        os << std::right << sum << " s: Total\n";
     }
     
     // Register a new activity with the specified name, returning the

@@ -81,7 +81,7 @@ double GIFScale = 0.4;
 // timer
 double secPast = 0.0;
 time_t lastStart_world;
-Timer timer, timer_step, timer_temp, timer_temp2;
+Timer timer, timer_step, timer_temp, timer_temp2, timer_temp3;
 
 
 void saveInfo(bool writePNG = true, bool writeGIF = true, bool writeMesh = true);
@@ -412,24 +412,11 @@ void saveInfoForPresent(const std::string fileName = "info.txt")
     
     file << iterNum << " " << optimizer->getInnerIterAmt() << " 0 0 " << lambda_init << " " << 1.0 - energyParams[0] << std::endl;
     
-    file << "0.0 0.0 " << timer.timing_total() << " " << secPast <<
-        " topo" << timer.timing(0) << " desc" << timer.timing(1) << " scaf" << timer.timing(2) << " enUp" << timer.timing(3) <<
-        " mtrComp" << timer_step.timing(0) << " mtrAssem" << timer_step.timing(1) << " symFac" << timer_step.timing(2) <<
-        " numFac" << timer_step.timing(3) << " backSolve" << timer_step.timing(4) << " lineSearch" << timer_step.timing(5) <<
-        " bSplit" << timer_step.timing(6) << " iSplit" << timer_step.timing(7) << " cMerge" << timer_step.timing(8) <<
-        " SVD" << timer_temp.timing(0) << " derivComp" << timer_temp.timing(1) << " SPD" << timer_temp.timing(2) << " blk2Mtr" << timer_temp.timing(3) <<
-        " inertiaE" << timer_temp.timing(4) <<
-        " inertiaG" << timer_temp.timing(5) <<
-        " inertiaH" << timer_temp.timing(6) <<
-        " compA" << timer_temp2.timing(0) <<
-        " compB" << timer_temp2.timing(1) <<
-        " comp_dP_div_dF" << timer_temp2.timing(2) <<
-        " comp_d2E_div_dx2|" << timer_temp2.timing(3) <<
-        " eVal" << timer_temp2.timing(4) <<
-        " grad_pre" << timer_temp2.timing(5) <<
-        " grad_dE_div_dF" << timer_temp2.timing(6) <<
-        " grad_dE_div_dx" << timer_temp2.timing(7) <<
-        " grad_add" << timer_temp2.timing(8) << std::endl;
+    timer.print(file);
+    timer_step.print(file);
+    timer_temp.print(file);
+    timer_temp2.print(file);
+    timer_temp3.print(file);
     
     double distortion;
     energyTerms[0]->computeEnergyVal(*triSoup[channel_result], distortion);
@@ -909,6 +896,14 @@ int main(int argc, char *argv[])
     timer_temp2.new_activity("grad_dE_div_dF");
     timer_temp2.new_activity("grad_dE_div_dx");
     timer_temp2.new_activity("grad_add");
+    
+    timer_temp3.new_activity("init");
+    timer_temp3.new_activity("initPrimal");
+    timer_temp3.new_activity("initDual");
+    timer_temp3.new_activity("initWeights");
+    timer_temp3.new_activity("initCons");
+    timer_temp3.new_activity("subdSolve");
+    timer_temp3.new_activity("consSolve");
     
     // * Our approach
     if(lambda != 1.0) {
