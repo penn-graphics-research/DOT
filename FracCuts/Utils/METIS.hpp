@@ -17,35 +17,49 @@ namespace FracCuts {
     
     // data structure from METIS mesh partitioning example
     typedef struct {
-        idx_t ptype;
-        idx_t objtype;
-        idx_t ctype;
-        idx_t iptype;
-        idx_t rtype;
+        idx_t ptype;    // partitioning method:
+                        // METIS_PTYPE_RB, METIS_PTYPE_KWAY
         
-        idx_t no2hop;
-        idx_t minconn;
-        idx_t contig;
+        idx_t objtype;  // objective:
+                        // METIS_OBJTYPE_CUT, METIS_OBJTYPE_VOL
+        
+        idx_t ctype;    // matching scheme for coarsening:
+                        // METIS_CTYPE_RM, METIS_CTYPE_SHEM
+        
+        idx_t iptype;   // algorithm for initial partitioning:
+                        // METIS_IPTYPE_GROW, METIS_IPTYPE_RANDOM,
+                        // METIS_IPTYPE_EDGE, METIS_IPTYPE_NODE
+        
+        idx_t rtype;    // algorithm for refinement
+                        // METIS_RTYPE_FM, METIS_RTYPE_GREEDY,
+                        //  METIS_RTYPE_SEP2SIDED, METIS_RTYPE_SEP1SIDED
+        
+        idx_t no2hop;   // perform a 2-hop matching (0) or not (1) for coarsening
+        idx_t minconn;  // whether to minimize the degree of the subdomain graph (1) or not (0)
+        idx_t contig;   // whether partition needs to be continuous (1) or not (0)
         
         idx_t nooutput;
         
         idx_t balance;
-        idx_t ncuts;
-        idx_t niter;
+        idx_t ncuts;    // number of candidate partition plans
+        idx_t niter;    // number of iterations for refinement
         
-        idx_t gtype;
-        idx_t ncommon;
+        idx_t gtype;    // type of graph (dual or primal)
+        idx_t ncommon;  // number of common nodes to have for elements to be considered adjacent
         
-        idx_t seed;
-        idx_t dbglvl;
+        idx_t seed;     // seed for random number generation
+        idx_t dbglvl;   // amount of debug info to be printed
         
-        idx_t nparts;
+        idx_t nparts;   // number of partitionings
         
-        idx_t nseps;
-        idx_t ufactor;
-        idx_t pfactor;
-        idx_t compress;
-        idx_t ccorder;
+        idx_t nseps;    // number of different candidate separators
+        idx_t ufactor;  // allowed load imbalance (1+ufactor)/1000
+        idx_t pfactor;  // if pfactor > 0, vertices with a degree greater than 0.1*pfactor*avgDeg
+                        // will be removed during ordering and then add back. 60 <= x <= 200 is
+                        // often good
+        
+        idx_t compress; // compress redundant vertices (1) or not (0)
+        idx_t ccorder;  // whether to order connected components (1) or not (0)
         
         char *filename;
         char *outfile;
@@ -106,13 +120,14 @@ namespace FracCuts {
             options[METIS_OPTION_CTYPE]   = params.ctype;
             options[METIS_OPTION_IPTYPE]  = params.iptype;
             options[METIS_OPTION_RTYPE]   = params.rtype;
-            options[METIS_OPTION_DBGLVL]  = params.dbglvl;
-            options[METIS_OPTION_UFACTOR] = params.ufactor;
             options[METIS_OPTION_MINCONN] = params.minconn;
             options[METIS_OPTION_CONTIG]  = params.contig;
-            options[METIS_OPTION_SEED]    = params.seed;
-            options[METIS_OPTION_NITER]   = params.niter;
             options[METIS_OPTION_NCUTS]   = params.ncuts;
+            options[METIS_OPTION_NSEPS]   = params.nseps;
+            options[METIS_OPTION_NITER]   = params.niter;
+            options[METIS_OPTION_DBGLVL]  = params.dbglvl;
+            options[METIS_OPTION_SEED]    = params.seed;
+            options[METIS_OPTION_UFACTOR] = params.ufactor;
             
             // init other parameters
             epart.resize(ne);
@@ -172,13 +187,14 @@ namespace FracCuts {
             params.iptype        = METIS_IPTYPE_METISRB;
             params.rtype         = METIS_RTYPE_GREEDY;
             
-            params.minconn       = 0;
+            params.minconn       = 1;
             params.contig        = 1;
             
             params.nooutput      = 0;
             params.wgtflag       = 3;
             
-            params.ncuts         = 1;
+            params.ncuts         = 1; //
+            params.nseps         = 1; //
             params.niter         = 10;
             params.ncommon       = dim;
             
@@ -191,7 +207,7 @@ namespace FracCuts {
             params.filename      = NULL;
             params.nparts        = nparts;
             
-            params.ufactor       = 30;
+            params.ufactor       = 30; //
             
             if (params.nparts < 2) {
                 assert(0 && "The number of partitions should be greater than 1!\n");
