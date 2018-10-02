@@ -926,29 +926,34 @@ namespace FracCuts {
                                             Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dU_div_dF,
                                             Eigen::Matrix<double, DIM * DIM, DIM * DIM>& dV_div_dF)
     {
-        assert(DIM == 2);
-#if(DIM == 2)
-        Eigen::Matrix2d coefMtr;
-        coefMtr << svd.singularValues()[0], svd.singularValues()[1],
-            svd.singularValues()[1], svd.singularValues()[0];
-        const Eigen::LDLT<Eigen::Matrix2d>& solver = coefMtr.ldlt();
-        assert(solver.info() == Eigen::Success);
-        
-        Eigen::Vector2d b;
-        for(int rowI = 0; rowI < 2; rowI++) {
-            for(int colI = 0; colI < 2; colI++) {
-                b << svd.matrixU()(rowI, 1) * svd.matrixV()(colI, 0),
-                    -svd.matrixU()(rowI, 0) * svd.matrixV()(colI, 1);
-                const Eigen::Vector2d wij21 = solver.solve(b);
-                
-                dU_div_dF.block(rowI * 2 + colI, 0, 1, 2) = wij21[0] * svd.matrixU().col(1).transpose();
-                dU_div_dF.block(rowI * 2 + colI, 2, 1, 2) = -wij21[0] * svd.matrixU().col(0).transpose();
-                
-                dV_div_dF.block(rowI * 2 + colI, 0, 1, 2) = -wij21[1] * svd.matrixV().col(1).transpose();
-                dV_div_dF.block(rowI * 2 + colI, 2, 1, 2) = wij21[1] * svd.matrixV().col(0).transpose();
+        int cAmt = DIM * (DIM - 1) / 2;
+        for(int cI = 0; cI < cAmt; cI++) {
+            int cI_post = (cI + 1) % DIM;
+            
+            Eigen::Matrix2d coefMtr;
+            coefMtr <<
+                svd.singularValues()[cI], svd.singularValues()[cI_post],
+                svd.singularValues()[cI_post], svd.singularValues()[cI];
+            const Eigen::LDLT<Eigen::Matrix2d>& solver = coefMtr.ldlt();
+            assert(solver.info() == Eigen::Success);
+            
+            dU_div_dF.setZero();
+            dV_div_dF.setZero();
+            Eigen::Vector2d b;
+            for(int rowI = 0; rowI < DIM; rowI++) {
+                for(int colI = 0; colI < DIM; colI++) {
+                    b << svd.matrixU()(rowI, cI_post) * svd.matrixV()(colI, cI),
+                        -svd.matrixU()(rowI, cI) * svd.matrixV()(colI, cI_post);
+                    const Eigen::Vector2d wij21 = solver.solve(b);
+                    
+                    dU_div_dF.block(rowI * DIM + colI, cI * DIM, 1, DIM) += wij21[0] * svd.matrixU().col(cI_post).transpose();
+                    dU_div_dF.block(rowI * DIM + colI, cI_post * DIM, 1, DIM) += -wij21[0] * svd.matrixU().col(cI).transpose();
+                    
+                    dV_div_dF.block(rowI * DIM + colI, cI * DIM, 1, DIM) += -wij21[1] * svd.matrixV().col(cI_post).transpose();
+                    dV_div_dF.block(rowI * DIM + colI, cI_post * DIM, 1, DIM) += wij21[1] * svd.matrixV().col(cI).transpose();
+                }
             }
         }
-#endif
     }
     
     void IglUtils::compute_d2sigma_div_dF2(const AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>>& svd,
@@ -959,7 +964,8 @@ namespace FracCuts {
         
         for(int sigmaI = 0; sigmaI < DIM; sigmaI++) {
             for(int Fij = 0; Fij < DIM * DIM; Fij++) {
-                const Eigen::Matrix<double, DIM, DIM>& d2sigma_div_dF2ij = dU_div_dF.block(Fij, sigmaI * DIM, 1, DIM).transpose() * svd.matrixV().col(sigmaI).transpose() +
+                const Eigen::Matrix<double, DIM, DIM>& d2sigma_div_dF2ij =
+                    dU_div_dF.block(Fij, sigmaI * DIM, 1, DIM).transpose() * svd.matrixV().col(sigmaI).transpose() +
                     svd.matrixU().col(sigmaI) * dV_div_dF.block(Fij, sigmaI * DIM, 1, DIM);
                 
                 d2sigma_div_dF2.block(Fij, sigmaI * DIM * DIM, 1, DIM) = d2sigma_div_dF2ij.row(0);

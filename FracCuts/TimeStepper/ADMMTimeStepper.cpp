@@ -31,12 +31,12 @@ namespace FracCuts {
                        p_propagateFracture, p_mute, p_scaffolding,
                        UV_bnds, E, bnd, animConfig)
     {
-        z.resize(Base::result.F.rows(), 4);
-        u.resize(Base::result.F.rows(), 4);
-        dz.resize(Base::result.F.rows(), 4);
-        rhs_xUpdate.resize(Base::result.V.rows() * 2);
-        M_mult_xHat.resize(Base::result.V.rows() * 2);
-        D_mult_x.resize(Base::result.F.rows(), 4);
+        z.resize(Base::result.F.rows(), dim * dim);
+        u.resize(Base::result.F.rows(), dim * dim);
+        dz.resize(Base::result.F.rows(), dim * dim);
+        rhs_xUpdate.resize(Base::result.V.rows() * dim);
+        M_mult_xHat.resize(Base::result.V.rows() * dim);
+        D_mult_x.resize(Base::result.F.rows(), dim * dim);
         
         // initialize weights
         double bulkModulus;
@@ -54,30 +54,36 @@ namespace FracCuts {
         weights2 = weights.cwiseProduct(weights);
         
         // initialize D_array
+        //TODO: simpify!!
         D_array.resize(Base::result.F.rows());
         for(int triI = 0; triI < Base::result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
-            
-            Eigen::Vector3d x0_3D[3] = {
-                Base::result.V_rest.row(triVInd[0]),
-                Base::result.V_rest.row(triVInd[1]),
-                Base::result.V_rest.row(triVInd[2])
-            };
-            Eigen::Vector2d x0[3];
-            IglUtils::mapTriangleTo2D(x0_3D, x0);
-            
-            Eigen::Matrix2d X0, A;
-            X0 << x0[1] - x0[0], x0[2] - x0[0];
-            A = X0.inverse();
-            
-            const double mA11mA21 = -A(0, 0) - A(1, 0);
-            const double mA12mA22 = -A(0, 1) - A(1, 1);
-            D_array[triI].resize(4, 6);
-            D_array[triI] <<
-            mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0), 0.0,
-            mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1), 0.0,
-            0.0, mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0),
-            0.0, mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1);
+            const Eigen::Matrix<double, dim, dim>& A = Base::result.restTriInv[triI];
+            if(dim == 2) {
+                const double mA11mA21 = -A(0, 0) - A(1, 0);
+                const double mA12mA22 = -A(0, 1) - A(1, 1);
+                D_array[triI].resize(4, 6);
+                D_array[triI] <<
+                    mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0), 0.0,
+                    mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1), 0.0,
+                    0.0, mA11mA21, 0.0, A(0, 0), 0.0, A(1, 0),
+                    0.0, mA12mA22, 0.0, A(0, 1), 0.0, A(1, 1);
+            }
+            else {
+                const double mA11mA21mA31 = -A(0, 0) - A(1, 0) - A(2, 0);
+                const double mA12mA22mA32 = -A(0, 1) - A(1, 1) - A(2, 1);
+                const double mA13mA23mA33 = -A(0, 2) - A(1, 2) - A(2, 2);
+                D_array[triI].resize(9, 12);
+                D_array[triI] <<
+                    mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0), 0.0, 0.0,
+                    mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1), 0.0, 0.0,
+                    mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2), 0.0, 0.0,
+                    0.0, mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0), 0.0,
+                    0.0, mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1), 0.0,
+                    0.0, mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2), 0.0,
+                    0.0, 0.0, mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0),
+                    0.0, 0.0, mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1),
+                    0.0, 0.0, mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2);
+            }
         }
     }
     
@@ -85,36 +91,50 @@ namespace FracCuts {
     void ADMMTimeStepper<dim>::precompute(void)
     {
         // construct and prefactorize the linear system
-        std::vector<Eigen::Triplet<double>> triplet(Base::result.F.rows() * 4 * 3);
+        std::vector<Eigen::Triplet<double>> triplet(Base::result.F.rows() * dim * dim * (dim + 1));
         for(int triI = 0; triI < Base::result.F.rows(); triI++) {
-            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
-            for(int FRowI = 0; FRowI < 2; FRowI++) {
-                for(int localVI = 0; localVI < 3; localVI++) {
-                    triplet.emplace_back(triI * 4 + FRowI * 2, triVInd[localVI] * 2 + FRowI,
-                                         weights[triI] * D_array[triI](FRowI * 2, localVI * 2 + FRowI));
-                    triplet.emplace_back(triI * 4 + FRowI * 2 + 1, triVInd[localVI] * 2 + FRowI,
-                                         weights[triI] * D_array[triI](FRowI * 2 + 1, localVI * 2 + FRowI));
+            const Eigen::Matrix<int, 1, dim + 1>& triVInd = Base::result.F.row(triI);
+            for(int FRowI = 0; FRowI < dim; FRowI++) {
+                for(int localVI = 0; localVI < dim + 1; localVI++) {
+                    //TODO: simplify!
+                    triplet.emplace_back(triI * dim * dim + FRowI * dim,
+                                         triVInd[localVI] * dim + FRowI,
+                                         weights[triI] * D_array[triI](FRowI * dim,
+                                                                       localVI * dim + FRowI));
+                    triplet.emplace_back(triI * dim * dim + FRowI * dim + 1,
+                                         triVInd[localVI] * dim + FRowI,
+                                         weights[triI] * D_array[triI](FRowI * dim + 1,
+                                                                       localVI * dim + FRowI));
+                    if(dim == 3) {
+                        triplet.emplace_back(triI * dim * dim + FRowI * dim + 2,
+                                             triVInd[localVI] * dim + FRowI,
+                                             weights[triI] * D_array[triI](FRowI * dim + 2,
+                                                                           localVI * dim + FRowI));
+                    }
                 }
             }
         }
         Eigen::SparseMatrix<double> WD;
-        WD.resize(Base::result.F.rows() * 4, Base::result.V.rows() * 2);
+        WD.resize(Base::result.F.rows() * dim * dim, Base::result.V.rows() * dim);
         WD.setFromTriplets(triplet.begin(), triplet.end());
         
         Eigen::SparseMatrix<double> coefMtr = WD.transpose() * WD;
         for(int vI = 0; vI < Base::result.V.rows(); vI++) {
             double massI = Base::result.massMatrix.coeffRef(vI, vI);
-            coefMtr.coeffRef(vI * 2, vI * 2) += massI;
-            coefMtr.coeffRef(vI * 2 + 1, vI * 2 + 1) += massI;
+            coefMtr.coeffRef(vI * dim, vI * dim) += massI;
+            coefMtr.coeffRef(vI * dim + 1, vI * dim + 1) += massI;
+            if(dim == 3) {
+                coefMtr.coeffRef(vI * dim + 2, vI * dim + 2) += massI;
+            }
         }
         offset_fixVerts.resize(0);
-        offset_fixVerts.resize(Base::result.V.rows() * 2);
+        offset_fixVerts.resize(Base::result.V.rows() * dim);
         for (int k = 0; k < coefMtr.outerSize(); ++k) {
             for (Eigen::SparseMatrix<double>::InnerIterator it(coefMtr, k); it; ++it)
             {
-                bool fixed_rowV = (Base::result.fixedVert.find(it.row() / 2) !=
+                bool fixed_rowV = (Base::result.fixedVert.find(it.row() / dim) !=
                                    Base::result.fixedVert.end());
-                bool fixed_colV = (Base::result.fixedVert.find(it.col() / 2) !=
+                bool fixed_colV = (Base::result.fixedVert.find(it.col() / dim) !=
                                    Base::result.fixedVert.end());
                 if(fixed_rowV || fixed_colV) {
                     if(!fixed_rowV) {
@@ -125,8 +145,11 @@ namespace FracCuts {
             }
         }
         for(const auto& fVI : Base::result.fixedVert) {
-            coefMtr.coeffRef(fVI * 2, fVI * 2) = 1.0;
-            coefMtr.coeffRef(fVI * 2 + 1, fVI * 2 + 1) = 1.0;
+            coefMtr.coeffRef(fVI * dim, fVI * dim) = 1.0;
+            coefMtr.coeffRef(fVI * dim + 1, fVI * dim + 1) = 1.0;
+            if(dim == 3) {
+                coefMtr.coeffRef(fVI * dim + 2, fVI * dim + 2) = 1.0;
+            }
         }
         coefMtr.makeCompressed();
         
@@ -156,14 +179,14 @@ namespace FracCuts {
 #endif
         {
             if(Base::result.fixedVert.find(vI) == Base::result.fixedVert.end()) {
-                M_mult_xHat.segment(vI * 2, 2) = (Base::result.massMatrix.coeffRef(vI, vI) *
+                M_mult_xHat.segment<dim>(vI * dim) = (Base::result.massMatrix.coeffRef(vI, vI) *
                                                   (Base::resultV_n.row(vI).transpose() +
-                                                   Base::dt * Base::velocity.segment(vI * 2, 2) +
+                                                   Base::dt * Base::velocity.segment(vI * dim, dim) +
                                                    Base::dtSq * Base::gravity));
             }
             else {
-                M_mult_xHat.segment(vI * 2, 2) = (Base::result.massMatrix.coeffRef(vI, vI) *
-                                                  Base::resultV_n.row(vI).transpose());
+                M_mult_xHat.segment<dim>(vI * dim) = (Base::result.massMatrix.coeffRef(vI, vI) *
+                                                      Base::resultV_n.row(vI).transpose());
             }
         }
 #ifdef USE_TBB
@@ -271,14 +294,17 @@ namespace FracCuts {
     template<int dim>
     void ADMMTimeStepper<dim>::checkRes(void)
     {
-        Eigen::VectorXd s = Eigen::VectorXd::Zero(Base::result.V.rows() * 2);
+        Eigen::VectorXd s = Eigen::VectorXd::Zero(Base::result.V.rows() * dim);
         double sqn_r = 0.0;
         for(int triI = 0; triI < Base::result.F.rows(); triI++) {
             const Eigen::VectorXd& s_triI = D_array[triI].transpose() * (dz.row(triI) * weights2[triI]).transpose();
-            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
-            s.segment(triVInd[0] * 2, 2) += s_triI.segment(0, 2);
-            s.segment(triVInd[1] * 2, 2) += s_triI.segment(2, 2);
-            s.segment(triVInd[2] * 2, 2) += s_triI.segment(4, 2);
+            const Eigen::Matrix<int, 1, dim + 1>& triVInd = Base::result.F.row(triI);
+            s.segment<dim>(triVInd[0] * dim) += s_triI.segment<dim>(0);
+            s.segment<dim>(triVInd[1] * dim) += s_triI.segment<dim>(dim);
+            s.segment<dim>(triVInd[2] * dim) += s_triI.segment<dim>(dim * 2);
+            if(dim == 3) {
+                s.segment<dim>(triVInd[3] * dim) += s_triI.segment<dim>(dim * 3);
+            }
             
             sqn_r += (D_mult_x.row(triI) - z.row(triI)).squaredNorm() * weights2[triI];
         }
@@ -293,10 +319,13 @@ namespace FracCuts {
         rhs_xUpdate = M_mult_xHat;
         for(int triI = 0; triI < Base::result.F.rows(); triI++) {
             const Eigen::VectorXd& rhs_right_triI = D_array[triI].transpose() * ((z.row(triI) - u.row(triI)) * weights2[triI]).transpose();
-            const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
-            rhs_xUpdate.segment(triVInd[0] * 2, 2) += rhs_right_triI.segment(0, 2);
-            rhs_xUpdate.segment(triVInd[1] * 2, 2) += rhs_right_triI.segment(2, 2);
-            rhs_xUpdate.segment(triVInd[2] * 2, 2) += rhs_right_triI.segment(4, 2);
+            const Eigen::Matrix<int, 1, dim + 1>& triVInd = Base::result.F.row(triI);
+            rhs_xUpdate.segment<dim>(triVInd[0] * dim) += rhs_right_triI.segment<dim>(0);
+            rhs_xUpdate.segment<dim>(triVInd[1] * dim) += rhs_right_triI.segment<dim>(dim);
+            rhs_xUpdate.segment<dim>(triVInd[2] * dim) += rhs_right_triI.segment<dim>(dim * 2);
+            if(dim == 3) {
+                rhs_xUpdate.segment<dim>(triVInd[3] * dim) += rhs_right_triI.segment<dim>(dim * 3);
+            }
         }
 #ifdef USE_TBB
         tbb::parallel_for(0, (int)offset_fixVerts.size(), 1, [&](int rowI)
@@ -305,8 +334,8 @@ namespace FracCuts {
 #endif
         {
             for(const auto& entryI : offset_fixVerts[rowI]) {
-                int vI = entryI.first / 2;
-                int dimI = entryI.first % 2;
+                int vI = entryI.first / dim;
+                int dimI = entryI.first % dim;
                 rhs_xUpdate[rowI] -= entryI.second * Base::result.V(vI, dimI);
             }
         }
@@ -314,7 +343,7 @@ namespace FracCuts {
         );
 #endif
         for(const auto& fVI : Base::result.fixedVert) {
-            rhs_xUpdate.segment(fVI * 2, 2) = Base::result.V.row(fVI).transpose();
+            rhs_xUpdate.segment<dim>(fVI * dim) = Base::result.V.row(fVI).transpose();
         }
         
         // solve linear system with pre-factorized info and update x
@@ -325,7 +354,7 @@ namespace FracCuts {
         for(int vI = 0; vI < Base::result.V.rows(); vI++)
 #endif
         {
-            Base::result.V.row(vI) = x_solved.segment(vI * 2, 2).transpose();
+            Base::result.V.row(vI) = x_solved.segment<dim>(vI * dim).transpose();
         }
 #ifdef USE_TBB
         );
@@ -349,14 +378,16 @@ namespace FracCuts {
     {
         assert(triI < Base::result.F.rows());
         
-        const Eigen::RowVector3i& triVInd = Base::result.F.row(triI);
+        const Eigen::Matrix<int, 1, dim + 1>& triVInd = Base::result.F.row(triI);
         
         Eigen::VectorXd Xt;
-        Xt.resize(6);
-        Xt <<
-            Base::result.V.row(triVInd[0]).transpose(),
-            Base::result.V.row(triVInd[1]).transpose(),
-            Base::result.V.row(triVInd[2]).transpose();
+        Xt.resize(dim * (dim + 1));
+        Xt.segment<dim>(0) = Base::result.V.row(triVInd[0]).transpose();
+        Xt.segment<dim>(dim) = Base::result.V.row(triVInd[1]).transpose();
+        Xt.segment<dim>(dim * 2) = Base::result.V.row(triVInd[2]).transpose();
+        if(dim == 3) {
+            Xt.segment<dim>(dim * 3) = Base::result.V.row(triVInd[3]).transpose();
+        }
         
         D_mult_x.row(triI) = (D_array[triI] * Xt).transpose();
     }
