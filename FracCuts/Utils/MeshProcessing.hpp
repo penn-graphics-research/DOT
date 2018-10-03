@@ -82,7 +82,28 @@ namespace FracCuts {
                             using namespace std;
                             
                             // Tetrahedralize the interior
-                            igl::copyleft::tetgen::tetrahedralize(V,F,"pq1.414Y", TV,TT,TF);
+                            std::string flag("pq1.414");
+                            if(argc > 4) {
+                                double maxElemVol = std::stod(argv[4]);
+                                if(maxElemVol > 0.0) {
+                                    flag += std::string("a") + std::string(argv[4]);
+                                }
+                            }
+                            if(argc > 5) {
+                                int addSteinerPoints = stod(argv[5]);
+                                if(!addSteinerPoints) {
+                                    flag += 'Y';
+                                }
+                            }
+                            else {
+                                flag += 'Y';
+                            }
+                            igl::copyleft::tetgen::tetrahedralize(V,F, flag.c_str(), TV,TT,TF);
+                            
+                            TriangleSoup<DIM> tetMesh(TV, TT, TV);
+                            std::cout << "minVol = " << tetMesh.triArea.minCoeff() << std::endl;
+                            std::cout << "maxVol = " << tetMesh.triArea.maxCoeff() << std::endl;
+                            std::cout << "avgVol = " << tetMesh.surfaceArea / TT.rows() << std::endl;
                             
                             // Compute barycenters
                             Eigen::MatrixXd B;
@@ -124,7 +145,7 @@ namespace FracCuts {
                             }
                             
                             IglUtils::saveTetMesh((meshFolderPath + meshName + ".msh").c_str(),
-                                                  TV, TT, F);
+                                                  TV, TT);
                             
                             viewer.launch();
                             
