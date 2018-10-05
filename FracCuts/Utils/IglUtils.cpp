@@ -7,6 +7,7 @@
 //
 
 #include "IglUtils.hpp"
+#include "Triplet.h"
 
 #include <set>
 
@@ -697,24 +698,24 @@ namespace FracCuts {
     
     void IglUtils::findSurfaceTris(const Eigen::MatrixXi& TT, Eigen::MatrixXi& F)
     {
-        std::map<FracCuts::Triplet, int> tri2Tet;
+        std::map<Triplet, int> tri2Tet;
         for(int elemI = 0; elemI < TT.rows(); elemI++) {
             const Eigen::RowVector4i& elemVInd = TT.row(elemI);
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
+            tri2Tet[Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
         }
         
         F.conservativeResize(0, 3);
         for(const auto& triI : tri2Tet) {
             const int* triVInd = triI.first.key;
             // find dual triangle with reversed indices:
-            auto finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[1], triVInd[0]));
+            auto finder = tri2Tet.find(Triplet(triVInd[2], triVInd[1], triVInd[0]));
             if(finder == tri2Tet.end()) {
-                finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[0], triVInd[2]));
+                finder = tri2Tet.find(Triplet(triVInd[1], triVInd[0], triVInd[2]));
                 if(finder == tri2Tet.end()) {
-                    finder = tri2Tet.find(FracCuts::Triplet(triVInd[0], triVInd[2], triVInd[1]));
+                    finder = tri2Tet.find(Triplet(triVInd[0], triVInd[2], triVInd[1]));
                     if(finder == tri2Tet.end()) {
                         int oldSize = F.rows();
                         F.conservativeResize(oldSize + 1, 3);
@@ -729,22 +730,22 @@ namespace FracCuts {
     void IglUtils::buildSTri2Tet(const Eigen::MatrixXi& F, const Eigen::MatrixXi& SF,
                                  std::vector<int>& sTri2Tet)
     {
-        std::map<FracCuts::Triplet, int> tri2Tet;
+        std::map<Triplet, int> tri2Tet;
         for(int elemI = 0; elemI < F.rows(); elemI++) {
             const Eigen::RowVector4i& elemVInd = F.row(elemI);
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
-            tri2Tet[FracCuts::Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[2], elemVInd[1])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[3], elemVInd[2])] = elemI;
+            tri2Tet[Triplet(elemVInd[0], elemVInd[1], elemVInd[3])] = elemI;
+            tri2Tet[Triplet(elemVInd[1], elemVInd[2], elemVInd[3])] = elemI;
         }
         sTri2Tet.resize(SF.rows());
         for(int triI = 0; triI < SF.rows(); triI++) {
             const Eigen::RowVector3i& triVInd = SF.row(triI);
-            auto finder = tri2Tet.find(FracCuts::Triplet(triVInd.data()));
+            auto finder = tri2Tet.find(Triplet(triVInd.data()));
             if(finder == tri2Tet.end()) {
-                finder = tri2Tet.find(FracCuts::Triplet(triVInd[1], triVInd[2], triVInd[0]));
+                finder = tri2Tet.find(Triplet(triVInd[1], triVInd[2], triVInd[0]));
                 if(finder == tri2Tet.end()) {
-                    finder = tri2Tet.find(FracCuts::Triplet(triVInd[2], triVInd[0], triVInd[1]));
+                    finder = tri2Tet.find(Triplet(triVInd[2], triVInd[0], triVInd[1]));
                     assert(finder != tri2Tet.end());
                 }
             }

@@ -58,4 +58,4 @@ include_directories(
 
 add_executable(${PROJECT_NAME}_bin ${SRCFILES})
 
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png TBB::tbb)
+target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::triangle igl::png igl::tetgen TBB::tbb)
