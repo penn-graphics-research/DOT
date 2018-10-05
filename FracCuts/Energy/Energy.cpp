@@ -210,7 +210,6 @@ namespace FracCuts {
         
         Eigen::SparseMatrix<double> hessian_symbolicPK, hessian_symbolicSVD;
         if(triplet) {
-#if(DIM == 2)
             Eigen::VectorXi I, J;
             Eigen::VectorXd V;
 //            computePrecondMtr(data, &V, &I, &J); //TODO: change name to Hessian! don't project!
@@ -221,7 +220,6 @@ namespace FracCuts {
             }
             hessian_symbolicSVD.resize(data.V.rows() * dim, data.V.rows() * dim);
             hessian_symbolicSVD.setFromTriplets(triplet.begin(), triplet.end());
-#endif
             
             LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *linSysSolver;
 #ifdef LINSYSSOLVER_USE_CHOLMOD
@@ -246,13 +244,13 @@ namespace FracCuts {
         const double relErrPK = difPK_L2 / hessian_finiteDiff.norm();
         std::cout << "PK L2 dist = " << difPK_L2 << ", relErr = " << relErrPK << std::endl;
         IglUtils::writeSparseMatrixToFile(outputFolderPath + "H_symbolicPK", hessian_symbolicPK, true);
-#if(DIM == 2)
+
         Eigen::SparseMatrix<double> difMtrSVD = hessian_symbolicSVD - hessian_finiteDiff;
         const double difSVD_L2 = difMtrSVD.norm();
         const double relErrSVD = difSVD_L2 / hessian_finiteDiff.norm();
         std::cout << "SVD L2 dist = " << difSVD_L2 << ", relErr = " << relErrSVD << std::endl;
         IglUtils::writeSparseMatrixToFile(outputFolderPath + "H_symbolicSVD", hessian_symbolicSVD, true);
-#endif
+
         IglUtils::writeSparseMatrixToFile(outputFolderPath + "H_finiteDiff", hessian_finiteDiff, true);
     }
     
@@ -436,7 +434,7 @@ namespace FracCuts {
             
             Eigen::Matrix<int, dim + 1, 1>& vInd = vInds[triI];
             vInd = triVInd;
-            for(int vI = 0; vI < 3; vI++) {
+            for(int vI = 0; vI < dim + 1; vI++) {
                 if(data.fixedVert.find(vInd[vI]) != data.fixedVert.end()) {
                     vInd[vI] = -1;
                 }
@@ -447,7 +445,7 @@ namespace FracCuts {
 #endif
         timer_temp.start(3);
         for(int triI = 0; triI < data.F.rows(); triI++) {
-            IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], 2, V, I, J);
+            IglUtils::addBlockToMatrix(triHessians[triI], vInds[triI], dim, V, I, J);
         }
         
         Eigen::VectorXi fixedVertInd;
@@ -456,8 +454,8 @@ namespace FracCuts {
         for(const auto fixedVI : data.fixedVert) {
             fixedVertInd[fVI++] = fixedVI;
         }
-        IglUtils::addDiagonalToMatrix(Eigen::VectorXd::Ones(data.fixedVert.size() * 2),
-                                      fixedVertInd, 2, V, I, J);
+        IglUtils::addDiagonalToMatrix(Eigen::VectorXd::Ones(data.fixedVert.size() * dim),
+                                      fixedVertInd, dim, V, I, J);
         timer_temp.stop();
     }
     

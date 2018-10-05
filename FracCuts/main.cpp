@@ -749,9 +749,14 @@ int main(int argc, char *argv[])
                 V *= config.size / (V.colwise().maxCoeff() - V.colwise().minCoeff()).maxCoeff();
                 //TODO: resampling according to config.resolution?
                 UV = V.leftCols(DIM);
+
+                // nonuniform scale
 //                UV.col(0) *= 1.1;
 //                UV.col(1) *= 1.2;
 //                UV.col(2) *= 1.3;
+                // shear
+//                UV.col(0) += 0.1 * UV.col(1);
+
                 FracCuts::IglUtils::findBorderVerts(V, borderVerts_primitive);
                 
                 FracCuts::IglUtils::buildSTri2Tet(F, SF, sTri2Tet);
@@ -761,8 +766,13 @@ int main(int argc, char *argv[])
                                                       config.size, config.resolution);
                 V = primitive.V_rest;
                 UV = primitive.V;
+
+                // nonuniform scale
 //                UV.col(0) *= 1.1;
 //                UV.col(1) *= 1.2;
+                // shear
+//                UV.col(0) += UV.col(1) * 0.1;
+
                 F = primitive.F;
                 borderVerts_primitive = primitive.borderVerts_primitive;
             }

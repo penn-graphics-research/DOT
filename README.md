@@ -25,7 +25,7 @@ cd OptCuts_dynamic
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
+cmake --build . -j 7
 cd ..
 python batch.py
 ```
