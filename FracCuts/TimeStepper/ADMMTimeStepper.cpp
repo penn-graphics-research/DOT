@@ -406,7 +406,8 @@ namespace FracCuts {
                                                        const Eigen::RowVectorXd& zi,
                                                        Eigen::Matrix<double, dim * dim, 1>& g) const
     {
-        Base::energyTerms[0]->computeGradientBySVD_F(Base::result, triI, zi, g);
+//        Base::energyTerms[0]->computeGradientBySVD_F(Base::result, triI, zi, g);
+        Base::energyTerms[0]->computeGradientByPK_F(Base::result, triI, zi, g);
         g *= Base::dtSq;
         g -= ((D_mult_x.row(triI) - zi + u.row(triI)) * weights2[triI]).transpose() ;
     }
@@ -415,7 +416,8 @@ namespace FracCuts {
                                                            const Eigen::RowVectorXd& zi,
                                                            Eigen::Matrix<double, dim * dim, dim * dim>& P) const
     {
-        Base::energyTerms[0]->computeHessianBySVD_F(Base::result, triI, zi, P);
+//        Base::energyTerms[0]->computeHessianBySVD_F(Base::result, triI, zi, P);
+        Base::energyTerms[0]->computeHessianByPK_F(Base::result, triI, zi, P);
         P *= Base::dtSq;
         P.diagonal().array() += weights2[triI];
     }

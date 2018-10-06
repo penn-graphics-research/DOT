@@ -106,6 +106,13 @@ namespace FracCuts {
                                            const Eigen::Matrix<double, 1, dim * dim>& F,
                                            Eigen::Matrix<double, dim * dim, dim * dim>& hessian,
                                            bool projectSPD = true) const;
+        virtual void computeGradientByPK_F(const TriangleSoup<dim>& data, int triI,
+                                           const Eigen::Matrix<double, 1, dim * dim>& F,
+                                           Eigen::Matrix<double, dim * dim, 1>& gradient) const;
+        virtual void computeHessianByPK_F(const TriangleSoup<dim>& data, int triI,
+                                          const Eigen::Matrix<double, 1, dim * dim>& F,
+                                          Eigen::Matrix<double, dim * dim, dim * dim>& hessian,
+                                          bool projectSPD = true) const;
         
         virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,
                                double& E) const;
