@@ -1874,7 +1874,7 @@ namespace FracCuts {
         if(needElemInvSafeGuard) {
             for(int testI = 0; testI < 6; testI++) {
                 testF.emplace_back(Eigen::Matrix<double, dim, dim>::Random());
-                IglUtils::makePD(testF.back());
+                IglUtils::flipDet_SVD(testF.back());
                 testF.back() += 1.0e-2 * Eigen::Matrix<double, dim, dim>::Identity();
             }
         }
@@ -1929,7 +1929,7 @@ namespace FracCuts {
         if(needElemInvSafeGuard) {
             for(int testI = 0; testI < 6; testI++) {
                 testF.emplace_back(Eigen::Matrix<double, dim, dim>::Random());
-                IglUtils::makePD(testF.back()); //!!! not for non-symmetric matrices
+                IglUtils::flipDet_SVD(testF.back());
                 testF.back() += 1.0e-2 * Eigen::Matrix<double, dim, dim>::Identity();
             }
         }

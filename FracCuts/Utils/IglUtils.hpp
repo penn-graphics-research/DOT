@@ -282,6 +282,19 @@ namespace FracCuts {
                 }
             }
         }
+        template<typename Scalar, int size>
+        static void flipDet_SVD(Eigen::Matrix<Scalar, size, size>& mtr) {
+            Eigen::JacobiSVD<Eigen::Matrix<Scalar, size, size>> svd(mtr, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+            Eigen::Matrix<Scalar, size, size> U = svd.matrixU(), V = svd.matrixV();
+            if(U.determinant() < 0) {
+                U.col(U.cols() - 1) *= -1.0;
+            }
+            if(V.determinant() < 0) {
+                V.col(V.cols() - 1) *= -1.0;
+            }
+            mtr = U * Eigen::DiagonalMatrix<Scalar, size>(svd.singularValues()) * V.transpose();
+        }
         
         static void writeSparseMatrixToFile(const std::string& filePath,
                                             const Eigen::SparseMatrix<double>& mtr,
