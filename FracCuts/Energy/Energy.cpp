@@ -171,7 +171,7 @@ namespace FracCuts {
         Eigen::VectorXd gradient0;
 //        computeGradientBySVD(data, gradient0);
         computeGradientByPK(data, true, svd, F, gradient0);
-        const double h = 1.0e-4 * igl::avg_edge_length(data.V, data.F);
+        const double h = 1.0e-6 * igl::avg_edge_length(data.V, data.F);
         TriangleSoup<dim> perturbed = data;
         Eigen::SparseMatrix<double> hessian_finiteDiff;
         hessian_finiteDiff.resize(data.V.rows() * dim, data.V.rows() * dim);
@@ -566,192 +566,10 @@ namespace FracCuts {
                 svd[triI].compute(F[triI], Eigen::ComputeFullU | Eigen::ComputeFullV);
                 timer_temp.start(1);
             }
-            const Eigen::Matrix<double, dim, 1>& sigma = svd[triI].singularValues();
             
-            // compute A
-            timer_temp2.start(0);
-            Eigen::Matrix<double, dim, 1> dE_div_dsigma;
-            compute_dE_div_dsigma(sigma, dE_div_dsigma);
-            Eigen::Matrix<double, dim, dim> d2E_div_dsigma2;
-            compute_d2E_div_dsigma2(sigma, d2E_div_dsigma2);
-            timer_temp2.stop();
-            if(projectSPD) {
-                timer_temp.start(2);
-#if(DIM == 2)
-                IglUtils::makePD2d(d2E_div_dsigma2);
-#else
-                IglUtils::makePD(d2E_div_dsigma2); //TODO: use implicit QR to accelerate
-#endif
-                timer_temp.start(1);
-            }
-            
-            // compute B
-            const int Cdim2 = dim * (dim - 1) / 2;
-            Eigen::Matrix<double, Cdim2, 1> BLeftCoef;
-            compute_BLeftCoef(sigma, BLeftCoef);
-            Eigen::Matrix2d B[Cdim2];
-            for(int cI = 0; cI < Cdim2; cI++) {
-                timer_temp2.start(1);
-                int cI_post = (cI + 1) % Cdim2;
-                
-                double rightCoef = dE_div_dsigma[cI] + dE_div_dsigma[cI_post];
-                double sum_sigma = sigma[cI] + sigma[cI_post];
-                const double eps = 1.0e-6;
-                if(sum_sigma < eps) {
-                    rightCoef /= 2.0 * eps;
-                }
-                else {
-                    rightCoef /= 2.0 * sum_sigma;
-                }
-            
-                const double& leftCoef = BLeftCoef[cI];
-                B[cI](0, 0) = B[cI](1, 1) = leftCoef + rightCoef;
-                B[cI](0, 1) = B[cI](1, 0) = leftCoef - rightCoef;
-                timer_temp2.stop();
-                if(projectSPD) {
-                    timer_temp.start(2);
-                    IglUtils::makePD2d(B[cI]);
-                    timer_temp.start(1);
-                }
-            }
-            
-            // compute M using A(d2E_div_dsigma2) and B
-            const double w = coef * data.triWeight[triI] * data.triArea[triI];
-            timer_temp2.start(2);
-            Eigen::Matrix<double, dim * dim, dim * dim> M;
-            M.setZero();
-            if(dim == 2) {
-                M(0, 0) = w * d2E_div_dsigma2(0, 0);
-                M(0, 3) = w * d2E_div_dsigma2(0, 1);
-                M.block(1, 1, 2, 2) = w * B[0];
-                M(3, 0) = w * d2E_div_dsigma2(1, 0);
-                M(3, 3) = w * d2E_div_dsigma2(1, 1);
-            }
-            else {
-                // A
-                M(0, 0) = w * d2E_div_dsigma2(0, 0);
-                M(0, 4) = w * d2E_div_dsigma2(0, 1);
-                M(0, 8) = w * d2E_div_dsigma2(0, 2);
-                M(4, 0) = w * d2E_div_dsigma2(1, 0);
-                M(4, 4) = w * d2E_div_dsigma2(1, 1);
-                M(4, 8) = w * d2E_div_dsigma2(1, 2);
-                M(8, 0) = w * d2E_div_dsigma2(2, 0);
-                M(8, 4) = w * d2E_div_dsigma2(2, 1);
-                M(8, 8) = w * d2E_div_dsigma2(2, 2);
-                // B01
-                M(1, 1) = w * B[0](0, 0);
-                M(1, 3) = w * B[0](0, 1);
-                M(3, 1) = w * B[0](1, 0);
-                M(3, 3) = w * B[0](1, 1);
-                // B12
-                M(5, 5) = w * B[1](0, 0);
-                M(5, 7) = w * B[1](0, 1);
-                M(7, 5) = w * B[1](1, 0);
-                M(7, 7) = w * B[1](1, 1);
-                // B20
-                M(2, 2) = w * B[2](1, 1);
-                M(2, 6) = w * B[2](1, 0);
-                M(6, 2) = w * B[2](0, 1);
-                M(6, 6) = w * B[2](0, 0);
-            }
-            
-            // compute dP_div_dF
             Eigen::Matrix<double, dim * dim, dim * dim> wdP_div_dF;
-            const Eigen::Matrix<double, dim, dim>& U = svd[triI].matrixU();
-            const Eigen::Matrix<double, dim, dim>& V = svd[triI].matrixV();
-            for(int i = 0; i < dim; i++) {
-                int _dim_i = i * dim;
-                for(int j = 0; j < dim; j++) {
-                    int ij = _dim_i + j;
-                    for(int r = 0; r < dim; r++) {
-                        int _dim_r = r * dim;
-                        for(int s = 0; s < dim; s++) {
-                            int rs = _dim_r + s;
-                            if(ij < rs) {
-                                // upper right
-                                if(dim == 2) {
-                                    wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                                }
-                                else {
-                                    wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                        M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                        M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                        M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                        M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                        M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                        M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                        M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                        M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                        M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                        M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                        M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                        M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                                }
-                            }
-                            else if(ij == rs) {
-                                // diagonal
-                                if(dim == 2) {
-                                    wdP_div_dF(ij, rs) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                                }
-                                else {
-                                    wdP_div_dF(ij, rs) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                        M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                        M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                        M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                        M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                        M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                        M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                        M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                        M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                        M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                        M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                        M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                        M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                                }
-                            }
-                            else {
-                                // bottom left, same as upper right
-                                continue;
-                            }
-                        }
-                    }
-                }
-            }
-            timer_temp2.stop();
+            const double w = coef * data.triWeight[triI] * data.triArea[triI];
+            compute_dP_div_dF(svd[triI], wdP_div_dF, w, projectSPD);
             
             Eigen::Matrix<double, dim * (dim + 1), dim * dim> wdP_div_dx;
             timer_temp2.start(3);
@@ -1101,182 +919,8 @@ namespace FracCuts {
             svd.compute(F_mtr, Eigen::ComputeFullU | Eigen::ComputeFullV);
         }
         
-        const Eigen::Matrix<double, dim, 1>& sigma = svd.singularValues();
-        
-        // compute A
-        Eigen::Matrix<double, dim, 1> dE_div_dsigma;
-        compute_dE_div_dsigma(sigma, dE_div_dsigma);
-        Eigen::Matrix<double, dim, dim> d2E_div_dsigma2;
-        compute_d2E_div_dsigma2(sigma, d2E_div_dsigma2);
-        if(projectSPD) {
-#if(DIM == 2)
-            IglUtils::makePD2d(d2E_div_dsigma2);
-#else
-            IglUtils::makePD(d2E_div_dsigma2); //TODO: use implicit QR to accelerate
-#endif
-        }
-        
-        // compute B
-        const int Cdim2 = dim * (dim - 1) / 2;
-        Eigen::Matrix<double, Cdim2, 1> BLeftCoef;
-        compute_BLeftCoef(sigma, BLeftCoef);
-        Eigen::Matrix2d B[Cdim2];
-        for(int cI = 0; cI < Cdim2; cI++) {
-            int cI_post = (cI + 1) % Cdim2;
-            
-            double rightCoef = dE_div_dsigma[cI] + dE_div_dsigma[cI_post];
-            double sum_sigma = sigma[cI] + sigma[cI_post];
-            const double eps = 1.0e-6;
-            if(sum_sigma < eps) {
-                rightCoef /= 2.0 * eps;
-            }
-            else {
-                rightCoef /= 2.0 * sum_sigma;
-            }
-            
-            const double& leftCoef = BLeftCoef[cI];
-            B[cI](0, 0) = B[cI](1, 1) = leftCoef + rightCoef;
-            B[cI](0, 1) = B[cI](1, 0) = leftCoef - rightCoef;
-            if(projectSPD) {
-                IglUtils::makePD2d(B[cI]);
-            }
-        }
-        
-        // compute M using A(d2E_div_dsigma2) and B
         const double w = data.triWeight[triI] * data.triArea[triI];
-        Eigen::Matrix<double, dim * dim, dim * dim>& M = hessian;
-        M.setZero();
-        if(dim == 2) {
-            M(0, 0) = w * d2E_div_dsigma2(0, 0);
-            M(0, 3) = w * d2E_div_dsigma2(0, 1);
-            M.block(1, 1, 2, 2) = w * B[0];
-            M(3, 0) = w * d2E_div_dsigma2(1, 0);
-            M(3, 3) = w * d2E_div_dsigma2(1, 1);
-        }
-        else {
-            // A
-            M(0, 0) = w * d2E_div_dsigma2(0, 0);
-            M(0, 4) = w * d2E_div_dsigma2(0, 1);
-            M(0, 8) = w * d2E_div_dsigma2(0, 2);
-            M(4, 0) = w * d2E_div_dsigma2(1, 0);
-            M(4, 4) = w * d2E_div_dsigma2(1, 1);
-            M(4, 8) = w * d2E_div_dsigma2(1, 2);
-            M(8, 0) = w * d2E_div_dsigma2(2, 0);
-            M(8, 4) = w * d2E_div_dsigma2(2, 1);
-            M(8, 8) = w * d2E_div_dsigma2(2, 2);
-            // B01
-            M(1, 1) = w * B[0](0, 0);
-            M(1, 3) = w * B[0](0, 1);
-            M(3, 1) = w * B[0](1, 0);
-            M(3, 3) = w * B[0](1, 1);
-            // B12
-            M(5, 5) = w * B[1](0, 0);
-            M(5, 7) = w * B[1](0, 1);
-            M(7, 5) = w * B[1](1, 0);
-            M(7, 7) = w * B[1](1, 1);
-            // B20
-            M(2, 2) = w * B[2](1, 1);
-            M(2, 6) = w * B[2](1, 0);
-            M(6, 2) = w * B[2](0, 1);
-            M(6, 6) = w * B[2](0, 0);
-        }
-        
-        // compute dP_div_dF
-        Eigen::Matrix<double, dim * dim, dim * dim> wdP_div_dF;
-        const Eigen::Matrix<double, dim, dim>& U = svd.matrixU();
-        const Eigen::Matrix<double, dim, dim>& V = svd.matrixV();
-        for(int i = 0; i < dim; i++) {
-            int _dim_i = i * dim;
-            for(int j = 0; j < dim; j++) {
-                int ij = _dim_i + j;
-                for(int r = 0; r < dim; r++) {
-                    int _dim_r = r * dim;
-                    for(int s = 0; s < dim; s++) {
-                        int rs = _dim_r + s;
-                        if(ij < rs) {
-                            // upper right
-                            if(dim == 2) {
-                                wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                            }
-                            else {
-                                wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                            }
-                        }
-                        else if(ij == rs) {
-                            // diagonal
-                            if(dim == 2) {
-                                wdP_div_dF(ij, rs) =
-                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                            }
-                            else {
-                                wdP_div_dF(ij, rs) =
-                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                            }
-                        }
-                        else {
-                            // bottom left, same as upper right
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
+        compute_dP_div_dF(svd, hessian, w, projectSPD);
     }
     
     template<int dim>
@@ -1317,17 +961,22 @@ namespace FracCuts {
                                         double w, bool projectSPD) const
     {
         // compute A
+        timer_temp.start(1);
+        timer_temp2.start(0);
         const Eigen::Matrix<double, dim, 1>& sigma = svd.singularValues();
         Eigen::Matrix<double, dim, 1> dE_div_dsigma;
         compute_dE_div_dsigma(sigma, dE_div_dsigma);
         Eigen::Matrix<double, dim, dim> d2E_div_dsigma2;
         compute_d2E_div_dsigma2(sigma, d2E_div_dsigma2);
+        timer_temp2.stop();
         if (projectSPD) {
+            timer_temp.start(2);
 #if(DIM == 2)
             IglUtils::makePD2d(d2E_div_dsigma2);
 #else
             IglUtils::makePD(d2E_div_dsigma2); //TODO: use implicit QR to accelerate
 #endif
+            timer_temp.start(1);
         }
 
         // compute B
@@ -1336,6 +985,7 @@ namespace FracCuts {
         compute_BLeftCoef(sigma, BLeftCoef);
         Eigen::Matrix2d B[Cdim2];
         for (int cI = 0; cI < Cdim2; cI++) {
+            timer_temp2.start(1);
             int cI_post = (cI + 1) % Cdim2;
 
             double rightCoef = dE_div_dsigma[cI] + dE_div_dsigma[cI_post];
@@ -1350,12 +1000,16 @@ namespace FracCuts {
             const double &leftCoef = BLeftCoef[cI];
             B[cI](0, 0) = B[cI](1, 1) = leftCoef + rightCoef;
             B[cI](0, 1) = B[cI](1, 0) = leftCoef - rightCoef;
+            timer_temp2.stop();
             if (projectSPD) {
+                timer_temp.start(2);
                 IglUtils::makePD2d(B[cI]);
+                timer_temp.start(1);
             }
         }
 
         // compute M using A(d2E_div_dsigma2) and B
+        timer_temp2.start(2);
         Eigen::Matrix<double, dim * dim, dim * dim> M;
         M.setZero();
         if (dim == 2) {
@@ -1404,86 +1058,55 @@ namespace FracCuts {
                     int _dim_r = r * dim;
                     for (int s = 0; s < dim; s++) {
                         int rs = _dim_r + s;
-                        if (ij < rs) {
-                            // upper right
-                            if (dim == 2) {
-                                wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                            } else {
-                                wdP_div_dF(ij, rs) = wdP_div_dF(rs, ij) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                        M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                        M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                        M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                        M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                        M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                        M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                        M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                        M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                        M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                        M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                        M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                        M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                            }
-                        } else if (ij == rs) {
-                            // diagonal
-                            if (dim == 2) {
-                                wdP_div_dF(ij, rs) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
-                            } else {
-                                wdP_div_dF(ij, rs) =
-                                        M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
-                                        M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
-                                        M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
-                                        M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
-                                        M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
-                                        M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
-                                        M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
-                                        M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
-                                        M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
-                                        M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
-                                        M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
-                                        M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
-                                        M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
-                                        M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
-                                        M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
-                                        M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
-                                        M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
-                                        M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
-                                        M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
-                                        M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
-                                        M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
-                            }
-                        } else {
+                        if(ij > rs) {
                             // bottom left, same as upper right
                             continue;
+                        }
+                        
+                        if (dim == 2) {
+                            wdP_div_dF(ij, rs) =
+                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
+                                M(0, 3) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
+                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
+                                M(1, 2) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
+                                M(2, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
+                                M(2, 2) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
+                                M(3, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
+                                M(3, 3) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1);
+                        }
+                        else {
+                            wdP_div_dF(ij, rs) =
+                                M(0, 0) * U(i, 0) * V(j, 0) * U(r, 0) * V(s, 0) +
+                                M(0, 4) * U(i, 0) * V(j, 0) * U(r, 1) * V(s, 1) +
+                                M(0, 8) * U(i, 0) * V(j, 0) * U(r, 2) * V(s, 2) +
+                                M(4, 0) * U(i, 1) * V(j, 1) * U(r, 0) * V(s, 0) +
+                                M(4, 4) * U(i, 1) * V(j, 1) * U(r, 1) * V(s, 1) +
+                                M(4, 8) * U(i, 1) * V(j, 1) * U(r, 2) * V(s, 2) +
+                                M(8, 0) * U(i, 2) * V(j, 2) * U(r, 0) * V(s, 0) +
+                                M(8, 4) * U(i, 2) * V(j, 2) * U(r, 1) * V(s, 1) +
+                                M(8, 8) * U(i, 2) * V(j, 2) * U(r, 2) * V(s, 2) +
+                                M(1, 1) * U(i, 0) * V(j, 1) * U(r, 0) * V(s, 1) +
+                                M(1, 3) * U(i, 0) * V(j, 1) * U(r, 1) * V(s, 0) +
+                                M(3, 1) * U(i, 1) * V(j, 0) * U(r, 0) * V(s, 1) +
+                                M(3, 3) * U(i, 1) * V(j, 0) * U(r, 1) * V(s, 0) +
+                                M(5, 5) * U(i, 1) * V(j, 2) * U(r, 1) * V(s, 2) +
+                                M(5, 7) * U(i, 1) * V(j, 2) * U(r, 2) * V(s, 1) +
+                                M(7, 5) * U(i, 2) * V(j, 1) * U(r, 1) * V(s, 2) +
+                                M(7, 7) * U(i, 2) * V(j, 1) * U(r, 2) * V(s, 1) +
+                                M(2, 2) * U(i, 0) * V(j, 2) * U(r, 0) * V(s, 2) +
+                                M(2, 6) * U(i, 0) * V(j, 2) * U(r, 2) * V(s, 0) +
+                                M(6, 2) * U(i, 2) * V(j, 0) * U(r, 0) * V(s, 2) +
+                                M(6, 6) * U(i, 2) * V(j, 0) * U(r, 2) * V(s, 0);
+                        }
+                        
+                        if (ij < rs) {
+                            wdP_div_dF(rs, ij) = wdP_div_dF(ij, rs);
                         }
                     }
                 }
             }
         }
+        timer_temp2.stop();
     }
     
     template<int dim>
