@@ -527,7 +527,7 @@ namespace FracCuts {
                 }
 #endif
             }
-//            //DEBUG
+            //DEBUG
 //            IglUtils::writeSparseMatrixToFile("/Users/mincli/Desktop/OptCuts_dynamic/output/WM" +
 //                                              std::to_string(subdomainI),
 //                                              weightMtr_subdomain[subdomainI], true);
@@ -591,7 +591,7 @@ namespace FracCuts {
                 
                 // line search init
                 double alpha = 1.0;
-                Base::energyTerms[0]->initStepSize(mesh_subdomain[subdomainI], p, alpha);
+                Base::energyTerms[0]->filterStepSize(mesh_subdomain[subdomainI], p, alpha);
                 
                 // Armijo's rule:
                 const double m = p.dot(g);

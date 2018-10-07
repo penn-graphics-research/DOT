@@ -264,7 +264,7 @@ namespace FracCuts {
                 
                 // line search init
                 double alpha = 1.0;
-                Base::energyTerms[0]->initStepSize(zi.transpose(), p, alpha); //TODO: different in F space
+                Base::energyTerms[0]->filterStepSize(zi.transpose(), p, alpha); //TODO: different in F space
                 
                 // Armijo's rule:
                 const double m = p.dot(g);

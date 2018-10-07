@@ -954,7 +954,7 @@ namespace FracCuts {
     {
         assert(0 && "please implement this method in the subclass!");
     }
-
+    
     template<int dim>
     void Energy<dim>::compute_dP_div_dF(const AutoFlipSVD<Eigen::Matrix<double, dim, dim>> &svd,
                                         Eigen::Matrix<double, dim * dim, dim * dim> &dP_div_dF,
@@ -1169,158 +1169,51 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void Energy<dim>::initStepSize(const TriangleSoup<dim>& data, const Eigen::VectorXd& searchDir, double& stepSize) const
+    void Energy<dim>::filterStepSize(const TriangleSoup<dim>& data, const Eigen::VectorXd& searchDir, double& stepSize) const
     {
         if(needElemInvSafeGuard) {
-            initStepSize_preventElemInv(data, searchDir, stepSize);
-        }
-    }
-    
-    template<int dim>
-    void Energy<dim>::initStepSize_preventElemInv(const TriangleSoup<dim>& data,
-                                                  const Eigen::VectorXd& searchDir,
-                                                  double& stepSize) const
-    {
-        // TODO: make sure explosion is because of scripts
-//#if(DIM == 2)
-//        assert(searchDir.size() == data.V.rows() * dim);
-//        assert(stepSize > 0.0);
-//        
-//        for(int triI = 0; triI < data.F.rows(); triI++)
-//        {
-//            const Eigen::Matrix<int, 1, dim + 1>& triVInd = data.F.row(triI);
-//            
-//            const Eigen::Matrix<double, dim, 1>& U1 = data.V.row(triVInd[0]);
-//            const Eigen::Matrix<double, dim, 1>& U2 = data.V.row(triVInd[1]);
-//            const Eigen::Matrix<double, dim, 1>& U3 = data.V.row(triVInd[2]);
-//            //TODO: U4? V4, ..
-//            
-//            const Eigen::Matrix<double, dim, 1>& V1 = searchDir.segment<dim>(triVInd[0] * dim);
-//            const Eigen::Matrix<double, dim, 1>& V2 = searchDir.segment<dim>(triVInd[1] * dim);
-//            const Eigen::Matrix<double, dim, 1>& V3 = searchDir.segment<dim>(triVInd[2] * dim);
-//            
-//            const Eigen::Matrix<double, dim, 1> U2m1 = U2 - U1;
-//            const Eigen::Matrix<double, dim, 1> U3m1 = U3 - U1;
-//            const Eigen::Matrix<double, dim, 1> V2m1 = V2 - V1;
-//            const Eigen::Matrix<double, dim, 1> V3m1 = V3 - V1;
-//            
-//            const double a = V2m1[0] * V3m1[1] - V2m1[1] * V3m1[0];
-//            const double b = U2m1[0] * V3m1[1] - U2m1[1] * V3m1[0] + V2m1[0] * U3m1[1] - V2m1[1] * U3m1[0];
-//            const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
-//            assert(c > 0.0);
-//            const double delta = b * b - 4.0 * a * c;
-//            
-//            double bound = stepSize;
-//            if(a > 0.0) {
-//                if((b < 0.0) && (delta >= 0.0)) {
-//                    bound = 2.0 * c / (-b + sqrt(delta));
-//                    // (same in math as (-b - sqrt(delta)) / 2.0 / a
-//                    //  but smaller numerical error when b < 0.0)
-//                    assert(bound > 0.0);
-//                }
-//            }
-//            else if(a < 0.0) {
-//                assert(delta > 0.0);
-//                if(b < 0.0) {
-//                    bound = 2.0 * c / (-b + sqrt(delta));
-//                    // (same in math as (-b - sqrt(delta)) / 2.0 / a
-//                    //  but smaller numerical error when b < 0.0)
-//                }
-//                else {
-//                    bound = (-b - sqrt(delta)) / 2.0 / a;
-//                }
-//                assert(bound > 0.0);
-//            }
-//            else {
-//                if(b < 0.0) {
-//                    bound = -c / b;
-//                    assert(bound > 0.0);
-//                }
-//            }
-//            
-//            if(bound < stepSize) {
-//                stepSize = bound;
-//            }
-//        }
-//#endif
-        Eigen::VectorXd output(data.F.rows());
-#if(DIM == 2)
-        computeInjectiveStepSize_2d(data.F, data.V, searchDir, 1.0e-6, output.data());
-#else
-        computeInjectiveStepSize_3d(data.F, data.V, searchDir, 1.0e-6, output.data());
-#endif
-        stepSize = std::min(1.0, 0.95 * output.minCoeff());
-        std::cout << "stepSize " << stepSize << std::endl;
-        //TODO: single element below, 2D use mine or ?, 3D numerical error use 0.95? optimize code?
-    }
-    
-    template<int dim>
-    void Energy<dim>::initStepSize(const Eigen::VectorXd& V,
-                              const Eigen::VectorXd& searchDir,
-                              double& stepSize) const
-    {
-        if(needElemInvSafeGuard) {
-            initStepSize_preventElemInv(V, searchDir, stepSize);
-        }
-    }
-    
-    template<int dim>
-    void Energy<dim>::initStepSize_preventElemInv(const Eigen::VectorXd& V,
-                                                  const Eigen::VectorXd& searchDir,
-                                                  double& stepSize) const
-    {
-        assert(V.size() == searchDir.size());
-        assert(stepSize > 0.0);
-        
-        const Eigen::Vector2d& U1 = V.segment(0, 2);
-        const Eigen::Vector2d& U2 = V.segment(2, 2);
-        const Eigen::Vector2d& U3 = V.segment(4, 2);
-        
-        const Eigen::Vector2d V1(searchDir.segment(0, 2));
-        const Eigen::Vector2d V2(searchDir.segment(2, 2));
-        const Eigen::Vector2d V3(searchDir.segment(4, 2));
-        
-        const Eigen::Vector2d U2m1 = U2 - U1;
-        const Eigen::Vector2d U3m1 = U3 - U1;
-        const Eigen::Vector2d V2m1 = V2 - V1;
-        const Eigen::Vector2d V3m1 = V3 - V1;
-        
-        const double a = V2m1[0] * V3m1[1] - V2m1[1] * V3m1[0];
-        const double b = U2m1[0] * V3m1[1] - U2m1[1] * V3m1[0] + V2m1[0] * U3m1[1] - V2m1[1] * U3m1[0];
-        const double c = U2m1[0] * U3m1[1] - U2m1[1] * U3m1[0];
-        assert(c > 0.0);
-        const double delta = b * b - 4.0 * a * c;
-        
-        double bound = stepSize;
-        if(a > 0.0) {
-            if((b < 0.0) && (delta >= 0.0)) {
-                bound = 2.0 * c / (-b + sqrt(delta));
-                // (same in math as (-b - sqrt(delta)) / 2.0 / a
-                //  but smaller numerical error when b < 0.0)
-                assert(bound > 0.0);
-            }
-        }
-        else if(a < 0.0) {
-            assert(delta > 0.0);
-            if(b < 0.0) {
-                bound = 2.0 * c / (-b + sqrt(delta));
-                // (same in math as (-b - sqrt(delta)) / 2.0 / a
-                //  but smaller numerical error when b < 0.0)
+            Eigen::VectorXd output(data.F.rows());
+            if(dim == 2) {
+                computeInjectiveStepSize_2d(data.F, data.V, searchDir, 1.0e-6, output.data());
             }
             else {
-                bound = (-b - sqrt(delta)) / 2.0 / a;
+                computeInjectiveStepSize_3d(data.F, data.V, searchDir, 1.0e-6, output.data());
             }
-            assert(bound > 0.0);
-        }
-        else {
-            if(b < 0.0) {
-                bound = -c / b;
-                assert(bound > 0.0);
+            
+            double tentativeStepSize = 0.99 * output.minCoeff();
+            if(tentativeStepSize < stepSize) {
+                stepSize = tentativeStepSize;
             }
         }
-        
-        if(bound < stepSize) {
-            stepSize = bound;
+    }
+    
+    template<int dim>
+    void Energy<dim>::filterStepSize(const Eigen::VectorXd& V_vec,
+                                     const Eigen::VectorXd& searchDir,
+                                     double& stepSize) const
+    {
+        if(needElemInvSafeGuard) {
+            Eigen::MatrixXi F(1, dim + 1);
+            F(0, 0) = 0; F(0, 1) = 1; F(0, 2) = 2;
+            Eigen::MatrixXd V(dim + 1, dim);
+            V.row(0) = V_vec.segment<dim>(0).transpose();
+            V.row(1) = V_vec.segment<dim>(dim).transpose();
+            V.row(2) = V_vec.segment<dim>(dim * 2).transpose();
+            
+            Eigen::VectorXd output(1);
+            if(dim == 2) {
+                computeInjectiveStepSize_2d(F, V, searchDir, 1.0e-6, output.data());
+            }
+            else {
+                F(0, 3) = 3;
+                V.row(3) = V_vec.segment<dim>(dim * 3).transpose();
+                computeInjectiveStepSize_3d(F, V, searchDir, 1.0e-6, output.data());
+            }
+            
+            double tentativeStepSize = 0.99 * output.minCoeff();
+            if(tentativeStepSize < stepSize) {
+                stepSize = tentativeStepSize;
+            }
         }
     }
     

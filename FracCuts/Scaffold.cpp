@@ -137,7 +137,7 @@ namespace FracCuts {
                         sepDir.block(globalVI2local[vI] * 2, 0, 2, 1) = sepDir_oneV.transpose();
                         double stepSize_sep = 1.0;
                         SymStretchEnergy<DIM> SD;
-                        SD.initStepSize(localMesh, sepDir, stepSize_sep);
+                        SD.filterStepSize(localMesh, sepDir, stepSize_sep);
                         H.bottomRows(1) = mesh.V.row(vI) + 0.5 * stepSize_sep * sepDir_oneV;
                     }
                     else {

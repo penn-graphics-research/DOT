@@ -625,7 +625,7 @@ namespace FracCuts {
 //        double E0;
 //        computeEnergyVal(result, scaffold, E0);
 //        double stepSize = 1.0;
-//        energyTerms[0]->initStepSize(result, searchDir, stepSize);
+//        energyTerms[0]->filterStepSize(result, searchDir, stepSize);
 //
 //        double E;
 //        stepForward(V0, Eigen::MatrixXd(), result, scaffold, stepSize);
@@ -638,7 +638,7 @@ namespace FracCuts {
 //        std::cout << "primal init step size = " << stepSize << std::endl;
         
         double stepSize = 1.0;
-        energyTerms[0]->initStepSize(result, searchDir, stepSize);
+        energyTerms[0]->filterStepSize(result, searchDir, stepSize);
         if(stepSize < 1.0) {
             //TODO: necessary?
             stepSize *= 0.5;
@@ -767,7 +767,7 @@ namespace FracCuts {
     bool Optimizer<dim>::lineSearch(void)
     {
         bool stopped = false;
-        double stepSize = 1.0;
+        double stepSize;
         initStepSize(result, stepSize);
         if(!mute) {
             std::cout << "stepSize: " << stepSize << " -> ";
@@ -930,15 +930,16 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::initStepSize(const TriangleSoup<dim>& data, double& stepSize) const
     {
+        stepSize = 1.0;
         for(int eI = 0; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->initStepSize(data, searchDir, stepSize);
+            energyTerms[eI]->filterStepSize(data, searchDir, stepSize);
         }
         
         if(scaffolding) {
             Eigen::VectorXd searchDir_scaffold;
             scaffold.wholeSearchDir2airMesh(searchDir, searchDir_scaffold);
             SymStretchEnergy<dim> SD;
-            SD.initStepSize(scaffold.airMesh, searchDir_scaffold, stepSize);
+            SD.filterStepSize(scaffold.airMesh, searchDir_scaffold, stepSize);
         }
     }
     

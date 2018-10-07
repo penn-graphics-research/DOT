@@ -136,19 +136,12 @@ namespace FracCuts {
         
         virtual void compute_d2E_div_dF2_rest(Eigen::Matrix<double, dim * dim, dim * dim>& d2E_div_dF2_rest) const;
         
-        virtual void initStepSize(const TriangleSoup<dim>& data,
-                                  const Eigen::VectorXd& searchDir,
-                                  double& stepSize) const;
-        virtual void initStepSize_preventElemInv(const TriangleSoup<dim>& data,
-                                                 const Eigen::VectorXd& searchDir,
-                                                 double& stepSize) const;
-        
-        virtual void initStepSize(const Eigen::VectorXd& V,
-                                  const Eigen::VectorXd& searchDir,
-                                  double& stepSize) const;
-        virtual void initStepSize_preventElemInv(const Eigen::VectorXd& V,
-                                                 const Eigen::VectorXd& searchDir,
-                                                 double& stepSize) const;
+        virtual void filterStepSize(const TriangleSoup<dim>& data,
+                                    const Eigen::VectorXd& searchDir,
+                                    double& stepSize) const;
+        virtual void filterStepSize(const Eigen::VectorXd& V,
+                                    const Eigen::VectorXd& searchDir,
+                                    double& stepSize) const;
         
         virtual void getBulkModulus(double& bulkModulus);
 
