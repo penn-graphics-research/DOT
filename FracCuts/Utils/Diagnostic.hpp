@@ -355,6 +355,21 @@ namespace FracCuts{
                         
                         break;
                     }
+
+                    case 11: { // a unit test for computing dE/dsigma
+                        std::vector<Energy<DIM>*> e;
+                        e.emplace_back(new FixedCoRotEnergy<DIM>);
+                        e.emplace_back(new NeoHookeanEnergy<DIM>);
+                        for(const auto eI : e) {
+                            eI->unitTest_dE_div_dsigma();
+                            eI->unitTest_d2E_div_dsigma2();
+                            eI->unitTest_BLeftCoef();
+                            eI->unitTest_dE_div_dF();
+                            eI->unitTest_dP_div_dF();
+                            delete eI;
+                        }
+                        break;
+                    }
                         
                     case 100: {
                         FILE *in = fopen(argv[3], "r");

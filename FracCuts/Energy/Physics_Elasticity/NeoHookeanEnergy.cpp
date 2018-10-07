@@ -71,13 +71,13 @@ namespace FracCuts {
         //TODO: right coef also has analytical form
         const double sigmaProd = singularValues.prod();
         if(dim == 2) {
-            BLeftCoef[0] = u + (u - lambda * std::log(sigmaProd)) / sigmaProd;
+            BLeftCoef[0] = (u + (u - lambda * std::log(sigmaProd)) / sigmaProd) / 2.0;
         }
         else {
             const double middle = u - lambda * std::log(sigmaProd);
-            BLeftCoef[0] = u + middle / singularValues[0] / singularValues[1];
-            BLeftCoef[1] = u + middle / singularValues[1] / singularValues[2];
-            BLeftCoef[2] = u + middle / singularValues[2] / singularValues[0];
+            BLeftCoef[0] = (u + middle / singularValues[0] / singularValues[1]) / 2.0;
+            BLeftCoef[1] = (u + middle / singularValues[1] / singularValues[2]) / 2.0;
+            BLeftCoef[2] = (u + middle / singularValues[2] / singularValues[0]) / 2.0;
         }
     }
     template<int dim>
