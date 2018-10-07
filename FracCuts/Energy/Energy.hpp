@@ -19,6 +19,8 @@
 
 #include "LinSysSolver.hpp"
 
+#include <iostream>
+
 namespace FracCuts {
     
     // a class for energy terms in the objective of an optimization problem
@@ -121,6 +123,9 @@ namespace FracCuts {
         virtual void compute_dE_div_dF(const Eigen::Matrix<double, dim, dim>& F,
                                        const AutoFlipSVD<Eigen::Matrix<double, dim, dim>>& svd,
                                        Eigen::Matrix<double, dim, dim>& dE_div_dF) const;
+        virtual void compute_dP_div_dF(const AutoFlipSVD<Eigen::Matrix<double, dim, dim>> &svd,
+                                       Eigen::Matrix<double, dim * dim, dim * dim> &dP_div_dF,
+                                       double w, bool projectSPD = true) const;
         
         virtual void compute_d2E_div_dF2_rest(Eigen::Matrix<double, dim * dim, dim * dim>& d2E_div_dF2_rest) const;
         
@@ -139,6 +144,12 @@ namespace FracCuts {
                                                  double& stepSize) const;
         
         virtual void getBulkModulus(double& bulkModulus);
+
+        virtual void unitTest_dE_div_dsigma(std::ostream& os = std::cout) const;
+        virtual void unitTest_d2E_div_dsigma2(std::ostream& os = std::cout) const;
+        virtual void unitTest_BLeftCoef(std::ostream& os = std::cout) const;
+        virtual void unitTest_dE_div_dF(std::ostream& os = std::cout) const;
+        virtual void unitTest_dP_div_dF(std::ostream& os = std::cout) const;
     };
     
 }
