@@ -1002,7 +1002,6 @@ namespace FracCuts {
     void IglUtils::compute_dF_div_dx(const Eigen::Matrix<double, DIM, DIM>& A,
                                      Eigen::Matrix<double, DIM * (DIM + 1), DIM * DIM>& dF_div_dx)
     {
-        assert(DIM == 2);
 #if(DIM == 2)
         const double mA11mA21 = -A(0, 0) - A(1, 0);
         const double mA12mA22 = -A(0, 1) - A(1, 1);
@@ -1013,6 +1012,20 @@ namespace FracCuts {
             0.0, 0.0, A(0, 0), A(0, 1),
             A(1, 0), A(1, 1), 0.0, 0.0,
             0.0, 0.0, A(1, 0), A(1, 1);
+#else
+        const double mA11mA21mA31 = -A(0, 0) - A(1, 0) - A(2, 0);
+        const double mA12mA22mA32 = -A(0, 1) - A(1, 1) - A(2, 1);
+        const double mA13mA23mA33 = -A(0, 2) - A(1, 2) - A(2, 2);
+        dF_div_dx <<
+            mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0), 0.0, 0.0,
+            mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1), 0.0, 0.0,
+            mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2), 0.0, 0.0,
+            0.0, mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0), 0.0,
+            0.0, mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1), 0.0,
+            0.0, mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2), 0.0,
+            0.0, 0.0, mA11mA21mA31, 0.0, 0.0, A(0, 0), 0.0, 0.0, A(1, 0), 0.0, 0.0, A(2, 0),
+            0.0, 0.0, mA12mA22mA32, 0.0, 0.0, A(0, 1), 0.0, 0.0, A(1, 1), 0.0, 0.0, A(2, 1),
+            0.0, 0.0, mA13mA23mA33, 0.0, 0.0, A(0, 2), 0.0, 0.0, A(1, 2), 0.0, 0.0, A(2, 2);
 #endif
     }
     void IglUtils::dF_div_dx_mult(const Eigen::Matrix<double, DIM, DIM>& right,
