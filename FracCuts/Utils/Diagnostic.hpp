@@ -337,24 +337,6 @@ namespace FracCuts{
                         
                         break;
                     }
-                        
-                    case 10: { // a unit test for computing p
-                        Energy<DIM>* e = new FixedCoRotEnergy<DIM>;
-                        
-                        Eigen::Matrix<double, DIM, DIM> F;
-                        F.setIdentity();
-                        AutoFlipSVD<Eigen::Matrix<double, DIM, DIM>> svd(F, Eigen::ComputeFullU |
-                                                                         Eigen::ComputeFullV);
-                        
-                        Eigen::Matrix<double, DIM, DIM> dE_div_dF;
-                        e->compute_dE_div_dF(F, svd, dE_div_dF);
-                        
-                        std::cout << dE_div_dF << std::endl;
-                        
-                        delete e;
-                        
-                        break;
-                    }
 
                     case 11: { // a unit test for computing dE/dsigma
                         std::vector<Energy<DIM>*> e;

@@ -34,6 +34,7 @@
 #include <iostream>
 
 extern std::string outputFolderPath;
+extern std::ofstream logFile;
 extern Timer timer_temp3;
 
 namespace FracCuts {
@@ -170,6 +171,8 @@ namespace FracCuts {
             dz_subdomain[subdomainI].resize(sharedVertexAmt, dim);
             weights_subdomain[subdomainI].resize(sharedVertexAmt, dim);
             weights_subdomain[subdomainI].setZero();
+            logFile << "subdomain " << subdomainI << ": " << sharedVertexAmt <<
+                " shared vertices out of " << mesh_subdomain[subdomainI].V.rows() << std::endl;
         }
         dualDim *= dim;
         

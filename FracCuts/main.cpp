@@ -212,7 +212,11 @@ void updateViewerData_distortion(void)
         }
     
         case 0: {
+#if(DIM == 2)
             color_distortionVis = Eigen::MatrixXd::Ones(triSoup[viewChannel]->F.rows(), 3);
+#else
+            color_distortionVis = Eigen::MatrixXd::Ones(SF.rows(), 3);
+#endif
             color_distortionVis.col(2).setZero();
             break;
         }
