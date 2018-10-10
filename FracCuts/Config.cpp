@@ -81,6 +81,16 @@ namespace FracCuts {
                         ss >> inputShapePath;
                     }
                 }
+                else if(token == "tol") {
+                    int amt;
+                    ss >> amt;
+                    assert(amt >= 0);
+                    tol.resize(amt);
+                    for(auto& tolI : tol) {
+                        assert(std::getline(file, line));
+                        sscanf(line.c_str(), "%le", &tolI);
+                    }
+                }
             }
             
             file.close();

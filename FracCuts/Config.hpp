@@ -43,6 +43,7 @@ namespace FracCuts {
         double YM, PR;
         AnimScriptType animScriptType;
         int partitionAmt;
+        std::vector<double> tol;
         
     public:
         static const std::vector<std::string> energyTypeStrs;

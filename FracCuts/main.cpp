@@ -94,7 +94,16 @@ void proceedOptimization(int proceedNum = 1)
             saveInfo(false, true, false); //!!! output mesh for making video, PNG output only works under online rendering mode
         }
         showDistortion = showDistortion_init;
-        std::cout << "Iteration" << iterNum << ":" << std::endl;
+        
+        std::cout << "Timestep" << iterNum << ":" << std::endl;
+        
+        if(iterNum < config.tol.size()) {
+            optimizer->updateTargetGRes(config.tol[iterNum]);
+        }
+        else {
+            optimizer->updateTargetGRes();
+        }
+        
         converged = optimizer->solve(1);
         if(converged == 2) {
             showDistortion = 0;

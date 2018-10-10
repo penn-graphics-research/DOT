@@ -882,7 +882,7 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void Optimizer<dim>::updateTargetGRes(void)
+    void Optimizer<dim>::updateTargetGRes(double p_tol)
     {
 //        targetGRes = energyParamSum * (data0.V_rest.rows() - data0.fixedVert.size()) * relGL2Tol * data0.avgEdgeLen * data0.avgEdgeLen;
 //        targetGRes = energyParamSum * static_cast<double>(data0.V_rest.rows() - data0.fixedVert.size()) / static_cast<double>(data0.V_rest.rows()) * relGL2Tol;
@@ -900,7 +900,7 @@ namespace FracCuts {
 #ifndef STATIC_SOLVE
         targetGRes *= dtSq * dtSq;
 #endif
-        targetGRes = 1.0e-10;
+        targetGRes = p_tol;
     }
     
     template<int dim>

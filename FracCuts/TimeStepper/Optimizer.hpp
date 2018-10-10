@@ -101,6 +101,7 @@ namespace FracCuts {
         
     public: // API
         virtual void setTime(double duration, double dt);
+        virtual void updateTargetGRes(double p_tol = 1.0e-10);
         // precompute preconditioning matrix and factorize for fast solve, prepare initial guess
         virtual void precompute(void);
         
@@ -153,8 +154,6 @@ namespace FracCuts {
 
         virtual void stepForward(const Eigen::MatrixXd& dataV0, const Eigen::MatrixXd& scaffoldV0,
                          TriangleSoup<dim>& data, Scaffold& scaffoldData, double stepSize) const;
-        
-        virtual void updateTargetGRes(void);
         
         virtual void computeEnergyVal(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                       bool redoSVD, double& energyVal, bool excludeScaffold = false);
