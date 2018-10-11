@@ -12,7 +12,7 @@ namespace FracCuts {
     
     template<int dim>
     const std::vector<std::string> AnimScripter<dim>::animScriptTypeStrs = {
-        "null", "hang", "stretch", "squash", "bend", "onepoint", "random"
+        "null", "hang", "stretch", "squash", "bend", "onepoint", "random", "fall"
     };
     
     template<int dim>
@@ -99,6 +99,11 @@ namespace FracCuts {
                 break;
             }
                 
+            case AST_FALL: {
+                mesh.resetFixedVert();
+                break;
+            }
+                
             default:
                 assert(0 && "invalid animScriptType");
                 break;
@@ -138,6 +143,9 @@ namespace FracCuts {
                 break;
                 
             case AST_RANDOM:
+                break;
+                
+            case AST_FALL:
                 break;
                 
             default:

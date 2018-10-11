@@ -23,7 +23,8 @@ namespace FracCuts {
         AST_SQUASH,
         AST_BEND,
         AST_ONEPOINT,
-        AST_RANDOM
+        AST_RANDOM,
+        AST_FALL
     };
     
     template<int dim>
