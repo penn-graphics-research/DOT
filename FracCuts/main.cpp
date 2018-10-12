@@ -76,6 +76,7 @@ int capture3DI = 0;
 
 GifWriter GIFWriter;
 uint32_t GIFDelay = 10; //*10ms
+int GIFStep = 1;
 double GIFScale = 0.4;
 
 // timer
@@ -387,7 +388,7 @@ void saveScreenshot(const std::string& filePath, double scale = 1.0, bool writeG
         igl::png::writePNG(R, G, B, A, filePath);
     }
     
-    if(writeGIF) {
+    if(writeGIF && (iterNum % GIFStep == 0)) {
         std::vector<uint8_t> img(width * height * 4);
         for(int rowI = 0; rowI < width; rowI++) {
             for(int colI = 0; colI < height; colI++) {
@@ -977,7 +978,9 @@ int main(int argc, char *argv[])
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
 #ifndef STATIC_SOLVE
-    GIFDelay = optimizer->getDt() * 100;
+    double delay_10ms = optimizer->getDt() * 100.0;
+    GIFStep = static_cast<int>(std::ceil(3.0 / delay_10ms));
+    GIFDelay = static_cast<int>(delay_10ms * GIFStep);
 #endif
     triSoup.emplace_back(&optimizer->getResult());
     triSoup.emplace_back(&optimizer->getData_findExtrema()); // for visualizing UV map for finding extrema
