@@ -11,6 +11,7 @@
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
 		98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */; };
+		98444EC72173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EC52173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp */; };
 		986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */; };
 		987382D12076F49A0040BBCE /* Scaffold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 987382CF2076F49A0040BBCE /* Scaffold.cpp */; };
 		988D81A720AA7FFE0037737D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 988ED1271F57211500B21181 /* OpenGL.framework */; };
@@ -65,6 +66,8 @@
 		98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = get_feasible_steps.cpp; sourceTree = "<group>"; };
 		98444EC0215F09B9004446B1 /* get_feasible_steps.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = get_feasible_steps.hpp; sourceTree = "<group>"; };
 		98444EC321613609004446B1 /* Triplet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Triplet.h; sourceTree = "<group>"; };
+		98444EC52173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoftPenaltyCollisionEnergy.cpp; path = Collision/SoftPenaltyCollisionEnergy.cpp; sourceTree = "<group>"; };
+		98444EC62173812D004446B1 /* SoftPenaltyCollisionEnergy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = SoftPenaltyCollisionEnergy.hpp; path = Collision/SoftPenaltyCollisionEnergy.hpp; sourceTree = "<group>"; };
 		986B83A720FE73EA00AF232B /* ADMMDDTimeStepper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ADMMDDTimeStepper.cpp; sourceTree = "<group>"; };
 		986B83A820FE73EA00AF232B /* ADMMDDTimeStepper.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ADMMDDTimeStepper.hpp; sourceTree = "<group>"; };
 		987382CB202902590040BBCE /* Types.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Types.hpp; sourceTree = "<group>"; };
@@ -186,6 +189,15 @@
 			path = FracCuts;
 			sourceTree = "<group>";
 		};
+		98444EC4217380A5004446B1 /* Collision */ = {
+			isa = PBXGroup;
+			children = (
+				98444EC52173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp */,
+				98444EC62173812D004446B1 /* SoftPenaltyCollisionEnergy.hpp */,
+			);
+			name = Collision;
+			sourceTree = "<group>";
+		};
 		986B83AA20FFDE9000AF232B /* TimeStepper */ = {
 			isa = PBXGroup;
 			children = (
@@ -230,6 +242,7 @@
 				988ED1371F58721B00B21181 /* Energy.hpp */,
 				98E6E68820DB163000130500 /* Physics_Elasticity */,
 				98E6E68720DB161E00130500 /* Geometry_Isometry */,
+				98444EC4217380A5004446B1 /* Collision */,
 				98E6E68920DB187000130500 /* Connectivity */,
 			);
 			path = Energy;
@@ -363,6 +376,7 @@
 				988ED1321F575C3C00B21181 /* IglUtils.cpp in Sources */,
 				982CE6131F5DB358004176A8 /* Energy.cpp in Sources */,
 				986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */,
+				98444EC72173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp in Sources */,
 				988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */,
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,

@@ -492,6 +492,8 @@ namespace FracCuts {
     template<int dim>
     void Optimizer<dim>::initX(int option)
     {
+        //TODO: compute energy gradient and Hessian by PK
+        
         // global:
         searchDir.resize(result.V.rows() * dim);
         switch(option) {
@@ -682,6 +684,7 @@ namespace FracCuts {
                 std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
                 logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
                 return true;
+//                return false;
             }
             innerIterAmt++;
             computeGradient(result, scaffold, false, gradient);
@@ -776,6 +779,7 @@ namespace FracCuts {
         double lastEnergyVal_scaffold = 0.0;
         const double m = searchDir.dot(gradient);
         const double c1m = 1.0e-4 * m;
+//        const double c1m = 0.0;
         Eigen::MatrixXd resultV0 = result.V;
 //        TriangleSoup<dim> temp = result; //TEST
         Eigen::MatrixXd scaffoldV0;
@@ -831,6 +835,14 @@ namespace FracCuts {
 //            stepForward(resultV0, scaffoldV0, result, scaffold, stepSize);
 //            computeEnergyVal(result, scaffold, testingE);
 //        }
+        
+//        // projection method for collision handling
+//        for(int vI = 0; vI < result.V.rows(); vI++) {
+//            if(result.V(vI, 1) < 0.0) {
+//                result.V(vI, 1) = 0.0;
+//            }
+//        }
+//        computeEnergyVal(result, scaffold, true, testingE);
         
         lastEDec = lastEnergyVal - testingE;
         if(scaffolding) {
@@ -895,7 +907,7 @@ namespace FracCuts {
                 m_sqn += m * m;
             }
         }
-        assert(energyParamSum == 1.0);
+//        assert(energyParamSum == 1.0);
         targetGRes = relGL2Tol * m_sqn * gravity.squaredNorm();
 #ifndef STATIC_SOLVE
         targetGRes *= dtSq * dtSq;
@@ -1004,12 +1016,13 @@ namespace FracCuts {
     void Optimizer<dim>::computeEnergyVal(const TriangleSoup<dim>& data, const Scaffold& scaffoldData,
                                      bool redoSVD, double& energyVal, bool excludeScaffold)
     {
+        //TODO: write inertia and augmented Lagrangian term into energyTerms
         if(!mute) { timer_step.start(0); }
         
-        energyTerms[0]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[0]);
+        energyTerms[0]->computeEnergyVal(data, redoSVD, svd, F, energyVal_ET[0]);
         energyVal = dtSq * energyParams[0] * energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeEnergyValBySVD(data, redoSVD, svd, F, energyVal_ET[eI]);
+            energyTerms[eI]->computeEnergyVal(data, redoSVD, svd, F, energyVal_ET[eI]);
             energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
         }
         
@@ -1050,10 +1063,10 @@ namespace FracCuts {
     {
         if(!mute) { timer_step.start(0); }
         
-        energyTerms[0]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[0]);
+        energyTerms[0]->computeGradient(data, redoSVD, svd, F, gradient_ET[0]);
         gradient = dtSq * energyParams[0] * gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeGradientByPK(data, redoSVD, svd, F, gradient_ET[eI]);
+            energyTerms[eI]->computeGradient(data, redoSVD, svd, F, gradient_ET[eI]);
             gradient += dtSq * energyParams[eI] * gradient_ET[eI];
         }
         
@@ -1094,9 +1107,9 @@ namespace FracCuts {
         
         p_linSysSolver->setZero();
         for(int eI = 0; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeHessianByPK(data, redoSVD, svd, F,
-                                                energyParams[eI] * dtSq,
-                                                p_linSysSolver);
+            energyTerms[eI]->computeHessian(data, redoSVD, svd, F,
+                                            energyParams[eI] * dtSq,
+                                            p_linSysSolver);
         }
 //        Eigen::VectorXi I, J;
 //        Eigen::VectorXd V;

@@ -727,9 +727,9 @@ namespace FracCuts {
     void ADMMDDTimeStepper<dim>::computeEnergyVal_subdomain(int subdomainI, bool redoSVD, double& Ei)
     {
         // incremental potential:
-        Base::energyTerms[0]->computeEnergyValBySVD(mesh_subdomain[subdomainI], redoSVD,
-                                                    svd_subdomain[subdomainI],
-                                                    F_subdomain[subdomainI], Ei);
+        Base::energyTerms[0]->computeEnergyVal(mesh_subdomain[subdomainI], redoSVD,
+                                               svd_subdomain[subdomainI],
+                                               F_subdomain[subdomainI], Ei);
         Ei *= Base::dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -771,9 +771,9 @@ namespace FracCuts {
                                                       Eigen::VectorXd& g)
     {
         // incremental potential:
-        Base::energyTerms[0]->computeGradientByPK(mesh_subdomain[subdomainI], redoSVD,
-                                            svd_subdomain[subdomainI],
-                                            F_subdomain[subdomainI], g);
+        Base::energyTerms[0]->computeGradient(mesh_subdomain[subdomainI], redoSVD,
+                                              svd_subdomain[subdomainI],
+                                              F_subdomain[subdomainI], g);
         g *= Base::dtSq;
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
@@ -813,10 +813,10 @@ namespace FracCuts {
     {
         // incremental potential:
         linSysSolver_subdomain[subdomainI]->setZero();
-        Base::energyTerms[0]->computeHessianByPK(mesh_subdomain[subdomainI], redoSVD,
-                                                 svd_subdomain[subdomainI],
-                                                 F_subdomain[subdomainI], Base::dtSq,
-                                                 linSysSolver_subdomain[subdomainI]);
+        Base::energyTerms[0]->computeHessian(mesh_subdomain[subdomainI], redoSVD,
+                                             svd_subdomain[subdomainI],
+                                             F_subdomain[subdomainI], Base::dtSq,
+                                             linSysSolver_subdomain[subdomainI]);
         
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);

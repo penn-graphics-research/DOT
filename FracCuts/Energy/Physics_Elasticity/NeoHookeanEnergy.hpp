@@ -16,7 +16,24 @@ namespace FracCuts {
     template<int dim>
     class NeoHookeanEnergy : public Energy<dim>
     {
+        typedef Energy<dim> Base;
+        
     public:
+        virtual void computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
+                                      std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                      double& energyVal) const;
+        virtual void computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
+                                     std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                     std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                     Eigen::VectorXd& gradient) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, bool redoSVD,
+                                    std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                    std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                    double coef,
+                                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                    bool projectSPD = true) const;
+        
         virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
         
         virtual void compute_E(const Eigen::Matrix<double, dim, 1>& singularValues,

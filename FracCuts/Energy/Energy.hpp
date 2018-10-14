@@ -47,7 +47,7 @@ namespace FracCuts {
         
     public:
         virtual void computeEnergyVal(const TriangleSoup<dim>& data, double& energyVal, bool uniformWeight = false) const;
-        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const = 0;
+        virtual void getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight = false) const;
         virtual void getEnergyValByElemID(const TriangleSoup<dim>& data, int elemI, double& energyVal, bool uniformWeight = false) const;
         virtual void computeGradient(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient, bool uniformWeight = false) const;
         virtual void computePrecondMtr(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& precondMtr, bool uniformWeight = false) const;
@@ -55,7 +55,22 @@ namespace FracCuts {
                                        Eigen::VectorXi* I = NULL, Eigen::VectorXi* J = NULL, bool uniformWeight = false) const;
         virtual void computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight = false) const;
         
-        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const = 0;
+        virtual void computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
+                                      std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                      double& energyVal) const;
+        virtual void computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
+                                     std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                     std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                     Eigen::VectorXd& gradient) const;
+        virtual void computeHessian(const TriangleSoup<dim>& data, bool redoSVD,
+                                    std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                    std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                    double coef,
+                                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                    bool projectSPD = true) const;
+        
+        virtual void checkEnergyVal(const TriangleSoup<dim>& data) const;
         
         virtual void checkGradient(const TriangleSoup<dim>& data) const; // check with finite difference method, according to energyVal
         virtual void checkHessian(const TriangleSoup<dim>& data, bool triplet = false) const; // check with finite difference method, according to gradient

@@ -12,6 +12,33 @@
 namespace FracCuts {
     
     template<int dim>
+    void NeoHookeanEnergy<dim>::computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
+                                                 std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                                 std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                                 double& energyVal) const
+    {
+        Base::computeEnergyValBySVD(data, redoSVD, svd, F, energyVal);
+    }
+    template<int dim>
+    void NeoHookeanEnergy<dim>::computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
+                                                std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                                std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                                Eigen::VectorXd& gradient) const
+    {
+        Base::computeGradientByPK(data, redoSVD, svd, F, gradient);
+    }
+    template<int dim>
+    void NeoHookeanEnergy<dim>::computeHessian(const TriangleSoup<dim>& data, bool redoSVD,
+                                               std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                               std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                               double coef,
+                                               LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                               bool projectSPD) const
+    {
+        Base::computeHessianByPK(data, redoSVD, svd, F, coef, linSysSolver, projectSPD);
+    }
+    
+    template<int dim>
     void NeoHookeanEnergy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data,
                                                     Eigen::VectorXd& energyValPerElem,
                                                     bool uniformWeight) const

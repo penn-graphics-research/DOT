@@ -82,6 +82,12 @@ namespace FracCuts {
     }
     
     template<int dim>
+    void Energy<dim>::getEnergyValPerElem(const TriangleSoup<dim>& data, Eigen::VectorXd& energyValPerElem, bool uniformWeight) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    
+    template<int dim>
     void Energy<dim>::getEnergyValByElemID(const TriangleSoup<dim>& data, int elemI, double& energyVal, bool uniformWeight) const
     {
         assert(0 && "please implement this method in the subclass!");
@@ -108,6 +114,39 @@ namespace FracCuts {
     
     template<int dim>
     void Energy<dim>::computeHessian(const TriangleSoup<dim>& data, Eigen::SparseMatrix<double>& hessian, bool uniformWeight) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    
+    template<int dim>
+    void Energy<dim>::computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
+                                       std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                       std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                       double& energyVal) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    template<int dim>
+    void Energy<dim>::computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
+                                      std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                      Eigen::VectorXd& gradient) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    template<int dim>
+    void Energy<dim>::computeHessian(const TriangleSoup<dim>& data, bool redoSVD,
+                                     std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
+                                     std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                     double coef,
+                                     LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
+                                     bool projectSPD) const
+    {
+        assert(0 && "please implement this method in the subclass!");
+    }
+    
+    template<int dim>
+    void Energy<dim>::checkEnergyVal(const TriangleSoup<dim>& data) const
     {
         assert(0 && "please implement this method in the subclass!");
     }

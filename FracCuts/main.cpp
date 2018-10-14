@@ -9,6 +9,7 @@
 #include "ARAPEnergy.hpp"
 #include "NeoHookeanEnergy.hpp"
 #include "FixedCoRotEnergy.hpp"
+#include "SoftPenaltyCollisionEnergy.hpp"
 #include "GIF.hpp"
 #include "Timer.hpp"
 
@@ -954,6 +955,9 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
     
+    energyParams.emplace_back(1.0);
+    energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>());
+    
     assert(lambda == 0.0);
     switch (config.timeStepperType) {
         case FracCuts::TST_NEWTON:
@@ -977,6 +981,7 @@ int main(int argc, char *argv[])
     //TODO: bijectivity for other mode?
     optimizer->precompute();
     optimizer->setAllowEDecRelTol(false);
+//    optimizer->setAllowEDecRelTol(true);
 #ifndef STATIC_SOLVE
     double delay_10ms = optimizer->getDt() * 100.0;
     GIFStep = static_cast<int>(std::ceil(3.0 / delay_10ms));
