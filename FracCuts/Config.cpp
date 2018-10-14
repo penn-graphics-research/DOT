@@ -26,7 +26,9 @@ namespace FracCuts {
     
     Config::Config(void) :
     resolution(100), size(1.0), duration(10.0), dt(0.025),
-    YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1), orthographic(false)
+    YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1),
+    ground(false),
+    orthographic(false)
     {}
     
     int Config::loadFromFile(const std::string& filePath)
@@ -104,6 +106,11 @@ namespace FracCuts {
                         orthographic = false;
                         std::cout << "use default perspective view" << std::endl;
                     }
+                }
+                else if(token == "ground") {
+                    ground = true;
+                    ss >> groundFriction >> groundY >> groundRelStiff;
+                    assert(groundRelStiff > 0.0);
                 }
             }
             

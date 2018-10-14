@@ -46,6 +46,12 @@ namespace FracCuts {
         std::vector<double> tol;
         bool orthographic;
         
+        // ground
+        bool ground;
+        bool groundFriction;
+        double groundY;
+        double groundRelStiff;
+        
     public:
         static const std::vector<std::string> energyTypeStrs;
         static const std::vector<std::string> timeStepperTypeStrs;
