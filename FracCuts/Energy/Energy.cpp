@@ -122,6 +122,7 @@ namespace FracCuts {
     void Energy<dim>::computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
                                        std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                        std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                       double coef,
                                        double& energyVal) const
     {
         assert(0 && "please implement this method in the subclass!");
@@ -130,6 +131,7 @@ namespace FracCuts {
     void Energy<dim>::computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
                                       std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                       std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                      double coef,
                                       Eigen::VectorXd& gradient) const
     {
         assert(0 && "please implement this method in the subclass!");
@@ -160,7 +162,7 @@ namespace FracCuts {
         std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>> svd(data.F.rows());
         
         double energyVal0;
-        computeEnergyValBySVD(data, true, svd, F, energyVal0);
+        computeEnergyValBySVD(data, true, svd, F, 1.0, energyVal0);
         const double h = 1.0e-8 * igl::avg_edge_length(data.V, data.F);
         TriangleSoup<dim> perturbed = data;
         Eigen::VectorXd gradient_finiteDiff;
@@ -171,7 +173,7 @@ namespace FracCuts {
                 perturbed.V = data.V;
                 perturbed.V(vI, dimI) += h;
                 double energyVal_perturbed;
-                computeEnergyValBySVD(perturbed, true, svd, F, energyVal_perturbed);
+                computeEnergyValBySVD(perturbed, true, svd, F, 1.0, energyVal_perturbed);
                 gradient_finiteDiff[vI * dim + dimI] = (energyVal_perturbed - energyVal0) / h;
             }
             
@@ -186,7 +188,7 @@ namespace FracCuts {
         Eigen::VectorXd gradient_symbolic;
 //        computeGradient(data, gradient_symbolic);
 //        computeGradientBySVD(data, gradient_symbolic);
-        computeGradientByPK(data, true, svd, F, gradient_symbolic);
+        computeGradientByPK(data, true, svd, F, 1.0, gradient_symbolic);
         
         Eigen::VectorXd difVec = gradient_symbolic - gradient_finiteDiff;
         const double dif_L2 = difVec.norm();
@@ -209,7 +211,7 @@ namespace FracCuts {
         
         Eigen::VectorXd gradient0;
 //        computeGradientBySVD(data, gradient0);
-        computeGradientByPK(data, true, svd, F, gradient0);
+        computeGradientByPK(data, true, svd, F, 1.0, gradient0);
         const double h = 1.0e-6 * igl::avg_edge_length(data.V, data.F);
         TriangleSoup<dim> perturbed = data;
         Eigen::SparseMatrix<double> hessian_finiteDiff;
@@ -230,7 +232,7 @@ namespace FracCuts {
                 perturbed.V(vI, dimI) += h;
                 Eigen::VectorXd gradient_perturbed;
 //                computeGradientBySVD(perturbed, gradient_perturbed);
-                computeGradientByPK(perturbed, true, svd, F, gradient_perturbed);
+                computeGradientByPK(perturbed, true, svd, F, 1.0, gradient_perturbed);
                 Eigen::VectorXd hessian_colI = (gradient_perturbed - gradient0) / h;
                 int colI = vI * dim + dimI;
                 for(int rowI = 0; rowI < data.V.rows() * dim; rowI++) {
@@ -347,11 +349,12 @@ namespace FracCuts {
     void Energy<dim>::computeEnergyValBySVD(const TriangleSoup<dim>& data, bool redoSVD,
                                             std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                             std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                            double coef,
                                             double& energyVal) const
     {
         Eigen::VectorXd energyValPerElem;
         getEnergyValPerElemBySVD(data, redoSVD, svd, F, energyValPerElem);
-        energyVal = energyValPerElem.sum();
+        energyVal = coef * energyValPerElem.sum();
     }
     
     template<int dim>
@@ -502,6 +505,7 @@ namespace FracCuts {
     void Energy<dim>::computeGradientByPK(const TriangleSoup<dim>& data, bool redoSVD,
                                           std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                           std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                          double coef,
                                           Eigen::VectorXd& gradient) const
     {
         std::vector<Eigen::Matrix<double, dim * (dim + 1), 1>> gradient_cont(data.F.rows());
@@ -537,7 +541,7 @@ namespace FracCuts {
             Eigen::Matrix<double, dim, dim> P;
             compute_dE_div_dF(F[triI], svd[triI], P);
             
-            const double w = data.triWeight[triI] * data.triArea[triI];
+            const double w = coef * data.triWeight[triI] * data.triArea[triI];
             P *= w;
             
             timer_temp2.start(7);

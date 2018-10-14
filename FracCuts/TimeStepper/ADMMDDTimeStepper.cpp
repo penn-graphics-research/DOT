@@ -729,8 +729,7 @@ namespace FracCuts {
         // incremental potential:
         Base::energyTerms[0]->computeEnergyVal(mesh_subdomain[subdomainI], redoSVD,
                                                svd_subdomain[subdomainI],
-                                               F_subdomain[subdomainI], Ei);
-        Ei *= Base::dtSq;
+                                               F_subdomain[subdomainI], Base::dtSq, Ei);
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
             Ei += (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).squaredNorm() * massI / 2.0;
@@ -773,8 +772,7 @@ namespace FracCuts {
         // incremental potential:
         Base::energyTerms[0]->computeGradient(mesh_subdomain[subdomainI], redoSVD,
                                               svd_subdomain[subdomainI],
-                                              F_subdomain[subdomainI], g);
-        g *= Base::dtSq;
+                                              F_subdomain[subdomainI], Base::dtSq, g);
         for(int vI = 0; vI < mesh_subdomain[subdomainI].V.rows(); vI++) {
             double massI = mesh_subdomain[subdomainI].massMatrix.coeff(vI, vI);
             g.segment<dim>(vI * dim) += massI * (mesh_subdomain[subdomainI].V.row(vI) - xHat_subdomain[subdomainI].row(vI)).transpose();

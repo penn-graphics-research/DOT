@@ -15,10 +15,10 @@ namespace FracCuts {
     computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
                      std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                     double coef,
                      double& energyVal) const
     {
-        //TODO: consider rho
-        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
+        const double avgMass = data.massMatrix.sum() / data.V.rows();
         
         energyVal = 0.0;
         if(friction) {
@@ -26,14 +26,14 @@ namespace FracCuts {
                 if(data.V(vI, 1) <= floorY) {
                     Eigen::Matrix<double, 1, dim> p = data.V.row(vI);
                     p[1] = floorY;
-                    energyVal += 0.5 * k * stiff * (data.V.row(vI) - p).squaredNorm();
+                    energyVal += 0.5 * k * avgMass * (data.V.row(vI) - p).squaredNorm();
                 }
             }
         }
         else {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {
-                    energyVal += 0.5 * k * stiff * (data.V(vI, 1) - floorY) * (data.V(vI, 1) - floorY);
+                    energyVal += 0.5 * k * avgMass * (data.V(vI, 1) - floorY) * (data.V(vI, 1) - floorY);
                 }
             }
         }
@@ -44,10 +44,10 @@ namespace FracCuts {
     computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
                     std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                     std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                    double coef,
                     Eigen::VectorXd& gradient) const
     {
-        //TODO: consider rho
-        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
+        const double avgMass = data.massMatrix.sum() / data.V.rows();
         
         gradient.conservativeResize(data.V.rows() * dim);
         gradient.setZero();
@@ -56,14 +56,14 @@ namespace FracCuts {
                 if(data.V(vI, 1) <= floorY) {
                     Eigen::Matrix<double, 1, dim> p = data.V.row(vI);
                     p[1] = floorY;
-                    gradient.segment<dim>(vI * dim) += k * stiff * (data.V.row(vI) - p).transpose();
+                    gradient.segment<dim>(vI * dim) += k * avgMass * (data.V.row(vI) - p).transpose();
                 }
             }
         }
         else {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {
-                    gradient[vI * dim + 1] += k * stiff * (data.V(vI, 1) - floorY);
+                    gradient[vI * dim + 1] += k * avgMass * (data.V(vI, 1) - floorY);
                 }
             }
         }
@@ -78,9 +78,9 @@ namespace FracCuts {
                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                    bool projectSPD) const
     {
-        //TODO: consider rho
-        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
-        double diagVal = coef * k * stiff;
+        const double avgMass = data.massMatrix.sum() / data.V.rows();
+        double diagVal = k * avgMass;
+        
         if(friction) {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {

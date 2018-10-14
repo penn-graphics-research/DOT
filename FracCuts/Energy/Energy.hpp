@@ -58,10 +58,12 @@ namespace FracCuts {
         virtual void computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
                                       std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                       std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                      double coef,
                                       double& energyVal) const;
         virtual void computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
                                      std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                     double coef,
                                      Eigen::VectorXd& gradient) const;
         virtual void computeHessian(const TriangleSoup<dim>& data, bool redoSVD,
                                     std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
@@ -83,6 +85,7 @@ namespace FracCuts {
         virtual void computeEnergyValBySVD(const TriangleSoup<dim>& data, bool redoSVD,
                                            std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                            std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                           double coef,
                                            double& energyVal) const;
         virtual void computeGradientBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd& gradient) const;
         virtual void computeHessianBySVD(const TriangleSoup<dim>& data, Eigen::VectorXd* V,
@@ -92,6 +95,7 @@ namespace FracCuts {
         virtual void computeGradientByPK(const TriangleSoup<dim>& data, bool redoSVD,
                                          std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                          std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                         double coef,
                                          Eigen::VectorXd& gradient) const;
         virtual void computeHessianByPK(const TriangleSoup<dim>& data, bool redoSVD,
                                         std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,

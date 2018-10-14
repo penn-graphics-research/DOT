@@ -1018,7 +1018,7 @@ int main(int argc, char *argv[])
     }
     
     energyParams.emplace_back(1.0);
-    energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>());
+    energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>(true, 0.0, 10.0));
     
     assert(lambda == 0.0);
     switch (config.timeStepperType) {

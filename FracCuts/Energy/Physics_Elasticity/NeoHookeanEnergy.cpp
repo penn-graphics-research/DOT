@@ -15,17 +15,19 @@ namespace FracCuts {
     void NeoHookeanEnergy<dim>::computeEnergyVal(const TriangleSoup<dim>& data, bool redoSVD,
                                                  std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                                  std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                                 double coef,
                                                  double& energyVal) const
     {
-        Base::computeEnergyValBySVD(data, redoSVD, svd, F, energyVal);
+        Base::computeEnergyValBySVD(data, redoSVD, svd, F, coef, energyVal);
     }
     template<int dim>
     void NeoHookeanEnergy<dim>::computeGradient(const TriangleSoup<dim>& data, bool redoSVD,
                                                 std::vector<AutoFlipSVD<Eigen::Matrix<double, dim, dim>>>& svd,
                                                 std::vector<Eigen::Matrix<double, dim, dim>>& F,
+                                                double coef,
                                                 Eigen::VectorXd& gradient) const
     {
-        Base::computeGradientByPK(data, redoSVD, svd, F, gradient);
+        Base::computeGradientByPK(data, redoSVD, svd, F, coef, gradient);
     }
     template<int dim>
     void NeoHookeanEnergy<dim>::computeHessian(const TriangleSoup<dim>& data, bool redoSVD,

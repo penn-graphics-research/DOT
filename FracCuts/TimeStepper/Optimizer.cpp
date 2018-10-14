@@ -1019,11 +1019,13 @@ namespace FracCuts {
         //TODO: write inertia and augmented Lagrangian term into energyTerms
         if(!mute) { timer_step.start(0); }
         
-        energyTerms[0]->computeEnergyVal(data, redoSVD, svd, F, energyVal_ET[0]);
-        energyVal = dtSq * energyParams[0] * energyVal_ET[0];
+        energyTerms[0]->computeEnergyVal(data, redoSVD, svd, F,
+                                         dtSq * energyParams[0], energyVal_ET[0]);
+        energyVal =  energyVal_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeEnergyVal(data, redoSVD, svd, F, energyVal_ET[eI]);
-            energyVal += dtSq * energyParams[eI] * energyVal_ET[eI];
+            energyTerms[eI]->computeEnergyVal(data, redoSVD, svd, F,
+                                              dtSq * energyParams[eI], energyVal_ET[eI]);
+            energyVal += energyVal_ET[eI];
         }
         
 //        if(scaffolding && (!excludeScaffold)) {
@@ -1063,11 +1065,13 @@ namespace FracCuts {
     {
         if(!mute) { timer_step.start(0); }
         
-        energyTerms[0]->computeGradient(data, redoSVD, svd, F, gradient_ET[0]);
-        gradient = dtSq * energyParams[0] * gradient_ET[0];
+        energyTerms[0]->computeGradient(data, redoSVD, svd, F,
+                                        dtSq * energyParams[0], gradient_ET[0]);
+        gradient = gradient_ET[0];
         for(int eI = 1; eI < energyTerms.size(); eI++) {
-            energyTerms[eI]->computeGradient(data, redoSVD, svd, F, gradient_ET[eI]);
-            gradient += dtSq * energyParams[eI] * gradient_ET[eI];
+            energyTerms[eI]->computeGradient(data, redoSVD, svd, F,
+                                             dtSq * energyParams[eI], gradient_ET[eI]);
+            gradient += gradient_ET[eI];
         }
         
 //        if(scaffolding) {
