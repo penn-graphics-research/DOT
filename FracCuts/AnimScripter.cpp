@@ -100,6 +100,8 @@ namespace FracCuts {
             }
                 
             case AST_FALL: {
+                mesh.V.col(1).array() += 0.5 * (mesh.V.colwise().maxCoeff() -
+                                                mesh.V.colwise().minCoeff()).norm();
                 mesh.resetFixedVert();
                 break;
             }

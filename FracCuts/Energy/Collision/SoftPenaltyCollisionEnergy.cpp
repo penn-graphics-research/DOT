@@ -17,20 +17,23 @@ namespace FracCuts {
                      std::vector<Eigen::Matrix<double, dim, dim>>& F,
                      double& energyVal) const
     {
+        //TODO: consider rho
+        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
+        
         energyVal = 0.0;
         if(friction) {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {
                     Eigen::Matrix<double, 1, dim> p = data.V.row(vI);
                     p[1] = floorY;
-                    energyVal += 0.5 * k * (data.V.row(vI) - p).squaredNorm();
+                    energyVal += 0.5 * k * stiff * (data.V.row(vI) - p).squaredNorm();
                 }
             }
         }
         else {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {
-                    energyVal += 0.5 * k * (data.V(vI, 1) - floorY) * (data.V(vI, 1) - floorY);
+                    energyVal += 0.5 * k * stiff * (data.V(vI, 1) - floorY) * (data.V(vI, 1) - floorY);
                 }
             }
         }
@@ -43,6 +46,9 @@ namespace FracCuts {
                     std::vector<Eigen::Matrix<double, dim, dim>>& F,
                     Eigen::VectorXd& gradient) const
     {
+        //TODO: consider rho
+        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
+        
         gradient.conservativeResize(data.V.rows() * dim);
         gradient.setZero();
         if(friction) {
@@ -50,14 +56,14 @@ namespace FracCuts {
                 if(data.V(vI, 1) <= floorY) {
                     Eigen::Matrix<double, 1, dim> p = data.V.row(vI);
                     p[1] = floorY;
-                    gradient.segment<dim>(vI * dim) += k * (data.V.row(vI) - p).transpose();
+                    gradient.segment<dim>(vI * dim) += k * stiff * (data.V.row(vI) - p).transpose();
                 }
             }
         }
         else {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {
-                    gradient[vI * dim + 1] += k * (data.V(vI, 1) - floorY);
+                    gradient[vI * dim + 1] += k * stiff * (data.V(vI, 1) - floorY);
                 }
             }
         }
@@ -72,7 +78,9 @@ namespace FracCuts {
                    LinSysSolver<Eigen::VectorXi, Eigen::VectorXd>* linSysSolver,
                    bool projectSPD) const
     {
-        double diagVal = k * coef;
+        //TODO: consider rho
+        const double stiff = data.surfaceArea * 9.8 / data.avgEdgeLen;
+        double diagVal = coef * k * stiff;
         if(friction) {
             for(int vI = 0; vI < data.V.rows(); vI++) {
                 if(data.V(vI, 1) <= floorY) {

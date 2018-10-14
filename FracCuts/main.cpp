@@ -59,7 +59,7 @@ std::vector<int> sTri2Tet;
 bool viewUV = true; // view UV or 3D model
 double texScale = 1.0;
 bool showSeam = false;
-Eigen::MatrixXd seamColor;
+Eigen::MatrixXd seamColor, floorColor;
 bool showBoundary = false;
 int showDistortion = 2; // 0: don't show; 1: energy value; 2: other scalar field;
 int showDistortion_init = showDistortion;
@@ -175,6 +175,60 @@ void updateViewerData_seam(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::Matrix
     }
 }
 
+void updateViewerData_floor(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& UV)
+{
+#if(DIM == 3)
+    Eigen::MatrixXd V_floor;
+    Eigen::MatrixXi F_floor;
+    
+    double size = config.size * 10.0;
+    int elemAmt = 200;
+    double spacing = size / std::sqrt(elemAmt / 2.0);
+    assert(size >= spacing);
+    int gridSize = static_cast<int>(size / spacing) + 1;
+    spacing = size / (gridSize - 1);
+    
+    V_floor.resize(gridSize * gridSize, 3);
+    for(int rowI = 0; rowI < gridSize; rowI++)
+    {
+        for(int colI = 0; colI < gridSize; colI++)
+        {
+            int vI = rowI * gridSize + colI;
+            V_floor.row(vI) = Eigen::RowVector3d(spacing * colI - size / 2.0,
+                                                 0.0,
+                                                 spacing * rowI - size / 2.0);
+        }
+    }
+
+    F_floor.resize((gridSize - 1) * (gridSize - 1) * 2, 3);
+    for(int rowI = 0; rowI < gridSize - 1; rowI++)
+    {
+        for(int colI = 0; colI < gridSize - 1; colI++)
+        {
+            int squareI = rowI * (gridSize - 1) + colI;
+            F_floor.row(squareI * 2) = Eigen::Vector3i(rowI * gridSize + colI,
+                                                       (rowI + 1) * gridSize + colI,
+                                                       (rowI + 1) * gridSize + colI + 1);
+            F_floor.row(squareI * 2 + 1) = Eigen::Vector3i(rowI * gridSize + colI,
+                                                           (rowI + 1) * gridSize + colI + 1,
+                                                           rowI * gridSize + colI + 1);
+        }
+    }
+
+    int oldVSize = V.rows();
+    V.conservativeResize(oldVSize + V_floor.rows(), 3);
+    V.bottomRows(V_floor.rows()) = V_floor;
+    
+    int oldFSize = F.rows();
+    F.conservativeResize(oldFSize + F_floor.rows(), 3);
+    F.bottomRows(F_floor.rows()) = F_floor;
+    F.bottomRows(F_floor.rows()).array() += oldVSize;
+    
+    floorColor.conservativeResize(F_floor.rows(), 3);
+    floorColor.setConstant(0.9);
+#endif
+}
+
 void updateViewerData_distortion(void)
 {
     Eigen::MatrixXd color_distortionVis;
@@ -252,6 +306,12 @@ void updateViewerData_distortion(void)
         color_distortionVis.conservativeResize(color_distortionVis.rows() + seamColor.rows(), 3);
         color_distortionVis.bottomRows(seamColor.rows()) = seamColor;
     }
+    
+    if(floorColor.rows() > 0) {
+        color_distortionVis.conservativeResize(color_distortionVis.rows() + floorColor.rows(), 3);
+        color_distortionVis.bottomRows(floorColor.rows()) = floorColor;
+    }
+    
     viewer.data().set_colors(color_distortionVis);
 }
 
@@ -270,6 +330,7 @@ void updateViewerData(void)
         }
         viewer.core.align_camera_center(triSoup[viewChannel]->V_rest * texScale, F_vis);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
+        updateViewerData_floor(UV_vis, F_vis, UV_vis);
         
         if((UV_vis.rows() != viewer.data().V.rows()) ||
            (F_vis.rows() != viewer.data().F.rows()))
@@ -762,6 +823,7 @@ int main(int argc, char *argv[])
                 FracCuts::IglUtils::readTetMesh(config.inputShapePath, V, F, SF);
                 
                 V *= config.size / (V.colwise().maxCoeff() - V.colwise().minCoeff()).maxCoeff();
+                V.rowwise() -= V.colwise().minCoeff();
                 //TODO: resampling according to config.resolution?
                 UV = V.leftCols(DIM);
 
@@ -1030,13 +1092,13 @@ int main(int argc, char *argv[])
         viewer.callback_pre_draw = &preDrawFunc;
         viewer.callback_post_draw = &postDrawFunc;
         viewer.data().show_lines = true;
-        viewer.core.orthographic = true;
+        viewer.core.orthographic = false;
     //    viewer.core.camera_zoom *= 1.9;
         viewer.core.animation_max_fps = 60.0;
         viewer.data().point_size = fracTailSize;
         viewer.data().show_overlay = true;
 #if(DIM == 3)
-        viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4, Eigen::Vector3f::UnitX()));
+        viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4 / 2.0, Eigen::Vector3f::UnitX()));
 #endif
         viewer.launch();
     }
