@@ -1,0 +1,8 @@
+shape grid
+script stretch
+energy FCR
+timeStepper Newton
+resolution 32
+size 1.0
+time 2.5 0.025
+stiffness 100.0 0.4

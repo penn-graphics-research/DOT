@@ -1,0 +1,8 @@
+shape Sharkey
+script stretch
+energy FCR
+timeStepper Newton
+resolution 524288
+size 1.0
+time 2.5 0.025
+stiffness 100.0 0.4
