@@ -26,7 +26,7 @@ namespace FracCuts {
     
     Config::Config(void) :
     resolution(100), size(1.0), duration(10.0), dt(0.025),
-    YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1)
+    YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1), orthographic(false)
     {}
     
     int Config::loadFromFile(const std::string& filePath)
@@ -89,6 +89,20 @@ namespace FracCuts {
                     for(auto& tolI : tol) {
                         assert(std::getline(file, line));
                         sscanf(line.c_str(), "%le", &tolI);
+                    }
+                }
+                else if(token == "view") {
+                    std::string type;
+                    ss >> type;
+                    if(type == "orthographic") {
+                        orthographic = true;
+                    }
+                    else if (type == "perspective"){
+                        orthographic = false;
+                    }
+                    else {
+                        orthographic = false;
+                        std::cout << "use default perspective view" << std::endl;
                     }
                 }
             }

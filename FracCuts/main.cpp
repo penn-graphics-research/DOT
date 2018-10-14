@@ -1018,7 +1018,7 @@ int main(int argc, char *argv[])
     }
     
     energyParams.emplace_back(1.0);
-    energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>(true, 0.0, 10.0));
+    energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>(false, 0.0, 10.0));
     
     assert(lambda == 0.0);
     switch (config.timeStepperType) {
@@ -1092,13 +1092,15 @@ int main(int argc, char *argv[])
         viewer.callback_pre_draw = &preDrawFunc;
         viewer.callback_post_draw = &postDrawFunc;
         viewer.data().show_lines = true;
-        viewer.core.orthographic = false;
+        viewer.core.orthographic = config.orthographic;
     //    viewer.core.camera_zoom *= 1.9;
         viewer.core.animation_max_fps = 60.0;
         viewer.data().point_size = fracTailSize;
         viewer.data().show_overlay = true;
 #if(DIM == 3)
-        viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4 / 2.0, Eigen::Vector3f::UnitX()));
+        if(!config.orthographic) {
+            viewer.core.trackball_angle = Eigen::Quaternionf(Eigen::AngleAxisf(M_PI_4 / 2.0, Eigen::Vector3f::UnitX()));
+        }
 #endif
         viewer.launch();
     }
