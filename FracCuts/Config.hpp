@@ -52,6 +52,8 @@ namespace FracCuts {
         double groundY;
         double groundRelStiff;
         
+        std::string appendStr;
+        
     public:
         static const std::vector<std::string> energyTypeStrs;
         static const std::vector<std::string> timeStepperTypeStrs;
@@ -60,6 +62,7 @@ namespace FracCuts {
     public:
         Config(void);
         int loadFromFile(const std::string& filePath);
+        void saveToFile(const std::string& filePath);
         
     public:
         void appendInfoStr(std::string& inputStr) const;

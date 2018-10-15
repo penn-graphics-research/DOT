@@ -11,6 +11,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <ctime>
 
 namespace FracCuts {
     
@@ -112,6 +113,9 @@ namespace FracCuts {
                     ss >> groundFriction >> groundY >> groundRelStiff;
                     assert(groundRelStiff > 0.0);
                 }
+                else if(token == "appendStr") {
+                    ss >> appendStr;
+                }
             }
             
             file.close();
@@ -121,6 +125,55 @@ namespace FracCuts {
         else {
             return -1;
         }
+    }
+    void Config::saveToFile(const std::string& filePath)
+    {
+        std::ofstream file(filePath);
+        assert(file.is_open());
+        
+        file << "energy " << getStrByEnergyType(energyType) << std::endl;
+        
+        file << "timeStepper " << getStrByTimeStepperType(timeStepperType);
+        if(timeStepperType == TST_ADMMDD) {
+            file << " " << partitionAmt;
+        }
+        file << std::endl;
+        
+        file << "resolution " << resolution << std::endl;
+        
+        file << "size " << size << std::endl;
+        
+        file << "time " << duration << " " << dt << std::endl;
+        
+        file << "stiffness " << YM << " " << PR << std::endl;
+        
+        file << "script " << AnimScripter<DIM>::getStrByAnimScriptType(animScriptType) << std::endl;
+        
+        file << "shape " << getStrByShapeType(shapeType);
+        if(shapeType == P_INPUT) {
+            file << " " << inputShapePath;
+        }
+        file << std::endl;
+        
+        if(ground) {
+            file << "ground " << groundFriction << " " <<
+                groundY << " " << groundRelStiff << std::endl;
+        }
+        
+        file << "view " << (orthographic ? "orthographic": "perspective") << std::endl;
+        
+        if(appendStr.length() > 0) {
+            file << "appendStr " << appendStr << std::endl;
+        }
+        
+        if(!tol.empty()) {
+            file << "tol " << tol.size() << std::endl;
+            for(const auto& tolI : tol) {
+                file << tolI << std::endl;
+            }
+        }
+        
+        file.close();
     }
     
     void Config::appendInfoStr(std::string& inputStr) const
@@ -134,13 +187,30 @@ namespace FracCuts {
             shapeName = getStrByShapeType(shapeType);
         }
         
+//        inputStr += (shapeName + "_" +
+//                     AnimScripter<DIM>::getStrByAnimScriptType(animScriptType) + "_" +
+//                     getStrByEnergyType(energyType) + "_" +
+//                     IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR) + "_" +
+//                     getStrByTimeStepperType(timeStepperType) +
+//                     ((timeStepperType == TST_ADMMDD) ? std::to_string(partitionAmt) : "") +
+//                     "_" + IglUtils::rtos(dt) + "_" + std::to_string(resolution) +
+//                     (appendStr.length() ? ("_" + appendStr) : ""));
+        
         inputStr += (shapeName + "_" +
                      AnimScripter<DIM>::getStrByAnimScriptType(animScriptType) + "_" +
                      getStrByEnergyType(energyType) + "_" +
-                     IglUtils::rtos(YM) + "_" + IglUtils::rtos(PR) + "_" +
                      getStrByTimeStepperType(timeStepperType) +
-                     ((timeStepperType == TST_ADMMDD) ? std::to_string(partitionAmt) : "") +
-                     "_" + IglUtils::rtos(dt) + "_" + std::to_string(resolution));
+                     ((timeStepperType == TST_ADMMDD) ? std::to_string(partitionAmt) : "")
+                     + "_");
+        
+        time_t rawTime = std::time(NULL);
+        char buf[BUFSIZ];
+        std::strftime(buf, sizeof(buf), "%Y%m%d%H%M%S", std::localtime(&rawTime));
+        inputStr += buf;
+        
+        if(appendStr.length()) {
+            inputStr += "_" + appendStr;
+        }
     }
     
     EnergyType Config::getEnergyTypeByStr(const std::string& str)

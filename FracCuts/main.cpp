@@ -942,6 +942,7 @@ int main(int argc, char *argv[])
         outputFolderPath += meshName + "_" +startDS + folderTail;
     }
     mkdir(outputFolderPath.c_str(), 0777);
+    config.saveToFile(outputFolderPath + "/config.primitive");
     
     // create log file
     outputFolderPath += '/';
