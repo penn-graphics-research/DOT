@@ -69,7 +69,11 @@ namespace FracCuts {
         
 #ifdef USE_METIS
         METIS<dim> partitions(Base::result);
+#if(USE_METIS == 1)
         partitions.partMesh(partitionAmt);
+#elif(USE_METIS == 2)
+        partitions.partMesh_slice(Base::result, partitionAmt, 0);
+#endif
 #endif
         
 #ifdef USE_TBB
@@ -91,7 +95,7 @@ namespace FracCuts {
             elemList_subdomain[subdomainI] = Eigen::VectorXi::LinSpaced(triI_end - triI_begin + 1,
                                                                         triI_begin,
                                                                         triI_end);
-//            // grid test only:
+//            // 2D grid test only:
 //            int partitionWidth = std::sqrt(partitionAmt);
 //            assert(partitionWidth * partitionWidth == partitionAmt);
 //            int gridWidth = sqrt(result.F.rows() / 2);

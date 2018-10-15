@@ -159,6 +159,25 @@ namespace FracCuts {
                     break;
             }
         }
+        void partMesh_slice(const TriangleSoup<dim>& mesh,
+                            int nParts, int dimI)
+        {
+            Eigen::VectorXd center_dimI(mesh.F.rows());
+            center_dimI.setZero();
+            for(int elemI = 0; elemI < mesh.F.rows(); elemI++) {
+                const Eigen::Matrix<int, 1, dim + 1>& elemVInd = mesh.F.row(elemI);
+                for(int vI = 0; vI < dim + 1; vI++) {
+                    center_dimI[elemI] += mesh.V(elemVInd[vI], dimI);
+                }
+                center_dimI[elemI] /= dim + 1;
+            }
+            
+            epart.resize(mesh.F.rows());
+            double step = (mesh.V.col(dimI).maxCoeff() - mesh.V.col(dimI).minCoeff()) / nParts;
+            for(int elemI = 0; elemI < mesh.F.rows(); elemI++) {
+                epart[elemI] = std::min(nParts - 1, std::max(0, int(center_dimI[elemI] / step)));
+            }
+        }
         void getElementList(int partI, Eigen::VectorXi& elementListI) const
         {
             assert(!epart.empty());
