@@ -75,19 +75,23 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "1 10"
+            argument = "1 11"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "1 100 /Users/mincli/Downloads/log.txt"
+            argument = "1 12"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "1 100 /Users/mincli/Downloads/logNow.txt"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "2 /Users/mincli/Desktop/output_FracCuts/test.obj 0"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "2 /Users/mincli/Desktop/OptCuts_dynamic/input/triMeshes/cow_head.obj 3"
+            argument = "2 /Users/mincli/Desktop/OptCuts_dynamic/input/triMeshes/cube.obj 3 3e-5 1"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
