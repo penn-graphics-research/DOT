@@ -229,6 +229,9 @@ namespace FracCuts {
         virtual const std::vector<std::map<int, int>>& getIJ2aI(void) const {
             return IJ2aI;
         }
+        virtual Eigen::VectorXi& get_ia(void) { return ia; }
+        virtual Eigen::VectorXi& get_ja(void) { return ja; }
+        virtual Eigen::VectorXd& get_a(void) { return a; }
     };
     
 }

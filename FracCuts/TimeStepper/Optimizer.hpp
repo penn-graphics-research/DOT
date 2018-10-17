@@ -15,6 +15,7 @@
 #include "AnimScripter.hpp"
 #include "Config.hpp"
 #include "LinSysSolver.hpp"
+#include "OSQP.h"
 
 #include <fstream>
 
@@ -30,6 +31,7 @@ namespace FracCuts {
         const std::vector<Energy<dim>*>& energyTerms; // E_0, E_1, E_2, ...
         const std::vector<double>& energyParams; // a_0, a_1, a_2, ...
         // E = \Sigma_i a_i E_i
+        const Config& animConfig;
         
     protected: // owned data
         int propagateFracture;
@@ -50,6 +52,13 @@ namespace FracCuts {
         
         // SPD solver for solving the linear system for search directions
         LinSysSolver<Eigen::VectorXi, Eigen::VectorXd> *linSysSolver;
+        
+        bool solveQP;
+        OSQP QPSolver;
+        Eigen::SparseMatrix<double> P_OSQP;
+        std::vector<double*> elemPtr_P_OSQP;
+        Eigen::VectorXd l_OSQP, u_OSQP;
+        Eigen::SparseMatrix<double> A_OSQP;
         
         Eigen::VectorXd gradient; // energy gradient computed in each iteration
         Eigen::VectorXd searchDir; // search direction comptued in each iteration

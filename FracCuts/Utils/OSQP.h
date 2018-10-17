@@ -20,11 +20,13 @@ namespace FracCuts {
         OSQPWorkspace *work; // Workspace
         
     public:
-        OSQP(void)
+        OSQP(bool printOutput = true)
         {
             settings = (OSQPSettings *)c_malloc(sizeof(OSQPSettings));
             // Define Solver settings as default
             osqp_set_default_settings(settings);
+            settings->verbose = printOutput;
+            settings->eps_abs = 0.0;
             
             data = (OSQPData *)c_malloc(sizeof(OSQPData));
             
@@ -55,14 +57,14 @@ namespace FracCuts {
                    c_float *l, c_float *u,
                    c_int n, c_int m)
         {
+            if(work) {
+                osqp_cleanup(work);
+            }
             if(data->P) {
                 c_free(data->P);
             }
             if(data->A) {
                 c_free(data->A);
-            }
-            if(work) {
-                osqp_cleanup(work);
             }
             
             // Populate data
@@ -78,13 +80,14 @@ namespace FracCuts {
             work = osqp_setup(data, settings);
         }
         
-        void solve(void)
+        c_float *solve(void)
         {
             // Solve Problem
             osqp_solve(work);
             // solution is in work->solution
-            // primal: c_float *work->solution.x
-            // dual: c_float *work->solution.y
+            // primal: c_float *work->solution->x
+            // dual: c_float *work->solution->y
+            return work->solution->x;
         }
     };
     

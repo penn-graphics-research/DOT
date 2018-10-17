@@ -30,6 +30,11 @@ namespace FracCuts {
         TST_ADMMDD
     };
     
+    enum ConstraintSolverType {
+        CST_PENALTY,
+        CST_QP
+    };
+    
     class Config
     {
     public:
@@ -45,6 +50,8 @@ namespace FracCuts {
         int partitionAmt;
         std::vector<double> tol;
         bool orthographic;
+        bool isConstrained;
+        ConstraintSolverType constraintSolverType;
         
         // ground
         bool ground;
@@ -58,6 +65,7 @@ namespace FracCuts {
         static const std::vector<std::string> energyTypeStrs;
         static const std::vector<std::string> timeStepperTypeStrs;
         static const std::vector<std::string> shapeTypeStrs;
+        static const std::vector<std::string> constraintSolverTypeStrs;
         
     public:
         Config(void);
@@ -74,6 +82,8 @@ namespace FracCuts {
         static std::string getStrByTimeStepperType(TimeStepperType timeStepperType);
         static Primitive getShapeTypeByStr(const std::string& str);
         static std::string getStrByShapeType(Primitive shapeType);
+        static ConstraintSolverType getConstraintSolverTypeByStr(const std::string& str);
+        static std::string getStrByConstraintSolverType(ConstraintSolverType constraintSolverType);
     };
     
 }

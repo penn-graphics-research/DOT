@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
+		980E7B6021765C8B0080705E /* libosqp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 989A2F61217513AC0074A705 /* libosqp.dylib */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
 		98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */; };
@@ -28,7 +29,6 @@
 		988ED1321F575C3C00B21181 /* IglUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 988ED1301F575C3C00B21181 /* IglUtils.cpp */; };
 		988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 988ED1331F5871F200B21181 /* Optimizer.cpp */; };
 		9894E5E32118BFC300FB0F46 /* libmetis.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 9894E5E22118BFC300FB0F46 /* libmetis.dylib */; };
-		989A2F62217513AC0074A705 /* libosqp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 989A2F61217513AC0074A705 /* libosqp.dylib */; };
 		98A5A32B1F5F5BB900584EFD /* ARAPEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98A5A3291F5F5BB900584EFD /* ARAPEnergy.cpp */; };
 		98C2D8F41F6348820048B18A /* SeparationEnergy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98C2D8F21F6348820048B18A /* SeparationEnergy.cpp */; };
 		98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98CE476D1F71E66300627725 /* PardisoSolver.cpp */; };
@@ -136,7 +136,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				989A2F62217513AC0074A705 /* libosqp.dylib in Frameworks */,
+				980E7B6021765C8B0080705E /* libosqp.dylib in Frameworks */,
 				98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */,
 				9894E5E32118BFC300FB0F46 /* libmetis.dylib in Frameworks */,
 				98E6E69520DDB07900130500 /* libcholmod.3.0.12.dylib in Frameworks */,

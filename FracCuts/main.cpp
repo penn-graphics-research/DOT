@@ -1020,7 +1020,7 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
     
-    if(config.ground) {
+    if(config.ground && (config.constraintSolverType == FracCuts::CST_PENALTY)) {
         energyParams.emplace_back(1.0);
         energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>
                                  (config.groundFriction, config.groundY, config.groundRelStiff));
@@ -1048,8 +1048,7 @@ int main(int argc, char *argv[])
     
     //TODO: bijectivity for other mode?
     optimizer->precompute();
-    optimizer->setAllowEDecRelTol(false);
-//    optimizer->setAllowEDecRelTol(true);
+    optimizer->setAllowEDecRelTol(config.isConstrained && (config.constraintSolverType == FracCuts::CST_QP));
 #ifndef STATIC_SOLVE
     double delay_10ms = optimizer->getDt() * 100.0;
     GIFStep = static_cast<int>(std::ceil(3.0 / delay_10ms));

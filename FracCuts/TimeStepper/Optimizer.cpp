@@ -46,8 +46,9 @@ namespace FracCuts {
                          const std::vector<Energy<dim>*>& p_energyTerms, const std::vector<double>& p_energyParams,
                          int p_propagateFracture, bool p_mute, bool p_scaffolding,
                          const Eigen::MatrixXd& UV_bnds, const Eigen::MatrixXi& E, const Eigen::VectorXi& bnd,
-                         const Config& animConfig) :
-        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams)
+                         const Config& p_animConfig) :
+        data0(p_data0), energyTerms(p_energyTerms), energyParams(p_energyParams), animConfig(p_animConfig),
+        QPSolver(false)
     {
         assert(energyTerms.size() == energyParams.size());
         
@@ -132,6 +133,7 @@ namespace FracCuts {
 #endif
         
         setAnimScriptType(animConfig.animScriptType);
+        solveQP = (animConfig.isConstrained && (animConfig.constraintSolverType == CST_QP));
         
         result = data0;
         svd.resize(result.F.rows());
@@ -317,6 +319,45 @@ namespace FracCuts {
             }
         }
         std::cout << "precompute: factorized" << std::endl;
+        
+        if(solveQP) {
+            //TODO: faster matrix set pattern! or use symmetric format in OSQP
+            P_OSQP.resize(result.V.rows() * dim, result.V.rows() * dim);
+            P_OSQP.setZero();
+            P_OSQP.reserve(linSysSolver->getNumNonzeros() * 2 - gradient.size());
+            for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
+                for(const auto& colIter : linSysSolver->getIJ2aI()[rowI]) {
+                    P_OSQP.insert(rowI, colIter.first) = 0.0;
+                    if(rowI != colIter.first) {
+                        P_OSQP.insert(colIter.first, rowI) = 0.0;
+                    }
+                }
+            }
+            P_OSQP.makeCompressed();
+            elemPtr_P_OSQP.resize(0);
+            elemPtr_P_OSQP.reserve(P_OSQP.nonZeros());
+            for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
+                for(const auto& colIter : linSysSolver->getIJ2aI()[rowI]) {
+                    elemPtr_P_OSQP.emplace_back(&P_OSQP.coeffRef(rowI, colIter.first));
+                    if(rowI != colIter.first) {
+                        elemPtr_P_OSQP.emplace_back(&P_OSQP.coeffRef(colIter.first, rowI));
+                    }
+                }
+            }
+            
+            l_OSQP.resize(result.V.rows());
+            u_OSQP.resize(result.V.rows());
+            u_OSQP.setConstant(INFINITY);
+            
+            //TODO: faster matrix set pattern
+            A_OSQP.resize(result.V.rows(), result.V.rows() * dim);
+            A_OSQP.setZero();
+            A_OSQP.reserve(result.V.rows());
+            for(int vI = 0; vI < result.V.rows(); ++vI) {
+                A_OSQP.insert(vI, vI * dim + 1) = 1.0;
+            }
+            A_OSQP.makeCompressed();
+        }
     }
     
     template<int dim>
@@ -681,10 +722,14 @@ namespace FracCuts {
         computeEnergyVal(result, scaffold, false, lastEnergyVal);
         do {
             if(solve_oneStep()) {
-                std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
-                logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
-                return true;
-//                return false;
+                if(solveQP) {
+                    std::cout << "rel tol satisfied" << std::endl;
+                }
+                else {
+                    std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
+                    logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
+                }
+                return !solveQP;
             }
             innerIterAmt++;
             computeGradient(result, scaffold, false, gradient);
@@ -746,12 +791,38 @@ namespace FracCuts {
             }
         }
         
-        Eigen::VectorXd minusG = -gradient;
         if(!mute) {
             std::cout << "back solve..." << std::endl;
         }
         if(!mute) { timer_step.start(4); }
-        linSysSolver->solve(minusG, searchDir);
+        if(solveQP) {
+            int elemPtrI = 0;
+            for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
+                for(const auto& colIter : linSysSolver->getIJ2aI()[rowI]) {
+                    *elemPtr_P_OSQP[elemPtrI++] = linSysSolver->get_a()[colIter.second];
+                    if(rowI != colIter.first) {
+                        *elemPtr_P_OSQP[elemPtrI++] = linSysSolver->get_a()[colIter.second];
+                    }
+                }
+            }
+            
+            for(int vI = 0; vI < result.V.rows(); vI++) {
+                l_OSQP[vI] = -result.V(vI, 1) + animConfig.groundY;
+            }
+            
+            QPSolver.setup(P_OSQP.valuePtr(), c_int(P_OSQP.nonZeros()),
+                           P_OSQP.innerIndexPtr(), P_OSQP.outerIndexPtr(),
+                           gradient.data(),
+                           A_OSQP.valuePtr(), c_int(A_OSQP.nonZeros()),
+                           A_OSQP.innerIndexPtr(), A_OSQP.outerIndexPtr(),
+                           l_OSQP.data(), u_OSQP.data(), c_int(gradient.size()), c_int(result.V.rows()));
+            searchDir.resize(gradient.size());
+            memcpy(searchDir.data(), QPSolver.solve(), searchDir.size() * sizeof(searchDir[0]));
+        }
+        else {
+            Eigen::VectorXd minusG = -gradient;
+            linSysSolver->solve(minusG, searchDir);
+        }
         if(!mute) { timer_step.stop(); }
         
         fractureInitiated = false;
@@ -849,8 +920,8 @@ namespace FracCuts {
             lastEDec += (-lastEnergyVal_scaffold + energyVal_scaffold);
         }
 //        lastEDec = (lastEnergyVal - testingE) / stepSize;
-        if(allowEDecRelTol && (lastEDec / lastEnergyVal / stepSize < 1.0e-6)) {
-//        if(allowEDecRelTol && (lastEDec / lastEnergyVal < 1.0e-6)) {
+//        if(allowEDecRelTol && (lastEDec / lastEnergyVal / stepSize < 1.0e-6)) {
+        if(allowEDecRelTol && (lastEDec / lastEnergyVal < 1.0e-3)) {
             // no prominent energy decrease, stop for accelerating the process
             stopped = true;
         }

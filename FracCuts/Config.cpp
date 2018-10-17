@@ -24,11 +24,14 @@ namespace FracCuts {
     const std::vector<std::string> Config::shapeTypeStrs = {
         "grid", "square", "spikes", "Sharkey", "cylinder", "input"
     };
+    const std::vector<std::string> Config::constraintSolverTypeStrs = {
+        "penalty", "QP"
+    };
     
     Config::Config(void) :
     resolution(100), size(1.0), duration(10.0), dt(0.025),
     YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1),
-    ground(false),
+    ground(false), isConstrained(false),
     orthographic(false)
     {}
     
@@ -113,12 +116,19 @@ namespace FracCuts {
                     ss >> groundFriction >> groundY >> groundRelStiff;
                     assert(groundRelStiff > 0.0);
                 }
+                else if(token == "constraintSolver") {
+                    std::string type;
+                    ss >> type;
+                    constraintSolverType = getConstraintSolverTypeByStr(type);
+                }
                 else if(token == "appendStr") {
                     ss >> appendStr;
                 }
             }
             
             file.close();
+            
+            isConstrained = ground; //TODO: || more constraint flags in the future
             
             return 0;
         }
@@ -158,6 +168,11 @@ namespace FracCuts {
         if(ground) {
             file << "ground " << groundFriction << " " <<
                 groundY << " " << groundRelStiff << std::endl;
+        }
+        
+        if(isConstrained) {
+            file << "constraintSolver " << getStrByConstraintSolverType(constraintSolverType)
+                << std::endl;
         }
         
         file << "view " << (orthographic ? "orthographic": "perspective") << std::endl;
@@ -257,6 +272,21 @@ namespace FracCuts {
     {
         assert(shapeType < shapeTypeStrs.size());
         return shapeTypeStrs[shapeType];
+    }
+    ConstraintSolverType Config::getConstraintSolverTypeByStr(const std::string& str)
+    {
+        for(int i = 0; i < constraintSolverTypeStrs.size(); i++) {
+            if(str == constraintSolverTypeStrs[i]) {
+                return ConstraintSolverType(i);
+            }
+        }
+        std::cout << "use default constraint solver type: penalty" << std::endl;
+        return CST_PENALTY;
+    }
+    std::string Config::getStrByConstraintSolverType(ConstraintSolverType constraintSolverType)
+    {
+        assert(constraintSolverType < constraintSolverTypeStrs.size());
+        return constraintSolverTypeStrs[constraintSolverType];
     }
     
 }
