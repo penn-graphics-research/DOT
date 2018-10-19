@@ -348,6 +348,7 @@ namespace FracCuts {
             l_OSQP.resize(result.V.rows());
             u_OSQP.resize(result.V.rows());
             u_OSQP.setConstant(INFINITY);
+            dual_OSQP.resize(result.V.rows());
             
             //TODO: faster matrix set pattern
             A_OSQP.resize(result.V.rows(), result.V.rows() * dim);
@@ -722,18 +723,23 @@ namespace FracCuts {
         computeEnergyVal(result, scaffold, false, lastEnergyVal);
         do {
             if(solve_oneStep()) {
-                if(solveQP) {
-                    std::cout << "rel tol satisfied" << std::endl;
-                }
-                else {
-                    std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
-                    logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
-                }
-                return !solveQP;
+                std::cout << "\tline search with Armijo's rule failed!!!" << std::endl;
+                logFile << "\tline search with Armijo's rule failed!!!" << std::endl;
+                return true;
             }
             innerIterAmt++;
             computeGradient(result, scaffold, false, gradient);
-            sqn_g = gradient.squaredNorm();
+            if(solveQP) {
+                Eigen::VectorXd grad_KKT = gradient;
+                for(int vI = 0; vI < result.V.rows(); ++vI) {
+                    grad_KKT[vI * dim + 1] += dual_OSQP[vI];
+                    // nonlinear constraint would be different
+                }
+                sqn_g = grad_KKT.squaredNorm();
+            }
+            else {
+                sqn_g = gradient.squaredNorm();
+            }
             if(!mute) {
                 std::cout << "\t||gradient||^2 = " << sqn_g << std::endl;
             }
@@ -818,6 +824,7 @@ namespace FracCuts {
                            l_OSQP.data(), u_OSQP.data(), c_int(gradient.size()), c_int(result.V.rows()));
             searchDir.resize(gradient.size());
             memcpy(searchDir.data(), QPSolver.solve(), searchDir.size() * sizeof(searchDir[0]));
+            memcpy(dual_OSQP.data(), QPSolver.getDual(), dual_OSQP.size() * sizeof(dual_OSQP[0]));
         }
         else {
             Eigen::VectorXd minusG = -gradient;
@@ -870,6 +877,7 @@ namespace FracCuts {
 //        while((testingE > lastEnergyVal + stepSize * c1m) ||
 //              (searchDir.dot(testingG) < c2m)) // Wolfe condition
         while(testingE > lastEnergyVal + stepSize * c1m) // Armijo condition
+            //TODO: for nonlinear constraint also needs to enforce feasibility here!
 //        while(0)
         {
             stepSize /= 2.0;

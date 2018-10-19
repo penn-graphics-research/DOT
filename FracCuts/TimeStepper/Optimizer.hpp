@@ -57,7 +57,7 @@ namespace FracCuts {
         OSQP QPSolver;
         Eigen::SparseMatrix<double> P_OSQP;
         std::vector<double*> elemPtr_P_OSQP;
-        Eigen::VectorXd l_OSQP, u_OSQP;
+        Eigen::VectorXd l_OSQP, u_OSQP, dual_OSQP;
         Eigen::SparseMatrix<double> A_OSQP;
         
         Eigen::VectorXd gradient; // energy gradient computed in each iteration

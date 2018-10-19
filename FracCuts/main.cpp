@@ -1048,7 +1048,7 @@ int main(int argc, char *argv[])
     
     //TODO: bijectivity for other mode?
     optimizer->precompute();
-    optimizer->setAllowEDecRelTol(config.isConstrained && (config.constraintSolverType == FracCuts::CST_QP));
+    optimizer->setAllowEDecRelTol(false);
 #ifndef STATIC_SOLVE
     double delay_10ms = optimizer->getDt() * 100.0;
     GIFStep = static_cast<int>(std::ceil(3.0 / delay_10ms));

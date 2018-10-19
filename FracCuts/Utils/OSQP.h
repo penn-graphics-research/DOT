@@ -89,6 +89,12 @@ namespace FracCuts {
             // dual: c_float *work->solution->y
             return work->solution->x;
         }
+        
+        c_float *getDual(void) const
+        {
+            assert(work);
+            return work->solution->y;
+        }
     };
     
 }
