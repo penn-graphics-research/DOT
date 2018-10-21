@@ -731,11 +731,18 @@ namespace FracCuts {
             computeGradient(result, scaffold, false, gradient);
             if(solveQP) {
                 Eigen::VectorXd grad_KKT = gradient;
+                Eigen::VectorXd fb(result.V.rows()); // Fischer-Burmeister measure for complementarity
                 for(int vI = 0; vI < result.V.rows(); ++vI) {
-                    grad_KKT[vI * dim + 1] += dual_OSQP[vI];
+                    const double &dual = dual_OSQP[vI];
+                    grad_KKT[vI * dim + 1] += dual;
+                    const double &constraint = result.V(vI, 1);
+                    fb[vI] = dual + constraint - std::sqrt(dual * dual + constraint * constraint);
                     // nonlinear constraint would be different
                 }
                 sqn_g = grad_KKT.squaredNorm();
+                
+                std::cout << "FB norm: inf = " << fb.cwiseAbs().maxCoeff() <<
+                    ", l2 = " << fb.norm() << std::endl;
             }
             else {
                 sqn_g = gradient.squaredNorm();
