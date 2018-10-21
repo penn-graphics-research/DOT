@@ -113,8 +113,11 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void AnimScripter<dim>::stepAnimScript(TriangleSoup<dim>& mesh, double dt)
+    void AnimScripter<dim>::stepAnimScript(TriangleSoup<dim>& mesh, double dt,
+                                           const std::vector<Energy<dim>*>& energyTerms)
     {
+        Eigen::VectorXd searchDir(mesh.V.rows() * dim);
+        searchDir.setZero();
         switch (animScriptType) {
             case AST_NULL:
                 break;
@@ -125,7 +128,8 @@ namespace FracCuts {
             case AST_STRETCH:
             case AST_SQUASH:
                 for(const auto& movingVerts : velocity_handleVerts) {
-                    mesh.V.row(movingVerts.first) += movingVerts.second.transpose() * dt;
+                    searchDir.segment<dim>(movingVerts.first * dim) =
+                        movingVerts.second * dt;
                 }
                 break;
                 
@@ -134,10 +138,10 @@ namespace FracCuts {
                     const Eigen::Matrix3d rotMtr =
                         Eigen::AngleAxis<double>(movingVerts.second * dt,
                                                  Eigen::Vector3d::UnitZ()).toRotationMatrix();
-                    
                     const auto rotCenter = rotCenter_handleVerts.find(movingVerts.first);
                     assert(rotCenter != rotCenter_handleVerts.end());
-                    mesh.V.row(movingVerts.first) = rotMtr.block<dim, dim>(0, 0) * (mesh.V.row(movingVerts.first).transpose() - rotCenter->second) + rotCenter->second;
+                    
+                    searchDir.segment<dim>(movingVerts.first * dim) = (rotMtr.block<dim, dim>(0, 0) * (mesh.V.row(movingVerts.first).transpose() - rotCenter->second) + rotCenter->second) - mesh.V.row(movingVerts.first).transpose();
                 }
                 break;
                 
@@ -153,6 +157,15 @@ namespace FracCuts {
             default:
                 assert(0 && "invalid animScriptType");
                 break;
+        }
+        
+        double stepSize = 1.0;
+        for(const auto& energyTermI : energyTerms) {
+            energyTermI->filterStepSize(mesh, searchDir, stepSize);
+        }
+        
+        for(int vI = 0; vI < mesh.V.rows(); vI++) {
+            mesh.V.row(vI) += stepSize * searchDir.segment<dim>(vI * dim).transpose();
         }
     }
     

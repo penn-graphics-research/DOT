@@ -369,7 +369,7 @@ namespace FracCuts {
         for(int iterI = 0; iterI < maxIter; iterI++)
         {
 #ifndef STATIC_SOLVE
-            animScripter.stepAnimScript(result, dt);
+            animScripter.stepAnimScript(result, dt, energyTerms);
             if(energyTerms[0]->getNeedElemInvSafeGuard()) {
                 if(!result.checkInversion()) {
                     std::cout << "scripted motion causes element inversion, end process" << std::endl;
@@ -898,6 +898,8 @@ namespace FracCuts {
         if(!mute) {
             std::cout << stepSize << "(armijo) ";
         }
+        
+        assert(result.checkInversion());
 
 //        while((!result.checkInversion()) ||
 //              ((scaffolding) && (!scaffold.airMesh.checkInversion())))

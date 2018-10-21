@@ -9,6 +9,7 @@
 #ifndef AnimScripter_hpp
 #define AnimScripter_hpp
 
+#include "Energy.hpp"
 #include "TriangleSoup.hpp"
 
 #include <cstdio>
@@ -48,7 +49,8 @@ namespace FracCuts {
         
     public:
         void initAnimScript(TriangleSoup<dim>& mesh);
-        void stepAnimScript(TriangleSoup<dim>& mesh, double dt);
+        void stepAnimScript(TriangleSoup<dim>& mesh, double dt,
+                            const std::vector<Energy<dim>*>& energyTerms);
         
     public:
         void setAnimScriptType(AnimScriptType p_animScriptType);

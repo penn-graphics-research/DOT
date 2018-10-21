@@ -1223,7 +1223,7 @@ namespace FracCuts {
                 computeInjectiveStepSize_3d(data.F, data.V, searchDir, 1.0e-6, output.data());
             }
             
-            double tentativeStepSize = 0.99 * output.minCoeff();
+            double tentativeStepSize = 0.9 * output.minCoeff();
             if(tentativeStepSize < stepSize) {
                 stepSize = tentativeStepSize;
             }
