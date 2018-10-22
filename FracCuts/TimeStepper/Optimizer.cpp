@@ -347,20 +347,6 @@ namespace FracCuts {
                     }
                 }
             }
-            
-            l_OSQP.resize(result.V.rows());
-            u_OSQP.resize(result.V.rows());
-            u_OSQP.setConstant(INFINITY);
-            dual_OSQP.resize(result.V.rows());
-            
-            //TODO: faster matrix set pattern
-            A_OSQP.resize(result.V.rows(), result.V.rows() * dim);
-            A_OSQP.setZero();
-            A_OSQP.reserve(result.V.rows());
-            for(int vI = 0; vI < result.V.rows(); ++vI) {
-                A_OSQP.insert(vI, vI * dim + 1) = 1.0;
-            }
-            A_OSQP.makeCompressed();
         }
     }
     
@@ -734,16 +720,24 @@ namespace FracCuts {
             computeGradient(result, scaffold, false, gradient);
             if(solveQP) {
                 Eigen::VectorXd grad_KKT = gradient;
-                Eigen::VectorXd fb(result.V.rows()); // Fischer-Burmeister measure for complementarity
-                for(int vI = 0; vI < result.V.rows(); ++vI) {
-                    const double &dual = dual_OSQP[vI];
-                    grad_KKT[vI * dim + 1] += dual;
-                    const double &constraint = result.V(vI, 1);
-                    fb[vI] = dual + constraint - std::sqrt(dual * dual + constraint * constraint);
-                    // nonlinear constraint would be different
+                constraintVal_OSQP.conservativeResize(0);
+                for(int coI = 0; coI < animConfig.collisionObjects.size(); ++coI) {
+                    animConfig.collisionObjects[coI]->evaluateConstraints(result,
+                                                                          constraintVal_OSQP);
+                    int constraintAmtI = constraintStartInds[coI + 1] - constraintStartInds[coI];
+                    animConfig.collisionObjects[coI]->leftMultiplyConstraintJacobianT
+                        (result, dual_OSQP.segment(constraintStartInds[coI], constraintAmtI),
+                         grad_KKT);
                 }
                 sqn_g = grad_KKT.squaredNorm();
                 
+                Eigen::VectorXd fb(l_OSQP.size()); // Fischer-Burmeister measure for complementarity
+                for(int constraintI = 0; constraintI < l_OSQP.size(); ++constraintI) {
+                    const double &dual = dual_OSQP[constraintI];
+                    const double &constraint = constraintVal_OSQP[constraintI];
+                    fb[constraintI] = (dual + constraint -
+                                       std::sqrt(dual * dual + constraint * constraint));
+                }
                 std::cout << "FB norm: inf = " << fb.cwiseAbs().maxCoeff() <<
                     ", l2 = " << fb.norm() << std::endl;
             }
@@ -822,16 +816,29 @@ namespace FracCuts {
                 }
             }
             
-            for(int vI = 0; vI < result.V.rows(); vI++) {
-                l_OSQP[vI] = -result.V(vI, 1) + animConfig.groundY;
+            A_triplet_OSQP.resize(0);
+            l_OSQP.conservativeResize(0);
+            constraintStartInds.resize(1);
+            constraintStartInds[0] = 0;
+            for(const auto& coI : animConfig.collisionObjects) {
+                coI->updateConstraints_OSQP(result, A_triplet_OSQP, l_OSQP);
+                constraintStartInds.emplace_back(l_OSQP.size());
             }
+            A_OSQP.resize(l_OSQP.size(), result.V.rows() * dim);
+            A_OSQP.setZero();
+            A_OSQP.reserve(A_triplet_OSQP.size());
+            A_OSQP.setFromTriplets(A_triplet_OSQP.begin(), A_triplet_OSQP.end());
+            u_OSQP.conservativeResize(l_OSQP.size());
+            u_OSQP.setConstant(INFINITY);
+            dual_OSQP.conservativeResize(l_OSQP.size());
             
             QPSolver.setup(P_OSQP.valuePtr(), c_int(P_OSQP.nonZeros()),
                            P_OSQP.innerIndexPtr(), P_OSQP.outerIndexPtr(),
                            gradient.data(),
                            A_OSQP.valuePtr(), c_int(A_OSQP.nonZeros()),
                            A_OSQP.innerIndexPtr(), A_OSQP.outerIndexPtr(),
-                           l_OSQP.data(), u_OSQP.data(), c_int(gradient.size()), c_int(result.V.rows()));
+                           l_OSQP.data(), u_OSQP.data(),
+                           c_int(gradient.size()), c_int(l_OSQP.size()));
             searchDir.resize(gradient.size());
             memcpy(searchDir.data(), QPSolver.solve(), searchDir.size() * sizeof(searchDir[0]));
             memcpy(dual_OSQP.data(), QPSolver.getDual(), dual_OSQP.size() * sizeof(dual_OSQP[0]));
@@ -909,7 +916,9 @@ namespace FracCuts {
             std::cout << stepSize << "(armijo) ";
         }
         
-        assert(result.checkInversion());
+        if(energyTerms[0]->getNeedElemInvSafeGuard()) {
+            assert(result.checkInversion());
+        }
 
 //        while((!result.checkInversion()) ||
 //              ((scaffolding) && (!scaffold.airMesh.checkInversion())))

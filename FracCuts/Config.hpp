@@ -11,6 +11,8 @@
 
 #include "AnimScripter.hpp"
 
+#include "CollisionObject.h"
+
 #include <iostream>
 #include <map>
 
@@ -53,11 +55,8 @@ namespace FracCuts {
         bool isConstrained;
         ConstraintSolverType constraintSolverType;
         
-        // ground
-        bool ground;
-        bool groundFriction;
-        double groundY;
-        double groundRelStiff;
+        // collision objects
+        std::vector<CollisionObject<DIM>*> collisionObjects;
         
         std::string appendStr;
         
@@ -69,6 +68,7 @@ namespace FracCuts {
         
     public:
         Config(void);
+        ~Config(void);
         int loadFromFile(const std::string& filePath);
         void saveToFile(const std::string& filePath);
         

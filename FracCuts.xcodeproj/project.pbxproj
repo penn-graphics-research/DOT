@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		980E7B6021765C8B0080705E /* libosqp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 989A2F61217513AC0074A705 /* libosqp.dylib */; };
+		980E7B66217E44010080705E /* HalfSpace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980E7B64217E44010080705E /* HalfSpace.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
 		98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */; };
@@ -60,6 +61,9 @@
 /* Begin PBXFileReference section */
 		980180B81F552CDA00C64B43 /* FracCuts */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FracCuts; sourceTree = BUILT_PRODUCTS_DIR; };
 		980180BB1F552CDA00C64B43 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		980E7B63217E429E0080705E /* CollisionObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CollisionObject.h; path = CollisionObject/CollisionObject.h; sourceTree = "<group>"; };
+		980E7B64217E44010080705E /* HalfSpace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HalfSpace.cpp; path = CollisionObject/HalfSpace.cpp; sourceTree = "<group>"; };
+		980E7B65217E44010080705E /* HalfSpace.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HalfSpace.hpp; path = CollisionObject/HalfSpace.hpp; sourceTree = "<group>"; };
 		982CE6121F5DB358004176A8 /* Energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Energy.cpp; sourceTree = "<group>"; };
 		983E7DB3202240D900412128 /* Diagnostic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Diagnostic.hpp; sourceTree = "<group>"; };
 		983E7DB62022421400412128 /* MeshProcessing.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MeshProcessing.hpp; sourceTree = "<group>"; };
@@ -176,6 +180,7 @@
 		980180BA1F552CDA00C64B43 /* FracCuts */ = {
 			isa = PBXGroup;
 			children = (
+				980E7B62217E42480080705E /* CollisionObject */,
 				98E6E68620DB15CC00130500 /* Energy */,
 				98E6E69C20E7E58800130500 /* LinSysSolver */,
 				986B83AA20FFDE9000AF232B /* TimeStepper */,
@@ -191,6 +196,16 @@
 				98E6E68A20DB18B800130500 /* Utils */,
 			);
 			path = FracCuts;
+			sourceTree = "<group>";
+		};
+		980E7B62217E42480080705E /* CollisionObject */ = {
+			isa = PBXGroup;
+			children = (
+				980E7B63217E429E0080705E /* CollisionObject.h */,
+				980E7B64217E44010080705E /* HalfSpace.cpp */,
+				980E7B65217E44010080705E /* HalfSpace.hpp */,
+			);
+			name = CollisionObject;
 			sourceTree = "<group>";
 		};
 		98444EC4217380A5004446B1 /* Collision */ = {
@@ -383,6 +398,7 @@
 				982CE6131F5DB358004176A8 /* Energy.cpp in Sources */,
 				986B83A920FE73EA00AF232B /* ADMMDDTimeStepper.cpp in Sources */,
 				98444EC72173812D004446B1 /* SoftPenaltyCollisionEnergy.cpp in Sources */,
+				980E7B66217E44010080705E /* HalfSpace.cpp in Sources */,
 				988ED1351F5871F200B21181 /* Optimizer.cpp in Sources */,
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,

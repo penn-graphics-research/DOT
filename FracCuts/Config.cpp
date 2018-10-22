@@ -9,6 +9,8 @@
 #include "Config.hpp"
 #include "IglUtils.hpp"
 
+#include "HalfSpace.hpp"
+
 #include <fstream>
 #include <sstream>
 #include <ctime>
@@ -31,9 +33,15 @@ namespace FracCuts {
     Config::Config(void) :
     resolution(100), size(1.0), duration(10.0), dt(0.025),
     YM(100.0), PR(0.4), shapeType(P_GRID), partitionAmt(-1),
-    ground(false), isConstrained(false),
-    orthographic(false)
+    isConstrained(false), orthographic(false)
     {}
+    
+    Config::~Config(void)
+    {
+        for(auto& coI : collisionObjects) {
+            delete coI;
+        }
+    }
     
     int Config::loadFromFile(const std::string& filePath)
     {
@@ -112,9 +120,13 @@ namespace FracCuts {
                     }
                 }
                 else if(token == "ground") {
-                    ground = true;
+                    double groundFriction, groundY, groundRelStiff;
                     ss >> groundFriction >> groundY >> groundRelStiff;
+                    assert(groundFriction >= 0.0);
                     assert(groundRelStiff > 0.0);
+                    collisionObjects.emplace_back(new HalfSpace<DIM>(groundY,
+                                                                     groundRelStiff,
+                                                                     groundFriction));
                 }
                 else if(token == "constraintSolver") {
                     std::string type;
@@ -128,7 +140,7 @@ namespace FracCuts {
             
             file.close();
             
-            isConstrained = ground; //TODO: || more constraint flags in the future
+            isConstrained = !collisionObjects.empty(); //TODO: || more constraint flags in the future
             
             return 0;
         }
@@ -165,9 +177,8 @@ namespace FracCuts {
         }
         file << std::endl;
         
-        if(ground) {
-            file << "ground " << groundFriction << " " <<
-                groundY << " " << groundRelStiff << std::endl;
+        for(const auto& coI : collisionObjects) {
+            coI->outputConfig(file);
         }
         
         if(isConstrained) {

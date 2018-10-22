@@ -175,62 +175,6 @@ void updateViewerData_seam(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::Matrix
     }
 }
 
-void updateViewerData_floor(Eigen::MatrixXd& V, Eigen::MatrixXi& F, Eigen::MatrixXd& UV)
-{
-#if(DIM == 3)
-    if(config.ground) {
-        Eigen::MatrixXd V_floor;
-        Eigen::MatrixXi F_floor;
-        
-        double size = config.size * 10.0;
-        int elemAmt = 200;
-        double spacing = size / std::sqrt(elemAmt / 2.0);
-        assert(size >= spacing);
-        int gridSize = static_cast<int>(size / spacing) + 1;
-        spacing = size / (gridSize - 1);
-        
-        V_floor.resize(gridSize * gridSize, 3);
-        for(int rowI = 0; rowI < gridSize; rowI++)
-        {
-            for(int colI = 0; colI < gridSize; colI++)
-            {
-                int vI = rowI * gridSize + colI;
-                V_floor.row(vI) = Eigen::RowVector3d(spacing * colI - size / 2.0,
-                                                     config.groundY,
-                                                     spacing * rowI - size / 2.0);
-            }
-        }
-
-        F_floor.resize((gridSize - 1) * (gridSize - 1) * 2, 3);
-        for(int rowI = 0; rowI < gridSize - 1; rowI++)
-        {
-            for(int colI = 0; colI < gridSize - 1; colI++)
-            {
-                int squareI = rowI * (gridSize - 1) + colI;
-                F_floor.row(squareI * 2) = Eigen::Vector3i(rowI * gridSize + colI,
-                                                           (rowI + 1) * gridSize + colI,
-                                                           (rowI + 1) * gridSize + colI + 1);
-                F_floor.row(squareI * 2 + 1) = Eigen::Vector3i(rowI * gridSize + colI,
-                                                               (rowI + 1) * gridSize + colI + 1,
-                                                               rowI * gridSize + colI + 1);
-            }
-        }
-
-        int oldVSize = V.rows();
-        V.conservativeResize(oldVSize + V_floor.rows(), 3);
-        V.bottomRows(V_floor.rows()) = V_floor;
-        
-        int oldFSize = F.rows();
-        F.conservativeResize(oldFSize + F_floor.rows(), 3);
-        F.bottomRows(F_floor.rows()) = F_floor;
-        F.bottomRows(F_floor.rows()).array() += oldVSize;
-        
-        floorColor.conservativeResize(F_floor.rows(), 3);
-        floorColor.setConstant(0.9);
-    }
-#endif
-}
-
 void updateViewerData_distortion(void)
 {
     Eigen::MatrixXd color_distortionVis;
@@ -332,7 +276,10 @@ void updateViewerData(void)
         }
         viewer.core.align_camera_center(triSoup[viewChannel]->V_rest * texScale, F_vis);
         updateViewerData_seam(UV_vis, F_vis, UV_vis);
-        updateViewerData_floor(UV_vis, F_vis, UV_vis);
+        floorColor.conservativeResize(0, 3);
+        for(const auto& coI : config.collisionObjects) {
+            coI->draw(UV_vis, F_vis, floorColor);
+        }
         
         if((UV_vis.rows() != viewer.data().V.rows()) ||
            (F_vis.rows() != viewer.data().F.rows()))
@@ -1020,10 +967,10 @@ int main(int argc, char *argv[])
 //        energyTerms.back()->checkHessian(*triSoup[0], true);
     }
     
-    if(config.ground && (config.constraintSolverType == FracCuts::CST_PENALTY)) {
-        energyParams.emplace_back(1.0);
-        energyTerms.emplace_back(new FracCuts::SoftPenaltyCollisionEnergy<DIM>
-                                 (config.groundFriction, config.groundY, config.groundRelStiff));
+    if(config.constraintSolverType == FracCuts::CST_PENALTY) {
+        for(const auto& coI : config.collisionObjects) {
+            coI->addSoftPenalty(energyParams, energyTerms);
+        }
     }
     
     assert(lambda == 0.0);
