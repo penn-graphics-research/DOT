@@ -13,13 +13,47 @@
 namespace FracCuts {
     
     template<int dim>
+    HalfSpace<dim>::HalfSpace(const Eigen::Matrix<double, dim, 1>& p_origin,
+                              const Eigen::Matrix<double, dim, 1>& p_normal,
+                              double p_stiffness, double p_friction)
+    {
+        init(p_origin, p_normal, p_stiffness, p_friction);
+    }
+    
+    template<int dim>
     HalfSpace<dim>::HalfSpace(double p_Y, double p_stiffness, double p_friction)
     {
-        Base::origin.setZero();
-        Base::origin[1] = p_Y;
+        Eigen::Matrix<double, dim, 1> p_origin, p_normal;
+        p_origin.setZero();
+        p_origin[1] = p_Y;
+        p_normal.setZero();
+        p_normal[1] = 1.0;
+        
+        init(p_origin, p_normal, p_stiffness, p_friction);
+    }
+    
+    template<int dim>
+    void HalfSpace<dim>::init(const Eigen::Matrix<double, dim, 1>& p_origin,
+                              const Eigen::Matrix<double, dim, 1>& p_normal,
+                              double p_stiffness, double p_friction)
+    {
+        Base::origin = p_origin;
+        normal = p_normal;
+        normal.normalize();
+        D = -normal.dot(Base::origin);
+        
+        Eigen::Matrix<double, dim, 1> defaultN;
+        defaultN.setZero();
+        defaultN[1] = 1.0;
+        double rotAngle = std::acos(std::max(-1.0, std::min(1.0, normal.dot(defaultN))));
+        if(rotAngle < 1.0e-3) {
+            rotMtr.setIdentity();
+        }
+        else {
+            rotMtr = Eigen::AngleAxisd(rotAngle, (defaultN.cross(normal)).normalized());
+        }
         
         Base::stiffness = p_stiffness;
-        
         Base::friction = p_friction;
     }
     
@@ -32,7 +66,11 @@ namespace FracCuts {
         
         A_triplet.reserve(A_triplet.size() + mesh.V.rows());
         for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            A_triplet.emplace_back(oldConstraintSize + vI, vI * dim + 1, 1.0);
+            A_triplet.emplace_back(oldConstraintSize + vI, vI * dim, normal[0]);
+            A_triplet.emplace_back(oldConstraintSize + vI, vI * dim + 1, normal[1]);
+            if(dim == 3) {
+                A_triplet.emplace_back(oldConstraintSize + vI, vI * dim + 2, normal[2]);
+            }
         }
         
         evaluateConstraints(mesh, l, -1.0);
@@ -46,7 +84,7 @@ namespace FracCuts {
         
         val.conservativeResize(oldConstraintSize + mesh.V.rows());
         for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            val[oldConstraintSize + vI] = coef * (mesh.V(vI, 1) - Base::origin[1]);
+            val[oldConstraintSize + vI] = coef * (normal.transpose().dot(mesh.V.row(vI)) + D);
         }
     }
     
@@ -59,7 +97,7 @@ namespace FracCuts {
         assert(output_incremental.size() == mesh.V.rows() * dim);
         
         for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            output_incremental[vI * dim + 1] += input[vI];
+            output_incremental.segment<dim>(vI * dim) += input[vI] * normal;
         }
     }
     
@@ -70,6 +108,7 @@ namespace FracCuts {
         energyParams.emplace_back(1.0);
         energTerms.emplace_back(new SoftPenaltyCollisionEnergy<DIM>
                                 (Base::friction, Base::origin[1], Base::stiffness));
+        //TODO: different penalty term
     }
     
     template<int dim>
@@ -77,6 +116,7 @@ namespace FracCuts {
     {
         os << "ground " << Base::friction << " " <<
             Base::origin[1] << " " << Base::stiffness << std::endl;
+        //TODO: different input
     }
     
     template<int dim>
@@ -85,6 +125,8 @@ namespace FracCuts {
                               Eigen::MatrixXd& color,
                               double extensionScale) const
     {
+        //TODO: transform rather than redraw everytime
+        
         Eigen::MatrixXd V_floor;
         Eigen::MatrixXi F_floor;
         
@@ -101,9 +143,11 @@ namespace FracCuts {
             for(int colI = 0; colI < gridSize; colI++)
             {
                 int vI = rowI * gridSize + colI;
-                V_floor.row(vI) = Eigen::RowVector3d(spacing * colI - size / 2.0,
-                                                     Base::origin[1],
-                                                     spacing * rowI - size / 2.0);
+                Eigen::RowVector3d coord(spacing * colI - size / 2.0,
+                                         Base::origin[1],
+                                         spacing * rowI - size / 2.0);
+                V_floor.row(vI) = (rotMtr * (coord.transpose() - Base::origin) +
+                                   Base::origin).transpose();
             }
         }
         

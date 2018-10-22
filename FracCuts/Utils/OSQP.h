@@ -27,6 +27,7 @@ namespace FracCuts {
             osqp_set_default_settings(settings);
             settings->verbose = printOutput;
             settings->eps_abs = 0.0;
+            settings->eps_rel = 1.0e-3; //TODO: related to incremental potential gradient tolerance
             
             data = (OSQPData *)c_malloc(sizeof(OSQPData));
             

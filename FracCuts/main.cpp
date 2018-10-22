@@ -791,7 +791,9 @@ int main(int argc, char *argv[])
                 FracCuts::TriangleSoup<DIM> primitive(config.shapeType,
                                                       config.size, config.resolution);
                 V = primitive.V_rest;
-                UV = primitive.V;
+                V *= config.size / (V.colwise().maxCoeff() - V.colwise().minCoeff()).maxCoeff();
+                V.rowwise() -= V.colwise().minCoeff();
+                UV = V.leftCols(DIM);
 
                 // nonuniform scale
 //                UV.col(0) *= 1.1;
