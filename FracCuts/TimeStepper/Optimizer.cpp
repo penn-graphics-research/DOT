@@ -321,19 +321,22 @@ namespace FracCuts {
         std::cout << "precompute: factorized" << std::endl;
         
         if(solveQP) {
-            //TODO: faster matrix set pattern! or use symmetric format in OSQP
-            P_OSQP.resize(result.V.rows() * dim, result.V.rows() * dim);
-            P_OSQP.setZero();
-            P_OSQP.reserve(linSysSolver->getNumNonzeros() * 2 - gradient.size());
+            //TODO: use symmetric format in OSQP
+            std::vector<Eigen::Triplet<double>> coefs;
+            coefs.reserve(linSysSolver->getNumNonzeros() * 2 - gradient.size());
             for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
                 for(const auto& colIter : linSysSolver->getIJ2aI()[rowI]) {
-                    P_OSQP.insert(rowI, colIter.first) = 0.0;
+                    coefs.emplace_back(rowI, colIter.first, 0.0);
                     if(rowI != colIter.first) {
-                        P_OSQP.insert(colIter.first, rowI) = 0.0;
+                        coefs.emplace_back(colIter.first, rowI, 0.0);
                     }
                 }
             }
-            P_OSQP.makeCompressed();
+            P_OSQP.resize(result.V.rows() * dim, result.V.rows() * dim);
+            P_OSQP.setZero();
+            P_OSQP.reserve(coefs.size());
+            P_OSQP.setFromTriplets(coefs.begin(), coefs.end());
+            
             elemPtr_P_OSQP.resize(0);
             elemPtr_P_OSQP.reserve(P_OSQP.nonZeros());
             for(int rowI = 0; rowI < linSysSolver->getNumRows(); rowI++) {
