@@ -899,9 +899,9 @@ namespace FracCuts {
         }
         
         double lastEnergyVal_scaffold = 0.0;
-        const double m = searchDir.dot(gradient);
-        const double c1m = 1.0e-4 * m;
-//        const double c1m = 0.0;
+//        const double m = searchDir.dot(gradient);
+//        const double c1m = 1.0e-4 * m;
+        const double c1m = 0.0;
         Eigen::MatrixXd resultV0 = result.V;
 //        TriangleSoup<dim> temp = result; //TEST
         Eigen::MatrixXd scaffoldV0;

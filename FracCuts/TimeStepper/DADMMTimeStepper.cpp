@@ -190,8 +190,9 @@ namespace FracCuts {
                 Base::energyTerms[0]->filterStepSize(zi, p, alpha);
                 
                 // Armijo's rule:
-                const double m = p.dot(g);
-                const double c1m = 1.0e-4 * m;
+//                const double m = p.dot(g);
+//                const double c1m = 1.0e-4 * m;
+                const double c1m = 0.0;
                 const Eigen::VectorXd zi0 = zi;
                 double E0;
                 computeEnergyVal_zUpdate(triI, zi0.transpose(), E0);

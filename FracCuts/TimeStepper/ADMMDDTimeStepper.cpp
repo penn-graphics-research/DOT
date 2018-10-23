@@ -72,7 +72,7 @@ namespace FracCuts {
 #if(USE_METIS == 1)
         partitions.partMesh(partitionAmt);
 #elif(USE_METIS == 2)
-        partitions.partMesh_slice(Base::result, partitionAmt, 0);
+        partitions.partMesh_slice(Base::result, partitionAmt, 1);
 #endif
 #endif
         
@@ -601,8 +601,9 @@ namespace FracCuts {
                 Base::energyTerms[0]->filterStepSize(mesh_subdomain[subdomainI], p, alpha);
                 
                 // Armijo's rule:
-                const double m = p.dot(g);
-                const double c1m = 1.0e-4 * m;
+//                const double m = p.dot(g);
+//                const double c1m = 1.0e-4 * m;
+                const double c1m = 0.0;
                 Eigen::MatrixXd V0 = mesh_subdomain[subdomainI].V;
                 double E0;
                 computeEnergyVal_subdomain(subdomainI, false, E0);
