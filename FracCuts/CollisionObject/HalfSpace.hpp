@@ -45,10 +45,15 @@ namespace FracCuts {
         
         virtual void evaluateConstraints(const TriangleSoup<dim>& mesh,
                                          Eigen::VectorXd& val, double coef = 1.0) const;
+        virtual void evaluateConstraints_all(const TriangleSoup<dim>& mesh,
+                                             Eigen::VectorXd& val, double coef = 1.0) const;
         
         virtual void leftMultiplyConstraintJacobianT(const TriangleSoup<dim>& mesh,
                                                      const Eigen::VectorXd& input,
                                                      Eigen::VectorXd& output) const;
+        
+        virtual void filterSearchDir_OSQP(const TriangleSoup<dim>& mesh,
+                                          Eigen::VectorXd& searchDir);
         
         virtual void addSoftPenalty(std::vector<double>& energyParams,
                                     std::vector<Energy<DIM>*>& energTerms) const;

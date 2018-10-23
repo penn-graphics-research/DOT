@@ -167,6 +167,7 @@ namespace FracCuts {
         for(int vI = 0; vI < mesh.V.rows(); vI++) {
             mesh.V.row(vI) += stepSize * searchDir.segment<dim>(vI * dim).transpose();
         }
+        //TODO: continue to move in each Newton's iteration if not at destiny
     }
     
     template<int dim>

@@ -119,6 +119,7 @@ namespace FracCuts {
                         std::cout << "use default perspective view" << std::endl;
                     }
                 }
+                
                 else if(token == "ground") {
                     double groundFriction, groundY, groundRelStiff;
                     ss >> groundFriction >> groundY >> groundRelStiff;
@@ -128,6 +129,24 @@ namespace FracCuts {
                                                                      groundRelStiff,
                                                                      groundFriction));
                 }
+                else if(token == "halfSpace") {
+                    Eigen::Matrix<double, DIM, 1> origin, normal;
+                    ss >> origin[0] >> origin[1];
+                    if(DIM == 3) {
+                        ss >> origin[2];
+                    }
+                    ss >> normal[0] >> normal[1];
+                    if(DIM == 3) {
+                        ss >> normal[2];
+                    }
+                    double stiffness, friction;
+                    ss >> stiffness >> friction;
+                    collisionObjects.emplace_back(new HalfSpace<DIM>(origin,
+                                                                     normal,
+                                                                     stiffness,
+                                                                     friction));
+                }
+                
                 else if(token == "constraintSolver") {
                     std::string type;
                     ss >> type;

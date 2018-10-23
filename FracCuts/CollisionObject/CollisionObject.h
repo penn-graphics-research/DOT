@@ -25,9 +25,19 @@ namespace FracCuts {
         Eigen::Matrix<double, dim, 1> origin;
         double stiffness;
         double friction;
+        std::set<int> activeSet, activeSet_next;
         
     public:
         virtual ~CollisionObject(void) {};
+        
+    public:
+        virtual void clearActiveSet(void) {
+            activeSet.clear();
+            activeSet_next.clear();
+        }
+        virtual void updateActiveSet(void) {
+            activeSet = activeSet_next;
+        }
         
     public:
         virtual void updateConstraints_OSQP(const TriangleSoup<dim>& mesh,
@@ -36,10 +46,15 @@ namespace FracCuts {
         
         virtual void evaluateConstraints(const TriangleSoup<dim>& mesh,
                                          Eigen::VectorXd& val, double coef = 1.0) const = 0;
+        virtual void evaluateConstraints_all(const TriangleSoup<dim>& mesh,
+                                             Eigen::VectorXd& val, double coef = 1.0) const = 0;
         
         virtual void leftMultiplyConstraintJacobianT(const TriangleSoup<dim>& mesh,
                                                      const Eigen::VectorXd& input,
                                                      Eigen::VectorXd& output) const = 0;
+        
+        virtual void filterSearchDir_OSQP(const TriangleSoup<dim>& mesh,
+                                          Eigen::VectorXd& searchDir) = 0;
         
         virtual void addSoftPenalty(std::vector<double>& energyParams,
                                     std::vector<Energy<DIM>*>& energTerms) const = 0;

@@ -62,15 +62,15 @@ namespace FracCuts {
                                                 std::vector<Eigen::Triplet<double>>& A_triplet,
                                                 Eigen::VectorXd& l) const
     {
-        int oldConstraintSize = l.size();
-        
-        A_triplet.reserve(A_triplet.size() + mesh.V.rows());
-        for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            A_triplet.emplace_back(oldConstraintSize + vI, vI * dim, normal[0]);
-            A_triplet.emplace_back(oldConstraintSize + vI, vI * dim + 1, normal[1]);
+        A_triplet.reserve(A_triplet.size() + Base::activeSet.size() * dim);
+        int constraintI = l.size();
+        for(const auto& vI : Base::activeSet) {
+            A_triplet.emplace_back(constraintI, vI * dim, normal[0]);
+            A_triplet.emplace_back(constraintI, vI * dim + 1, normal[1]);
             if(dim == 3) {
-                A_triplet.emplace_back(oldConstraintSize + vI, vI * dim + 2, normal[2]);
+                A_triplet.emplace_back(constraintI, vI * dim + 2, normal[2]);
             }
+            ++constraintI;
         }
         
         evaluateConstraints(mesh, l, -1.0);
@@ -80,11 +80,22 @@ namespace FracCuts {
     void HalfSpace<dim>::evaluateConstraints(const TriangleSoup<dim>& mesh,
                                              Eigen::VectorXd& val, double coef) const
     {
-        int oldConstraintSize = val.size();
-        
-        val.conservativeResize(oldConstraintSize + mesh.V.rows());
-        for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            val[oldConstraintSize + vI] = coef * (normal.transpose().dot(mesh.V.row(vI)) + D);
+        int constraintI = val.size();
+        val.conservativeResize(constraintI + Base::activeSet.size());
+        for(const auto& vI : Base::activeSet) {
+            val[constraintI] = coef * (normal.transpose().dot(mesh.V.row(vI)) + D);
+            ++constraintI;
+        }
+    }
+    template<int dim>
+    void HalfSpace<dim>::evaluateConstraints_all(const TriangleSoup<dim>& mesh,
+                                                 Eigen::VectorXd& val, double coef) const
+    {
+        int constraintI = val.size();
+        val.conservativeResize(constraintI + mesh.V.rows());
+        for(int vI = 0; vI < mesh.V.rows(); vI++) {
+            val[constraintI] = coef * (normal.transpose().dot(mesh.V.row(vI)) + D);
+            ++constraintI;
         }
     }
     
@@ -93,11 +104,34 @@ namespace FracCuts {
                                                          const Eigen::VectorXd& input,
                                                          Eigen::VectorXd& output_incremental) const
     {
-        assert(input.size() == mesh.V.rows());
+        assert(input.size() == Base::activeSet.size());
         assert(output_incremental.size() == mesh.V.rows() * dim);
         
-        for(int vI = 0; vI < mesh.V.rows(); ++vI) {
-            output_incremental.segment<dim>(vI * dim) += input[vI] * normal;
+        int constraintI = 0;
+        for(const auto& vI : Base::activeSet) {
+            output_incremental.segment<dim>(vI * dim) += input[constraintI] * normal;
+            ++constraintI;
+        }
+    }
+    
+    template<int dim>
+    void HalfSpace<dim>::filterSearchDir_OSQP(const TriangleSoup<dim>& mesh,
+                                               Eigen::VectorXd& searchDir)
+    {
+        Eigen::VectorXd constraintVal;
+        evaluateConstraints_all(mesh, constraintVal, -1.0);
+        for(int vI = 0; vI < mesh.V.rows(); vI++) {
+            double coef = normal.dot(searchDir.segment<dim>(vI * dim));
+            if(coef < 0.0) { // if going towards the halfSpace
+                double maxStepSize = constraintVal[vI] / coef;
+                if(maxStepSize < 1.0) { // includes points inside halfSpace (maxStepSize <= 0)
+                    Base::activeSet_next.insert(vI);
+                    // project out normal search direction so that stepSize won't be limited:
+                    searchDir.segment<dim>(vI * dim) -= (1.0 - maxStepSize) * coef * normal;
+                    //NOTE: clamp search direction colinearly will fail the line search
+                }
+            }
+            //TODO: how to shrink active set?
         }
     }
     
@@ -114,9 +148,15 @@ namespace FracCuts {
     template<int dim>
     void HalfSpace<dim>::outputConfig(std::ostream& os) const
     {
-        os << "ground " << Base::friction << " " <<
-            Base::origin[1] << " " << Base::stiffness << std::endl;
-        //TODO: different input
+        os << "halfSpace  " << Base::origin[0] << " " << Base::origin[1] << " ";
+        if(dim == 3) {
+            os << Base::origin[2] << " ";
+        }
+        os << " " << normal[0] << " " << normal[1] << " ";
+        if(dim == 3) {
+            os << normal[2] << " ";
+        }
+        os << " " << Base::stiffness << "  " << Base::friction << std::endl;
     }
     
     template<int dim>
