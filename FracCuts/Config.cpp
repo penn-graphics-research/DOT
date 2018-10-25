@@ -10,6 +10,7 @@
 #include "IglUtils.hpp"
 
 #include "HalfSpace.hpp"
+#include "Sphere.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -141,10 +142,30 @@ namespace FracCuts {
                     }
                     double stiffness, friction;
                     ss >> stiffness >> friction;
+                    assert(friction >= 0.0);
+                    assert(stiffness > 0.0);
                     collisionObjects.emplace_back(new HalfSpace<DIM>(origin,
                                                                      normal,
                                                                      stiffness,
                                                                      friction));
+                }
+                else if(token == "sphere") {
+                    Eigen::Matrix<double, DIM, 1> origin;
+                    ss >> origin[0] >> origin[1];
+                    if(DIM == 3) {
+                        ss >> origin[2];
+                    }
+                    double radius;
+                    ss >> radius;
+                    assert(radius > 0.0);
+                    double stiffness, friction;
+                    ss >> stiffness >> friction;
+                    assert(friction >= 0.0);
+                    assert(stiffness > 0.0);
+                    collisionObjects.emplace_back(new Sphere<DIM>(origin,
+                                                                  radius,
+                                                                  stiffness,
+                                                                  friction));
                 }
                 
                 else if(token == "constraintSolver") {

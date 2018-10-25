@@ -55,6 +55,8 @@ namespace FracCuts {
         
         Base::stiffness = p_stiffness;
         Base::friction = p_friction;
+        
+        initRenderingData();
     }
     
     template<int dim>
@@ -160,16 +162,8 @@ namespace FracCuts {
     }
     
     template<int dim>
-    void HalfSpace<dim>::draw(Eigen::MatrixXd& V,
-                              Eigen::MatrixXi& F,
-                              Eigen::MatrixXd& color,
-                              double extensionScale) const
+    void HalfSpace<dim>::initRenderingData(double extensionScale)
     {
-        //TODO: transform rather than redraw everytime
-        
-        Eigen::MatrixXd V_floor;
-        Eigen::MatrixXi F_floor;
-        
         double size = extensionScale * 10.0;
         int elemAmt = 200;
         double spacing = size / std::sqrt(elemAmt / 2.0);
@@ -177,7 +171,7 @@ namespace FracCuts {
         int gridSize = static_cast<int>(size / spacing) + 1;
         spacing = size / (gridSize - 1);
         
-        V_floor.resize(gridSize * gridSize, 3);
+        Base::V.resize(gridSize * gridSize, 3);
         for(int rowI = 0; rowI < gridSize; rowI++)
         {
             for(int colI = 0; colI < gridSize; colI++)
@@ -186,37 +180,25 @@ namespace FracCuts {
                 Eigen::RowVector3d coord(spacing * colI - size / 2.0,
                                          Base::origin[1],
                                          spacing * rowI - size / 2.0);
-                V_floor.row(vI) = (rotMtr * (coord.transpose() - Base::origin) +
+                Base::V.row(vI) = (rotMtr * (coord.transpose() - Base::origin) +
                                    Base::origin).transpose();
             }
         }
         
-        F_floor.resize((gridSize - 1) * (gridSize - 1) * 2, 3);
+        Base::F.resize((gridSize - 1) * (gridSize - 1) * 2, 3);
         for(int rowI = 0; rowI < gridSize - 1; rowI++)
         {
             for(int colI = 0; colI < gridSize - 1; colI++)
             {
                 int squareI = rowI * (gridSize - 1) + colI;
-                F_floor.row(squareI * 2) = Eigen::Vector3i(rowI * gridSize + colI,
+                Base::F.row(squareI * 2) = Eigen::Vector3i(rowI * gridSize + colI,
                                                            (rowI + 1) * gridSize + colI,
                                                            (rowI + 1) * gridSize + colI + 1);
-                F_floor.row(squareI * 2 + 1) = Eigen::Vector3i(rowI * gridSize + colI,
+                Base::F.row(squareI * 2 + 1) = Eigen::Vector3i(rowI * gridSize + colI,
                                                                (rowI + 1) * gridSize + colI + 1,
                                                                rowI * gridSize + colI + 1);
             }
         }
-        
-        int oldVSize = V.rows();
-        V.conservativeResize(oldVSize + V_floor.rows(), 3);
-        V.bottomRows(V_floor.rows()) = V_floor;
-        
-        int oldFSize = F.rows();
-        F.conservativeResize(oldFSize + F_floor.rows(), 3);
-        F.bottomRows(F_floor.rows()) = F_floor;
-        F.bottomRows(F_floor.rows()).array() += oldVSize;
-        
-        color.conservativeResize(color.rows() + F_floor.rows(), 3);
-        color.bottomRows(F_floor.rows()).setConstant(0.9);
     }
 
     template class HalfSpace<DIM>;

@@ -1,13 +1,13 @@
 //
-//  HalfSpace.hpp
+//  Sphere.hpp
 //  FracCuts
 //
-//  Created by Minchen Li on 10/22/18.
+//  Created by Minchen Li on 10/24/18.
 //  Copyright © 2018 Minchen Li. All rights reserved.
 //
 
-#ifndef HalfSpace_hpp
-#define HalfSpace_hpp
+#ifndef Sphere_hpp
+#define Sphere_hpp
 
 #include "CollisionObject.h"
 
@@ -16,27 +16,16 @@
 namespace FracCuts {
     
     template<int dim>
-    class HalfSpace : public CollisionObject<dim>
+    class Sphere : public CollisionObject<dim>
     {
         typedef CollisionObject<dim> Base;
         
     protected:
-        Eigen::Matrix<double, dim, 1> normal;
-        double D;
-        // normal[0] x + normal[1] y + normal[2] z + D = 0
-        
-        Eigen::Matrix<double, dim, dim> rotMtr; // for visualization
+        double radius, radius2;
         
     public:
-        HalfSpace(const Eigen::Matrix<double, dim, 1>& origin,
-                  const Eigen::Matrix<double, dim, 1>& normal,
-                  double p_stiffness, double p_friction);
-        
-        HalfSpace(double p_Y, double p_stiffness, double p_friction);
-        
-        void init(const Eigen::Matrix<double, dim, 1>& origin,
-                  const Eigen::Matrix<double, dim, 1>& normal,
-                  double p_stiffness, double p_friction);
+        Sphere(const Eigen::Matrix<double, dim, 1>& origin,
+               double p_radius, double p_stiffness, double p_friction);
         
     public:
         virtual void updateConstraints_OSQP(const TriangleSoup<dim>& mesh,
@@ -65,4 +54,4 @@ namespace FracCuts {
     
 }
 
-#endif /* HalfSpace_hpp */
+#endif /* Sphere_hpp */

@@ -212,6 +212,32 @@ namespace FracCuts {
                             
                             break;
                         }
+                        
+                        case 5: {
+                            // output c++ format of an obj file
+                            FILE *out = fopen((meshFolderPath + "/" +
+                                               meshName + ".txt").c_str(), "w");
+                            assert(out);
+                            
+                            fprintf(out, "%le, %le, %le",
+                                    V(0, 0), V(0, 1), V(0, 2));
+                            for(int vI = 1; vI < V.rows(); vI++) {
+                                fprintf(out, ", %le, %le, %le",
+                                        V(vI, 0), V(vI, 1), V(vI, 2));
+                            }
+                            fprintf(out, "\n");
+                            
+                            fprintf(out, "%d, %d, %d",
+                                    F(0, 0), F(0, 1), F(0, 2));
+                            for(int fI = 1; fI < F.rows(); fI++) {
+                                fprintf(out, ", %d, %d, %d",
+                                        F(fI, 0), F(fI, 1), F(fI, 2));
+                            }
+                            fprintf(out, "\n");
+                            
+                            fclose(out);
+                            break;
+                        }
                             
                         default:
                             std::cout << "No procMode " << procMode << std::endl;

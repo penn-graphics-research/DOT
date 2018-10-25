@@ -10,6 +10,7 @@
 		980180BC1F552CDA00C64B43 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980180BB1F552CDA00C64B43 /* main.cpp */; };
 		980E7B6021765C8B0080705E /* libosqp.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 989A2F61217513AC0074A705 /* libosqp.dylib */; };
 		980E7B66217E44010080705E /* HalfSpace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980E7B64217E44010080705E /* HalfSpace.cpp */; };
+		980E7B69218113F90080705E /* Sphere.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 980E7B67218113F90080705E /* Sphere.cpp */; };
 		982CE6131F5DB358004176A8 /* Energy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 982CE6121F5DB358004176A8 /* Energy.cpp */; };
 		98444EBB2156C72B004446B1 /* libtetgen.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 98444EBA2156C72B004446B1 /* libtetgen.a */; };
 		98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 98444EBF215F09B9004446B1 /* get_feasible_steps.cpp */; };
@@ -64,6 +65,8 @@
 		980E7B63217E429E0080705E /* CollisionObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CollisionObject.h; path = CollisionObject/CollisionObject.h; sourceTree = "<group>"; };
 		980E7B64217E44010080705E /* HalfSpace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HalfSpace.cpp; path = CollisionObject/HalfSpace.cpp; sourceTree = "<group>"; };
 		980E7B65217E44010080705E /* HalfSpace.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = HalfSpace.hpp; path = CollisionObject/HalfSpace.hpp; sourceTree = "<group>"; };
+		980E7B67218113F90080705E /* Sphere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Sphere.cpp; path = CollisionObject/Sphere.cpp; sourceTree = "<group>"; };
+		980E7B68218113F90080705E /* Sphere.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Sphere.hpp; path = CollisionObject/Sphere.hpp; sourceTree = "<group>"; };
 		982CE6121F5DB358004176A8 /* Energy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Energy.cpp; sourceTree = "<group>"; };
 		983E7DB3202240D900412128 /* Diagnostic.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Diagnostic.hpp; sourceTree = "<group>"; };
 		983E7DB62022421400412128 /* MeshProcessing.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = MeshProcessing.hpp; sourceTree = "<group>"; };
@@ -204,6 +207,8 @@
 				980E7B63217E429E0080705E /* CollisionObject.h */,
 				980E7B64217E44010080705E /* HalfSpace.cpp */,
 				980E7B65217E44010080705E /* HalfSpace.hpp */,
+				980E7B67218113F90080705E /* Sphere.cpp */,
+				980E7B68218113F90080705E /* Sphere.hpp */,
 			);
 			name = CollisionObject;
 			sourceTree = "<group>";
@@ -403,6 +408,7 @@
 				98CE476F1F71E66300627725 /* PardisoSolver.cpp in Sources */,
 				98E6E68D20DB4F2C00130500 /* FixedCoRotEnergy.cpp in Sources */,
 				98E6E6A720F7C59700130500 /* Config.cpp in Sources */,
+				980E7B69218113F90080705E /* Sphere.cpp in Sources */,
 				98E6E69320DDA03300130500 /* CHOLMODSolver.cpp in Sources */,
 				98E6E6A420E8046700130500 /* EigenLibSolver.cpp in Sources */,
 				98444EC1215F09B9004446B1 /* get_feasible_steps.cpp in Sources */,

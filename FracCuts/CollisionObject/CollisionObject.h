@@ -27,6 +27,9 @@ namespace FracCuts {
         double friction;
         std::set<int> activeSet, activeSet_next;
         
+        Eigen::MatrixXd V;
+        Eigen::MatrixXi F;
+        
     public:
         virtual ~CollisionObject(void) {};
         
@@ -61,10 +64,25 @@ namespace FracCuts {
         
         virtual void outputConfig(std::ostream& os) const = 0;
         
-        virtual void draw(Eigen::MatrixXd& V,
-                          Eigen::MatrixXi& F,
+        virtual void initRenderingData(double extensionScale = 1.0) = 0;
+        
+        virtual void draw(Eigen::MatrixXd& p_V,
+                          Eigen::MatrixXi& p_F,
                           Eigen::MatrixXd& color,
-                          double extensionScale = 1.0) const = 0;
+                          double extensionScale = 1.0) const
+        {
+            int oldVSize = p_V.rows();
+            p_V.conservativeResize(oldVSize + V.rows(), 3);
+            p_V.bottomRows(V.rows()) = V;
+            
+            int oldFSize = p_F.rows();
+            p_F.conservativeResize(oldFSize + F.rows(), 3);
+            p_F.bottomRows(F.rows()) = F;
+            p_F.bottomRows(F.rows()).array() += oldVSize;
+            
+            color.conservativeResize(color.rows() + F.rows(), 3);
+            color.bottomRows(F.rows()).setConstant(0.9);
+        }
     };
     
 }

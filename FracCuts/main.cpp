@@ -763,7 +763,7 @@ int main(int argc, char *argv[])
     else if(suffix == ".obj") {
         loadSucceed = igl::readOBJ(meshFilePath, V, UV, N, F, FUV, FN);
     }
-    else if(suffix == ".primitive") {
+    else if((suffix == ".txt") || (suffix == ".primitive")) {
         loadSucceed = !config.loadFromFile(meshFilePath);
         if(loadSucceed) {
             if(config.shapeType == FracCuts::Primitive::P_INPUT) {
@@ -819,7 +819,7 @@ int main(int argc, char *argv[])
     // construct mesh data structure
     FracCuts::TriangleSoup<DIM> *temp = new FracCuts::TriangleSoup<DIM>(V, F, UV);
     // primitive test cases
-    if(suffix == ".primitive") {
+    if((suffix == ".txt") || (suffix == ".primitive")) {
         temp->borderVerts_primitive = borderVerts_primitive;
     }
     triSoup.emplace_back(temp);
@@ -883,7 +883,7 @@ int main(int argc, char *argv[])
     
     // create output folder
     mkdir(outputFolderPath.c_str(), 0777);
-    if(suffix == ".primitive") {
+    if((suffix == ".txt") || (suffix == ".primitive")) {
         config.appendInfoStr(outputFolderPath);
         outputFolderPath += folderTail;
     }
@@ -891,7 +891,7 @@ int main(int argc, char *argv[])
         outputFolderPath += meshName + "_" +startDS + folderTail;
     }
     mkdir(outputFolderPath.c_str(), 0777);
-    config.saveToFile(outputFolderPath + "/config.primitive");
+    config.saveToFile(outputFolderPath + "/config.txt");
     
     // create log file
     outputFolderPath += '/';
