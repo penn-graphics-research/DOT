@@ -1,0 +1,15 @@
+energy FCR
+timeStepper ADMMDD 6
+inexactSolve 0
+warmStart 2
+resolution 1000
+size 1
+time 10 0.025
+density 1000
+stiffness 25000 0.4
+script twistnsns_old
+shape input input/tetMeshes/monkey18K.msh
+view orthographic
+zoom 1
+rotateModel 0 1 0  40
+handleRatio 0.02

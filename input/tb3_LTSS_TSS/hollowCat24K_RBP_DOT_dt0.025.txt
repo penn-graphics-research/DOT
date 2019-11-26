@@ -1,0 +1,16 @@
+energy FCR
+timeIntegration BE
+timeStepper DOT 6
+inexactSolve 0
+warmStart 2
+resolution 1000
+size 1
+time 10 0.025
+density 1000
+stiffness 60000 0.4
+turnOffGravity
+script rubberBandPull
+shape input input/tetMeshes/hollowCat24K.msh
+rotateModel 1 0 0 -90
+view orthographic
+zoom 0.5

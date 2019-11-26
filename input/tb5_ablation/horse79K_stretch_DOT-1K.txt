@@ -1,0 +1,13 @@
+energy FCR
+timeStepper DOT -1 1024
+inexactSolve 0
+warmStart 2
+resolution 1000
+size 1
+time 10 0.025
+density 1000
+stiffness 100000 0.4
+script stretch
+shape input input/tetMeshes/horse79K.msh
+view orthographic
+zoom 1

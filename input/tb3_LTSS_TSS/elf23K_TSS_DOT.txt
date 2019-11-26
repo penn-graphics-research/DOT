@@ -1,0 +1,13 @@
+energy FCR
+timeStepper DOT 6
+inexactSolve 0
+warmStart 2
+resolution 1000
+size 1
+time 10 0.025
+density 1000
+stiffness 100000 0.4
+script twistnsns_old
+shape input input/tetMeshes/elf23K.msh
+view orthographic
+zoom 1
