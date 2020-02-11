@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.9)
 project(DOT)
 
+set(DOT_EXTERNAL "${CMAKE_CURRENT_SOURCE_DIR}/ext")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+include(${PROJECT_NAME}Dependencies)
 
 # libigl
 option(LIBIGL_USE_STATIC_LIBRARY "Use libigl as static library" OFF)
@@ -28,9 +30,9 @@ find_package(LIBIGL REQUIRED QUIET)
 
 
 # tbb
-include(tbb/cmake/TBBGet.cmake)
-tbb_get(TBB_ROOT tbb_root CONFIG_DIR TBB_DIR)
-find_package(TBB REQUIRED tbb)
+#include(tbb/cmake/TBBGet.cmake)
+#tbb_get(TBB_ROOT tbb_root CONFIG_DIR TBB_DIR)
+#find_package(TBB REQUIRED tbb)
 
 
 # project source files
